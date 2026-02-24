@@ -181,6 +181,7 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
   if (id.includes('signed_at_state')) return 'IA';
   if (id.includes('owner_id_country')) return 'United States';
   if (id.includes('owner_country_of_citizenship')) return 'U.S.A.';
+  if (id === 'owner_years_employed') return '5';
 
   return 'Sample value';
 }
