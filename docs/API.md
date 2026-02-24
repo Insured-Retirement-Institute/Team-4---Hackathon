@@ -1,8 +1,8 @@
 # API Reference
 
-Base URL: `http://localhost:5000/api/v1`
+## AI Service
 
-## Health
+Base URL: `http://localhost:8000/api/v1` (local) or `https://<app-runner-url>/api/v1` (deployed)
 
 ### GET /health
 
@@ -12,12 +12,112 @@ Returns service status.
 ```json
 {
   "status": "healthy",
-  "service": "iri-retirement-api",
+  "service": "iri-ai-service",
   "version": "1.0.0"
 }
 ```
 
-## Schemas
+### POST /sessions
+
+Create a new conversation session.
+
+**Request body:**
+```json
+{
+  "questions": [
+    {
+      "step_id": "owner_info",
+      "title": "Owner Information",
+      "fields": [
+        {
+          "field_id": "owner_first_name",
+          "type": "text",
+          "label": "First Name",
+          "required": true,
+          "validation": {"max_length": 50}
+        }
+      ]
+    }
+  ],
+  "known_data": {
+    "owner_first_name": "John",
+    "owner_dob": "1965-03-15"
+  },
+  "callback_url": "https://eapp-api.example.com/applications/abc-123"
+}
+```
+
+**Response 200:**
+```json
+{
+  "session_id": "uuid",
+  "phase": "spot_check",
+  "greeting": "Hey there! I've got some info on file already...",
+  "field_summary": {"missing": 5, "unconfirmed": 3, "confirmed": 0, "collected": 0},
+  "fields": [
+    {"field_id": "owner_first_name", "label": "First Name", "status": "unconfirmed", "value": "John"}
+  ]
+}
+```
+
+### POST /sessions/{session_id}/message
+
+Send a user message and get an AI reply.
+
+**Request body:**
+```json
+{
+  "message": "Yeah that all looks right"
+}
+```
+
+**Response 200:**
+```json
+{
+  "reply": "Great! Now let's talk about the annuity details...",
+  "phase": "collecting",
+  "updated_fields": [
+    {"field_id": "owner_first_name", "status": "confirmed", "value": "John"}
+  ],
+  "field_summary": {"missing": 5, "unconfirmed": 0, "confirmed": 3, "collected": 0},
+  "complete": false
+}
+```
+
+### GET /sessions/{session_id}
+
+Get current session state.
+
+**Response 200:** Same shape as create session response (without greeting).
+
+### POST /sessions/{session_id}/submit
+
+Submit collected data to the callback URL.
+
+**Response 200:**
+```json
+{
+  "status": "submitted",
+  "field_count": 25,
+  "submitted_at": "2026-02-24T15:30:00Z"
+}
+```
+
+### GET /demo/midland-schema
+
+Load the Midland National eApp schema in internal format (for testing).
+
+**Response 200:** Array of step definitions with fields.
+
+---
+
+## Backend
+
+Base URL: `http://localhost:5000/api/v1`
+
+### GET /health
+
+Returns service status.
 
 ### GET /schemas
 
@@ -41,37 +141,6 @@ List all active carrier schemas.
 
 Get full carrier schema including steps and fields.
 
-**Parameters:**
-- `carrier_id` (path) — Carrier identifier
-- `version` (query, optional) — Schema version, defaults to latest
-
-**Response 200:** Full carrier schema object (see DATA_MODEL.md)
-
-**Response 404:**
-```json
-{
-  "error": "Schema not found",
-  "carrier_id": "unknown"
-}
-```
-
-### POST /schemas
-
-Create or update a carrier schema.
-
-**Request body:** Full carrier schema object
-
-**Response 201:**
-```json
-{
-  "carrier_id": "sample_carrier",
-  "schema_version": "1.0",
-  "message": "Schema created"
-}
-```
-
-## Applications
-
 ### POST /applications
 
 Create a new draft application.
@@ -94,97 +163,17 @@ Create a new draft application.
 }
 ```
 
-### GET /applications/{id}
-
-Get application by ID.
-
-**Response 200:** Full application object (see DATA_MODEL.md)
-
-**Response 404:**
-```json
-{
-  "error": "Application not found",
-  "application_id": "uuid"
-}
-```
-
 ### PUT /applications/{id}
 
 Save application progress (partial update).
-
-**Request body:**
-```json
-{
-  "data": {
-    "owner_first_name": "John",
-    "owner_last_name": "Doe"
-  }
-}
-```
-
-**Response 200:**
-```json
-{
-  "application_id": "uuid",
-  "status": "draft",
-  "updated_at": "2025-01-01T00:00:00Z"
-}
-```
 
 ### POST /applications/{id}/validate
 
 Validate application data against its carrier schema without submitting.
 
-**Response 200:**
-```json
-{
-  "valid": true,
-  "errors": []
-}
-```
-
-**Response 200 (with errors):**
-```json
-{
-  "valid": false,
-  "errors": [
-    {
-      "field_id": "owner_first_name",
-      "message": "This field is required"
-    },
-    {
-      "field_id": "owner_email",
-      "message": "Invalid email format"
-    }
-  ]
-}
-```
-
 ### POST /applications/{id}/submit
 
 Validate and submit the application. Fails if validation errors exist.
-
-**Response 200:**
-```json
-{
-  "application_id": "uuid",
-  "status": "submitted",
-  "submitted_at": "2025-01-01T00:00:00Z"
-}
-```
-
-**Response 400:**
-```json
-{
-  "error": "Validation failed",
-  "errors": [
-    {
-      "field_id": "owner_first_name",
-      "message": "This field is required"
-    }
-  ]
-}
-```
 
 ## Error Responses
 

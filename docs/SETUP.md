@@ -5,6 +5,24 @@
 - Python 3.11+
 - Node.js 18+
 - AWS CLI configured (or local DynamoDB for offline dev)
+- AWS Bedrock access (for AI service)
+
+## AI Service Setup
+
+```bash
+cd ai-service
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env      # add AWS credentials
+python run.py
+```
+
+The AI service starts at `http://localhost:8000`. Chat UI at `http://localhost:8000/`. Verify with:
+
+```bash
+curl http://localhost:8000/api/v1/health
+```
 
 ## Backend Setup
 
@@ -36,6 +54,19 @@ The UI starts at `http://localhost:5173`.
 
 ## Environment Variables
 
+### AI Service (`ai-service/.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AWS_REGION` | `us-east-1` | AWS region for Bedrock |
+| `AWS_ACCESS_KEY_ID` | (empty) | AWS credentials |
+| `AWS_SECRET_ACCESS_KEY` | (empty) | AWS credentials |
+| `AWS_SESSION_TOKEN` | (empty) | For assumed roles |
+| `BEDROCK_MODEL` | `anthropic.claude-3-sonnet-20240229-v1:0` | Claude model ID |
+| `HOST` | `0.0.0.0` | Server bind address |
+| `PORT` | `8000` | Server port |
+| `LOG_LEVEL` | `info` | Logging level |
+
 ### Backend (`backend/.env`)
 
 | Variable | Default | Description |
@@ -66,32 +97,19 @@ python scripts/create-dynamodb-tables.py
 ### Option B: Local DynamoDB
 
 ```bash
-# Using Docker
 docker run -p 8000:8000 amazon/dynamodb-local
-
-# Set in backend/.env
-AWS_ENDPOINT_URL=http://localhost:8000
-
-# Create tables
-python scripts/create-dynamodb-tables.py --endpoint http://localhost:8000
+AWS_ENDPOINT_URL=http://localhost:8000 python scripts/create-dynamodb-tables.py
 ```
 
 ## Running Tests
 
 ```bash
+# AI Service
+cd ai-service && source venv/bin/activate && pytest
+
 # Backend
-cd backend
-python -m pytest
+cd backend && source venv/bin/activate && pytest
 
 # Frontend
-cd frontend
-npm test
+cd frontend && npm test
 ```
-
-## One-Command Setup
-
-```bash
-bash scripts/setup-local.sh
-```
-
-This script installs dependencies for both backend and frontend and creates DynamoDB tables.

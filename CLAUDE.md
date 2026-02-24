@@ -2,31 +2,37 @@
 
 ## Project Overview
 
-A schema-driven platform for processing retirement (annuity/life insurance) applications across multiple carriers. One JSON schema per carrier drives the entire pipeline: UI rendering, validation, and future PDF/AI features.
+A schema-driven platform for processing retirement (annuity/life insurance) applications across multiple carriers. One JSON schema per carrier drives the entire pipeline: UI rendering, validation, AI-assisted data collection, and submission.
 
 ## Architecture
 
-- **Monorepo:** `backend/` (Python Flask) + `frontend/` (React/TypeScript/Vite)
+- **Monorepo:** `backend/` (Python Flask), `ai-service/` (Python FastAPI), `frontend/` (React/TypeScript/Vite)
 - **Database:** AWS DynamoDB (CarrierSchemas + Applications tables)
-- **Core pattern:** Schema-driven everything — carrier JSON schemas define fields, validation, wizard steps, and future PDF mappings
+- **AI Service:** Standalone conversational engine using Claude via AWS Bedrock — collects and validates application data through natural conversation
+- **Core pattern:** Schema-driven everything — carrier JSON schemas define fields, validation, wizard steps, and AI conversation flow
 
 ## Tech Stack
 
 - Backend: Python 3.11+, Flask, boto3, jsonschema
+- AI Service: Python 3.11+, FastAPI, Anthropic SDK (Bedrock), httpx, pydantic
 - Frontend: React 18, TypeScript, Vite
 - Database: AWS DynamoDB
-- Testing: pytest (backend), vitest (frontend)
-
-## Key Concepts
-
-- **Carrier Schema:** JSON document defining all fields, steps, and validation rules for a carrier's application. Stored in DynamoDB and seeded from `backend/app/schemas/carriers/`.
-- **Application:** A user's in-progress or submitted application, validated against its carrier schema.
-- **Wizard:** Dynamic multi-step form rendered from a carrier schema. Steps, fields, and validation are all schema-driven.
+- Infrastructure: AWS App Runner (ai-service), ECR, IAM
+- Testing: pytest (backend + ai-service), vitest (frontend)
 
 ## Project Structure
 
 ```
-backend/           Python Flask API
+ai-service/        Conversational AI service (FastAPI)
+  app/
+    models/        Conversation state, API request/response contracts
+    routes/        HTTP endpoints (sessions, chat, health, demo)
+    services/      LLM orchestration, validation, extraction, schema adapter
+    prompts/       Phase-aware system prompt builder
+    schemas/       Carrier eApp JSON schemas (e.g., Midland National)
+    static/        Chat demo UI
+  tests/           pytest tests
+backend/           Flask API for schema/application CRUD
   app/
     models/        DynamoDB data models
     routes/        API endpoint blueprints
@@ -35,19 +41,30 @@ backend/           Python Flask API
     utils/         Shared utilities
   tests/           pytest tests
 frontend/          React + TypeScript + Vite
-  src/
-    api/           HTTP client and API calls
-    types/         TypeScript type definitions
-    components/    UI components (wizard/, fields/, layout/)
-    pages/         Route-level page components
-    hooks/         Custom React hooks
-    utils/         Client-side utilities
 docs/              Architecture and reference docs
 scripts/           Setup and utility scripts
 infra/             Infrastructure definitions
 ```
 
-## API Base
+## AI Service API
+
+All endpoints under `/api/v1`. Key routes:
+- `GET /health` — health check
+- `POST /sessions` — create conversation session (accepts questions, known_data, callback_url)
+- `GET /sessions/{session_id}` — get session state and field summary
+- `POST /sessions/{session_id}/message` — send user message, get AI reply + field updates
+- `POST /sessions/{session_id}/submit` — submit collected data to callback URL
+- `GET /demo/midland-schema` — load Midland National eApp as test data
+
+### Conversation Phases
+
+`SPOT_CHECK` → `COLLECTING` → `REVIEWING` → `COMPLETE` → `SUBMITTED`
+
+### Field Statuses
+
+`MISSING` → `UNCONFIRMED` (from known_data) → `CONFIRMED` / `COLLECTED`
+
+## Backend API
 
 All endpoints under `/api/v1`. Key routes:
 - `GET /health` — health check
@@ -60,15 +77,32 @@ All endpoints under `/api/v1`. Key routes:
 ## Development
 
 ```bash
+# AI Service
+cd ai-service && python -m venv venv && source venv/Scripts/activate  # or venv/bin/activate on Linux
+pip install -r requirements.txt
+cp .env.example .env  # add AWS credentials
+python run.py
+
 # Backend
 cd backend && pip install -r requirements.txt && python run.py
 
 # Frontend
 cd frontend && npm install && npm run dev
+
+# Tests
+cd ai-service && pytest
+cd backend && pytest
 ```
 
-## Phase Roadmap
+## AWS Configuration
 
-- **Phase 1 (current):** Centralized app, dynamic wizard UI, carrier submission API
-- **Phase 2 (planned):** DTCC converter, PDF form filling, LLM chat completion
-- **Phase 3 (planned):** Agentic AI, CRM integration, call transcript parsing
+The AI service requires AWS Bedrock access. Set these in `ai-service/.env`:
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN`
+- `AWS_REGION` (default: us-east-1)
+- `BEDROCK_MODEL` (default: anthropic.claude-3-sonnet-20240229-v1:0)
+
+## Deployment
+
+- **AI Service:** AWS App Runner from ECR image (`iri-ai-service`)
+- **CI/CD:** GitHub Actions builds and pushes to ECR on push to `feature/ai-service-standalone` or `main`
+- Auto-deploy enabled — App Runner redeploys when new image is pushed to ECR
