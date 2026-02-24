@@ -2,7 +2,7 @@ name: Build & Deploy to App Runner
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/ai-service-standalone]
 
 env:
   AWS_REGION: us-east-1
@@ -10,6 +10,7 @@ env:
 jobs:
   deploy-backend:
     name: Deploy Backend
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -107,9 +108,12 @@ jobs:
                   "Port": "8000",
                   "RuntimeEnvironmentVariables": {
                     "HOST": "0.0.0.0",
-                    "PORT": "8000"
+                    "PORT": "8000",
+                    "AWS_REGION": "us-east-1",
+                    "BEDROCK_MODEL": "anthropic.claude-3-sonnet-20240229-v1:0",
+                    "LOG_LEVEL": "info"
                   }
                 }
               },
-              "AutoDeploymentsEnabled": false
+              "AutoDeploymentsEnabled": true
             }'
