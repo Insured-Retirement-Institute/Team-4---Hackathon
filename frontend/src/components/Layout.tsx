@@ -35,6 +35,15 @@ function Layout() {
           >
             About
           </Button>
+          <Button
+            color="inherit"
+            onClick={() => navigate('/wizard-v1')}
+            variant="outlined"
+            size="small"
+            sx={{ ml: 1, borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}
+          >
+            Annuity Application
+          </Button>
         </Toolbar>
       </AppBar>
       <Container maxWidth="lg" sx={{ py: 4, flex: 1 }}>
