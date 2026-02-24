@@ -8,13 +8,14 @@ const { docClient } = require('../config/dynamodb');
 
 const TABLE_NAME = process.env.SUBMISSIONS_TABLE_NAME || 'Submissions';
 
-async function createSubmission({ applicationId, productId, answers, confirmationNumber, metadata }) {
+async function createSubmission({ applicationId, productId, payload, rawAnswers, confirmationNumber, metadata }) {
   const now = new Date().toISOString();
   const item = {
     id: crypto.randomUUID(),
     applicationId,
     productId,
-    answers,
+    payload,
+    rawAnswers,
     confirmationNumber,
     status: 'received',
     metadata: metadata || {},

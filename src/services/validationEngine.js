@@ -511,4 +511,4 @@ function evaluateLeafOp(fieldValue, op, compareValue) {
   }
 }
 
-module.exports = { validate };
+module.exports = { validate, evaluateVisibility };

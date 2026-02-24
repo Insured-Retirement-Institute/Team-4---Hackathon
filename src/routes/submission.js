@@ -4,6 +4,8 @@ const { getProduct } = require('../services/productStore');
 const { validate } = require('../services/validationEngine');
 const { getApplicationById, updateApplicationStatus } = require('../services/applicationService');
 const { createSubmission } = require('../services/submissionService');
+const { transformSubmission } = require('../services/submissionTransformer');
+const { validateSubmission } = require('../services/submissionValidator');
 
 // POST /application/:applicationId/submit
 router.post('/:applicationId/submit', async (req, res) => {
@@ -39,22 +41,44 @@ router.post('/:applicationId/submit', async (req, res) => {
     const metadata = (req.body && req.body.metadata) || {};
     const mergedAnswers = { ...application.answers, ...bodyAnswers };
 
-    // Run full validation
+    // 1. Run full answer validation
     const validationResult = validate(product, mergedAnswers, 'full', null);
 
     if (!validationResult.valid) {
       return res.status(422).json(validationResult);
     }
 
+    // 2. Transform answers into canonical payload
+    const now = new Date();
+    const payload = transformSubmission(product, mergedAnswers, {
+      applicationId: application.id,
+      submittedAt: now.toISOString(),
+      submittingAgentNpn: (req.body && req.body.agentNpn) || null,
+      ipAddress: req.ip || null,
+      userAgent: req.get('User-Agent') || null,
+      submissionSource: (req.body && req.body.submissionSource) || 'web',
+    });
+
+    // 3. Run submission-level business validation
+    const submissionValidation = validateSubmission(payload);
+
+    if (!submissionValidation.valid) {
+      return res.status(422).json({
+        valid: false,
+        errors: submissionValidation.errors,
+      });
+    }
+
     // Generate confirmation number
     const seq = String(Date.now() % 100000000).padStart(8, '0');
-    const confirmationNumber = `ANN-${new Date().getFullYear()}-${seq}`;
+    const confirmationNumber = `ANN-${now.getFullYear()}-${seq}`;
 
-    // Persist submission
+    // 4. Persist submission with canonical payload + raw answers
     const submission = await createSubmission({
       applicationId: application.id,
       productId: application.productId,
-      answers: mergedAnswers,
+      payload,
+      rawAnswers: mergedAnswers,
       confirmationNumber,
       metadata,
     });
@@ -62,6 +86,7 @@ router.post('/:applicationId/submit', async (req, res) => {
     // Mark application as submitted
     await updateApplicationStatus(application.id, 'submitted');
 
+    // 5. Return confirmation response
     res.json({
       id: submission.id,
       confirmationNumber: submission.confirmationNumber,
