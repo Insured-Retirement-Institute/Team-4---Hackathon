@@ -1,49 +1,10 @@
+import type { ApplicationDefinition, AnswerMap } from '../types/application';
+
+export type { ApplicationDefinition, AnswerMap };
+
 const BASE = '/application';
 
-// ── Shared types ─────────────────────────────────────────────────────────────
-
-/** Flat map of question IDs to their answer values. */
-export type AnswerMap = Record<string, string | number | boolean | null>;
-
 // ── GET /application/:productId ───────────────────────────────────────────────
-
-export interface ApplicationDefinition {
-  id: string;
-  version: string;
-  carrier: string;
-  productName: string;
-  productId: string;
-  effectiveDate: string;
-  locale: string;
-  description: string;
-  pages: Page[];
-}
-
-export interface Page {
-  pageId: string;
-  title: string;
-  description?: string | null;
-  condition?: unknown;
-  pageRepeat?: unknown;
-  questions: Question[];
-}
-
-export interface Question {
-  questionId: string;
-  type: string;
-  label: string;
-  hint?: string | null;
-  required?: boolean;
-  options?: Option[];
-  condition?: unknown;
-  validation?: unknown[];
-  [key: string]: unknown;
-}
-
-export interface Option {
-  value: string;
-  label: string;
-}
 
 export async function getApplication(productId: string, locale = 'en-US'): Promise<ApplicationDefinition> {
   const res = await fetch(`${BASE}/${encodeURIComponent(productId)}?locale=${locale}`);
