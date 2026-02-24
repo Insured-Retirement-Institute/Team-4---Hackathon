@@ -1,28 +1,34 @@
-const express = require('express');
-const path = require('path');
-const swaggerUi = require('swagger-ui-express');
-const YAML = require('yamljs');
+const express = require("express");
+const path = require("path");
+const swaggerUi = require("swagger-ui-express");
+const YAML = require("yamljs");
+require("dotenv").config();
 
 const app = express();
 
-app.use(express.json({ limit: '5mb' }));
+// Body parsers (JSON + form)
+// Only register express.json ONCE; set the size limit there.
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true }));
 
 // Swagger UI
-const swaggerDoc = YAML.load(path.resolve(__dirname, '../Assets/annuity-eapp-openapi.yaml'));
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
+const swaggerDoc = YAML.load(
+  path.resolve(__dirname, "../Assets/annuity-eapp-openapi.yaml")
+);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'healthy' });
+app.get("/health", (req, res) => {
+  res.json({ status: "healthy" });
 });
 
 // Routes
-const applicationRoutes = require('./routes/application');
-const validationRoutes = require('./routes/validation');
-const submissionRoutes = require('./routes/submission');
+const applicationRoutes = require("./routes/application");
+const validationRoutes = require("./routes/validation");
+const submissionRoutes = require("./routes/submission");
 
-app.use('/application', applicationRoutes);
-app.use('/application', validationRoutes);
-app.use('/application', submissionRoutes);
+app.use("/application", applicationRoutes);
+app.use("/application", validationRoutes);
+app.use("/application", submissionRoutes);
 
 module.exports = app;
