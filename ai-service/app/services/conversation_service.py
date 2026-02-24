@@ -232,11 +232,19 @@ def _generate_greeting(llm: LLMService, state: ConversationState) -> str:
 
 
 def _build_llm_messages(state: ConversationState) -> list[dict[str, Any]]:
-    """Convert conversation history to Anthropic message format."""
-    return [
+    """Convert conversation history to Anthropic message format.
+
+    The Anthropic API requires the first message to be a 'user' role.
+    If the history starts with an assistant message (the greeting), we
+    prepend a synthetic user message so the API is happy.
+    """
+    msgs = [
         {"role": msg.role.value, "content": msg.content}
         for msg in state.messages
     ]
+    if msgs and msgs[0]["role"] == "assistant":
+        msgs.insert(0, {"role": "user", "content": "Hello, let's get started."})
+    return msgs
 
 
 def _process_tool_calls(
