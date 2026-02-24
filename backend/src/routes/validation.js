@@ -2,27 +2,45 @@ const express = require('express');
 const router = express.Router();
 const { getProduct } = require('../services/productStore');
 const { validate } = require('../services/validationEngine');
+const { getApplicationById, updateApplicationAnswers } = require('../services/applicationService');
 
 // POST /application/:applicationId/validate
-router.post('/:applicationId/validate', (req, res) => {
+router.post('/:applicationId/validate', async (req, res) => {
   try {
-    const { productId, answers } = req.body || {};
+    const { productId, answers: bodyAnswers } = req.body || {};
 
-    if (!productId || !answers) {
+    if (!productId || !bodyAnswers) {
       return res.status(400).json({
         code: 'BAD_REQUEST',
-        message: 'Request body must include productId and answers.',
+        message: 'Both productId and answers are required in the request body.',
         details: null
       });
     }
 
-    const product = getProduct(productId);
+    const application = await getApplicationById(req.params.applicationId);
+
+    if (!application) {
+      return res.status(404).json({
+        code: 'APPLICATION_NOT_FOUND',
+        message: `Application '${req.params.applicationId}' not found.`,
+        details: null
+      });
+    }
+
+    const product = await getProduct(productId);
     if (!product) {
       return res.status(404).json({
         code: 'PRODUCT_NOT_FOUND',
         message: `No application definition found for product ID '${productId}'.`,
         details: null
       });
+    }
+
+    const mergedAnswers = { ...application.answers, ...bodyAnswers };
+
+    // Persist merged answers back if body included new answers
+    if (Object.keys(bodyAnswers).length > 0) {
+      await updateApplicationAnswers(req.params.applicationId, mergedAnswers);
     }
 
     const scope = req.query.scope || 'full';
@@ -36,7 +54,7 @@ router.post('/:applicationId/validate', (req, res) => {
       });
     }
 
-    const result = validate(product, answers, scope, pageId);
+    const result = validate(product, mergedAnswers, scope, pageId);
     res.json(result);
   } catch (err) {
     console.error('Validation error:', err);
