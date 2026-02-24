@@ -11,6 +11,7 @@ import Divider from '@mui/material/Divider';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import ReactMarkdown from 'react-markdown';
 
 export interface ChatMessage {
   id: string;
@@ -68,9 +69,30 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
           }}
         >
-          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-            {message.content}
-          </Typography>
+          {isUser ? (
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+              {message.content}
+            </Typography>
+          ) : (
+            <Box
+              sx={{
+                '& p': { m: 0, mb: 1, lineHeight: 1.6, fontSize: '0.875rem' },
+                '& p:last-child': { mb: 0 },
+                '& ul, & ol': { m: 0, mb: 1, pl: 2.5 },
+                '& li': { fontSize: '0.875rem', lineHeight: 1.6 },
+                '& strong': { fontWeight: 600 },
+                '& h1, & h2, & h3': { fontSize: '0.95rem', fontWeight: 600, mt: 0, mb: 0.5 },
+                '& code': {
+                  bgcolor: 'action.hover',
+                  px: 0.5,
+                  borderRadius: 0.5,
+                  fontSize: '0.8rem',
+                },
+              }}
+            >
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </Box>
+          )}
         </Paper>
         <Typography
           variant="caption"

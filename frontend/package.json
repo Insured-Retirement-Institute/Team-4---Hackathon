@@ -19,6 +19,7 @@
     "lottie-web": "^5.13.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.1",
     "team4-hackathon": "file:.."
   },
