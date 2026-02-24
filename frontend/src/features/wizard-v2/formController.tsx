@@ -14,6 +14,7 @@ interface WizardV2Controller {
   pages: PageDefinition[];
   setValue: (questionId: string, value: AnswerValue) => void;
   validatePage: (page: PageDefinition) => boolean;
+  isPageComplete: (page: PageDefinition) => boolean;
   populateWithDummyData: () => void;
 }
 
@@ -253,6 +254,16 @@ export function WizardV2FormProvider({ children }: WizardV2FormProviderProps) {
   const [values, setValues] = useState<FormValues>(() => getInitialValues(allQuestions));
   const [errors, setErrors] = useState<FormErrors>({});
 
+  const getPageErrors = (page: PageDefinition) =>
+    page.questions.reduce<FormErrors>((acc, question) => {
+      const value = values[question.id];
+      const message = getValidationMessage(question, value);
+      if (message) {
+        acc[question.id] = message;
+      }
+      return acc;
+    }, {});
+
   const setValue = (questionId: string, value: AnswerValue) => {
     setValues((prev) => ({ ...prev, [questionId]: value }));
     setErrors((prev) => {
@@ -276,18 +287,13 @@ export function WizardV2FormProvider({ children }: WizardV2FormProviderProps) {
   };
 
   const validatePage = (page: PageDefinition) => {
-    const nextErrors = page.questions.reduce<FormErrors>((acc, question) => {
-      const value = values[question.id];
-      const message = getValidationMessage(question, value);
-      if (message) {
-        acc[question.id] = message;
-      }
-      return acc;
-    }, {});
+    const nextErrors = getPageErrors(page);
 
     setErrors((prev) => ({ ...prev, ...nextErrors }));
     return Object.keys(nextErrors).length === 0;
   };
+
+  const isPageComplete = (page: PageDefinition) => Object.keys(getPageErrors(page)).length === 0;
 
   const controller = useMemo<WizardV2Controller>(
     () => ({
@@ -296,6 +302,7 @@ export function WizardV2FormProvider({ children }: WizardV2FormProviderProps) {
       pages,
       setValue,
       validatePage,
+      isPageComplete,
       populateWithDummyData,
     }),
     [errors, pages, values],

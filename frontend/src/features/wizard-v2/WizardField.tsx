@@ -76,6 +76,28 @@ function WizardField({ question }: WizardFieldProps) {
     }
 
     if (field.type === 'radio') {
+      if ((field.options?.length ?? 0) > 2) {
+        return (
+          <TextField
+            select
+            label={field.label}
+            required={field.required}
+            value={typeof fieldValue === 'string' ? fieldValue : ''}
+            onChange={(event) => onChange(event.target.value)}
+            error={Boolean(fieldError)}
+            helperText={fieldError}
+            fullWidth
+          >
+            <MenuItem value="">Select</MenuItem>
+            {field.options?.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        );
+      }
+
       return (
         <FormControl error={Boolean(fieldError)}>
           <FormLabel sx={{ mb: 1 }}>
@@ -239,6 +261,28 @@ function WizardField({ question }: WizardFieldProps) {
   }
 
   if (question.type === 'radio') {
+    if ((question.options?.length ?? 0) > 2) {
+      return (
+        <TextField
+          select
+          label={question.label}
+          required={question.required}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(event) => setValue(question.id, event.target.value)}
+          error={Boolean(error)}
+          helperText={error}
+          fullWidth
+        >
+          <MenuItem value="">Select</MenuItem>
+          {question.options?.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              {option.label}
+            </MenuItem>
+          ))}
+        </TextField>
+      );
+    }
+
     return (
       <FormControl error={Boolean(error)}>
         <FormLabel sx={{ mb: 1 }}>{labelWithHint}</FormLabel>

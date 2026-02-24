@@ -8,9 +8,11 @@ import type { PageDefinition } from './applicationDefinition';
 interface WizardSidebarProps {
   pages: PageDefinition[];
   currentStep: number;
+  isPageComplete: (index: number) => boolean;
+  onPageClick: (index: number) => void;
 }
 
-function WizardSidebar({ pages, currentStep }: WizardSidebarProps) {
+function WizardSidebar({ pages, currentStep, isPageComplete, onPageClick }: WizardSidebarProps) {
   const reviewStepIndex = pages.length;
   const isIntroActive = currentStep === -1;
   const isIntroComplete = currentStep > -1;
@@ -70,15 +72,17 @@ function WizardSidebar({ pages, currentStep }: WizardSidebarProps) {
 
         {pages.map((page, index) => {
           const isActive = currentStep === index;
-          const isComplete = currentStep > index;
+          const isComplete = isPageComplete(index);
 
           return (
             <Box
               key={page.id}
+              onClick={() => onPageClick(index)}
               sx={{
                 borderRadius: 2,
                 p: 1.25,
                 bgcolor: isActive ? 'rgba(255,255,255,0.15)' : 'transparent',
+                cursor: 'pointer',
               }}
             >
               <Stack direction="row" spacing={1} alignItems="center">
