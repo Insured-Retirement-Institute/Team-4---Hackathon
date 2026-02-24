@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     aws_session_token: str = ""
-    bedrock_model: str = "anthropic.claude-3-sonnet-20240229-v1:0"
+    bedrock_model: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 
     host: str = "0.0.0.0"
     port: int = 8000
