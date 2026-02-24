@@ -17,6 +17,15 @@ import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
 
+type ValidationError = {
+  message?: string;
+};
+
+type ValidationResponse = {
+  valid?: boolean;
+  errors?: ValidationError[];
+  message?: string;
+};
 
 type AnswerMap = Record<string, string | boolean | Record<string, string | boolean>[]>;
 
@@ -357,6 +366,12 @@ function ReviewPanel() {
           <Stack spacing={1.25}>
             {page.questions.map((question) => {
               const rawValue = values[question.id];
+              const isMissingValue =
+                rawValue === undefined
+                || rawValue === null
+                || (typeof rawValue === 'string' && !rawValue.trim())
+                || (Array.isArray(rawValue) && rawValue.length === 0);
+
               const displayValue = Array.isArray(rawValue)
                 ? `${rawValue.length} item${rawValue.length === 1 ? '' : 's'}`
                 : typeof rawValue === 'boolean'
@@ -366,11 +381,21 @@ function ReviewPanel() {
                 : rawValue || 'Not provided';
 
               return (
-                <Stack key={question.id} direction="row" justifyContent="space-between" spacing={2}>
-                  <Typography variant="body2" color="text.secondary">
+                <Stack
+                  key={question.id}
+                  direction="row"
+                  justifyContent="space-between"
+                  spacing={2}
+                  sx={isMissingValue ? { color: 'error.main' } : undefined}
+                >
+                  <Typography variant="body2" color={isMissingValue ? 'error.main' : 'text.secondary'}>
                     {question.label}
                   </Typography>
-                  <Typography variant="body2" sx={{ textAlign: 'right' }}>
+                  <Typography
+                    variant="body2"
+                    color={isMissingValue ? 'error.main' : 'text.primary'}
+                    sx={{ textAlign: 'right', fontWeight: isMissingValue ? 600 : 400 }}
+                  >
                     {displayValue}
                   </Typography>
                 </Stack>
@@ -387,6 +412,8 @@ function WizardPageContent() {
   const { pages, values, validatePage, isPageComplete, populateWithDummyData } = useWizardV2Controller();
   const [currentStep, setCurrentStep] = useState(0);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isIntroStep = currentStep === 0;
   const isReviewStep = currentStep === pages.length + 1;
@@ -408,6 +435,11 @@ function WizardPageContent() {
     return currentPage?.title ?? '';
   }, [currentPage, isIntroStep, isReviewStep]);
 
+  const isFormComplete = useMemo(
+    () => pages.every((page) => isPageComplete(page)),
+    [isPageComplete, pages],
+  );
+
   const handleNext = () => {
     if (!isReviewStep && currentPage && !validatePage(currentPage)) {
       return;
@@ -424,14 +456,71 @@ function WizardPageContent() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setSubmissionError(null);
+    setShowSubmissionBanner(false);
+    setIsSubmitting(true);
+
     const submissionPayload = buildSubmissionPayload(values as AnswerMap);
-    console.log('eapp_submission_payload', submissionPayload);
-    setShowSubmissionBanner(true);
+    const applicationId = `app_${APPLICATION_DEFINITION.id}`;
+    const requestPayload = {
+      productId: APPLICATION_DEFINITION.productId,
+      answers: values,
+    };
+
+    try {
+      const validateResponse = await fetch(`/application/${applicationId}/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      const validateResult = (await validateResponse.json()) as ValidationResponse;
+
+      if (!validateResponse.ok) {
+        setSubmissionError(validateResult.message || 'Validation request failed.');
+        return;
+      }
+
+      if (!validateResult.valid) {
+        const firstValidationMessage = validateResult.errors?.[0]?.message;
+        setSubmissionError(firstValidationMessage || 'Validation failed. Please review your answers and try again.');
+        return;
+      }
+
+      const submitResponse = await fetch(`/application/${applicationId}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...requestPayload,
+          metadata: {
+            submissionSource: 'web',
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+          },
+        }),
+      });
+
+      if (!submitResponse.ok) {
+        const submitResult = (await submitResponse.json()) as ValidationResponse;
+        setSubmissionError(submitResult.message || 'Submission failed. Please try again.');
+        return;
+      }
+
+      console.log('eapp_submission_payload', submissionPayload);
+      setShowSubmissionBanner(true);
+    } catch (error) {
+      setSubmissionError('Unable to reach the server. Please try again.');
+      console.error('Submission request failed:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSidebarPageClick = (pageIndex: number) => {
-    if (!isPageComplete(pages[pageIndex])) return;
     setCurrentStep(pageIndex + 1);
   };
 
@@ -465,6 +554,12 @@ function WizardPageContent() {
             {showSubmissionBanner && (
               <Alert icon={<CheckIcon fontSize="inherit" />} severity="success" sx={{ mb: 3 }}>
                 Application submitted successfully. You can review data and navigate back if updates are needed.
+              </Alert>
+            )}
+
+            {submissionError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {submissionError}
               </Alert>
             )}
 
@@ -546,8 +641,13 @@ function WizardPageContent() {
                   </Button>
                 )}
                 {isReviewStep && (
-                  <Button variant="contained" color="success" onClick={handleSubmit}>
-                    Submit Application
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || !isFormComplete}
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Application'}
                   </Button>
                 )}
               </Stack>

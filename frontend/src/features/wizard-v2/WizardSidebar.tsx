@@ -73,17 +73,16 @@ function WizardSidebar({ pages, currentStep, isPageComplete, onPageClick }: Wiza
         {pages.map((page, index) => {
           const isActive = currentStep === index;
           const isComplete = isPageComplete(index);
-          const isClickable = isComplete;
 
           return (
             <Box
               key={page.id}
-              onClick={isClickable ? () => onPageClick(index) : undefined}
+              onClick={() => onPageClick(index)}
               sx={{
                 borderRadius: 2,
                 p: 1.25,
                 bgcolor: isActive ? 'rgba(255,255,255,0.15)' : 'transparent',
-                cursor: isClickable ? 'pointer' : 'default',
+                cursor: 'pointer',
               }}
             >
               <Stack direction="row" spacing={1} alignItems="center">
