@@ -22,6 +22,19 @@ export interface QuestionOption {
   label: string;
 }
 
+export interface AllocationFund {
+  id: string;
+  name: string;
+  description?: string | null;
+}
+
+export interface AllocationConfig {
+  totalRequired?: number;
+  minPerFund?: number;
+  maxPerFund?: number;
+  funds: AllocationFund[];
+}
+
 export interface QuestionDefinition {
   id: string;
   label: string;
@@ -38,6 +51,7 @@ export interface QuestionDefinition {
     addLabel?: string;
     fields: QuestionDefinition[];
   };
+  allocationConfig?: AllocationConfig;
 }
 
 export interface PageDefinition {
@@ -76,6 +90,16 @@ interface RawQuestion {
     maxItems: number;
     addLabel?: string;
     fields: RawQuestion[];
+  } | null;
+  allocationConfig?: {
+    totalRequired?: number;
+    minPerFund?: number;
+    maxPerFund?: number;
+    funds?: Array<{
+      id: string;
+      name: string;
+      description?: string | null;
+    }> | null;
   } | null;
 }
 
@@ -141,6 +165,18 @@ function normalizeQuestion(question: RawQuestion): QuestionDefinition {
           fields: [...question.groupConfig.fields]
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             .map((field) => normalizeQuestion(field)),
+        }
+      : undefined,
+    allocationConfig: question.allocationConfig
+      ? {
+          totalRequired: question.allocationConfig.totalRequired,
+          minPerFund: question.allocationConfig.minPerFund,
+          maxPerFund: question.allocationConfig.maxPerFund,
+          funds: question.allocationConfig.funds?.map((fund) => ({
+            id: fund.id,
+            name: fund.name,
+            description: fund.description ?? undefined,
+          })) ?? [],
         }
       : undefined,
   };

@@ -310,6 +310,7 @@ function evaluateRule(rule, answer, question, allAnswers) {
       if (!isPresent(answer)) return null;
       const str = String(answer);
       if (str.length < rule.value) {
+        // console.log(2, question)
         return rule.description || `Must be at least ${rule.value} characters`;
       }
       return null;
@@ -319,6 +320,7 @@ function evaluateRule(rule, answer, question, allAnswers) {
       if (!isPresent(answer)) return null;
       const str = String(answer);
       if (str.length > rule.value) {
+        console.log(1, question)
         return rule.description || `Must be at most ${rule.value} characters`;
       }
       return null;

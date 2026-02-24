@@ -165,6 +165,109 @@ function WizardField({ question }: WizardFieldProps) {
     );
   };
 
+  if (question.type === 'allocation_table') {
+    const allocations = Array.isArray(value)
+      ? value.map((item) => ({
+          fundId: typeof item.fundId === 'string' ? item.fundId : '',
+          percentage: typeof item.percentage === 'string' ? item.percentage : '',
+        }))
+      : [];
+    const funds = question.allocationConfig?.funds ?? [];
+    const minPerFund = question.allocationConfig?.minPerFund ?? 0;
+    const maxPerFund = question.allocationConfig?.maxPerFund ?? 100;
+    const requiredTotal = question.allocationConfig?.totalRequired ?? 100;
+    const total = allocations.reduce((sum, item) => sum + (Number(item.percentage) || 0), 0);
+
+    const updateAllocation = (index: number, field: 'fundId' | 'percentage', nextValue: string) => {
+      const next = [...allocations];
+      const current = next[index] ?? { fundId: '', percentage: '' };
+      next[index] = { ...current, [field]: nextValue };
+      setValue(question.id, next);
+    };
+
+    const addAllocation = () => {
+      setValue(question.id, [...allocations, { fundId: '', percentage: '' }]);
+    };
+
+    const removeAllocation = (index: number) => {
+      setValue(
+        question.id,
+        allocations.filter((_, itemIndex) => itemIndex !== index),
+      );
+    };
+
+    return (
+      <FormControl error={Boolean(error)} fullWidth>
+        <FormLabel sx={{ mb: 1 }}>{labelWithHint}</FormLabel>
+
+        <Stack spacing={2}>
+          {allocations.map((item, index) => {
+            const selectedFundIds = allocations
+              .map((allocation, allocationIndex) => (allocationIndex === index ? null : allocation.fundId))
+              .filter((fundId): fundId is string => Boolean(fundId));
+
+            const availableFunds = funds.filter((fund) => !selectedFundIds.includes(fund.id) || fund.id === item.fundId);
+
+            return (
+              <Paper key={`${question.id}-${index}`} variant="outlined" sx={{ p: 2 }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
+                  <TextField
+                    select
+                    label="Fund"
+                    value={item.fundId}
+                    onChange={(event) => updateAllocation(index, 'fundId', event.target.value)}
+                    fullWidth
+                  >
+                    <MenuItem value="">Select fund</MenuItem>
+                    {availableFunds.map((fund) => (
+                      <MenuItem key={fund.id} value={fund.id}>
+                        {fund.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <TextField
+                    label="Allocation %"
+                    value={item.percentage}
+                    onChange={(event) => updateAllocation(index, 'percentage', event.target.value)}
+                    type="number"
+                    slotProps={{
+                      htmlInput: {
+                        min: minPerFund,
+                        max: maxPerFund,
+                        step: 1,
+                      },
+                    }}
+                    sx={{ width: { xs: '100%', sm: 160 } }}
+                  />
+
+                  <Button color="inherit" onClick={() => removeAllocation(index)}>
+                    Remove
+                  </Button>
+                </Stack>
+              </Paper>
+            );
+          })}
+
+          <Box>
+            <Button variant="outlined" color="success" onClick={addAllocation}>
+              Add Allocation
+            </Button>
+            <Typography
+              variant="caption"
+              color={total === requiredTotal ? 'text.secondary' : 'error.main'}
+              sx={{ display: 'block', mt: 0.75 }}
+            >
+              Total Allocation: {total}% / {requiredTotal}%
+            </Typography>
+          </Box>
+        </Stack>
+
+        {error && <FormHelperText>{error}</FormHelperText>}
+      </FormControl>
+    );
+  }
+
   if (question.type === 'repeatable_group' && question.groupConfig) {
     const items = Array.isArray(value) ? value : [];
     const { fields, minItems, maxItems, addLabel } = question.groupConfig;
