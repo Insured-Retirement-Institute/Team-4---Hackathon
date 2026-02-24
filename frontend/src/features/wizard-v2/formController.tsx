@@ -205,7 +205,7 @@ function getValidationMessage(question: QuestionDefinition, value: AnswerValue):
     return 'Enter a valid email address';
   }
 
-  if (question.type === 'phone' && value.length < 10) {
+  if (question.type === 'phone' && value.replace(/\D/g, '').length < 10) {
     return 'Enter a valid phone number';
   }
 

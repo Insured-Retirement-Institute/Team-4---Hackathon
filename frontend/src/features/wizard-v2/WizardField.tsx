@@ -25,6 +25,13 @@ interface WizardFieldProps {
   question: QuestionDefinition;
 }
 
+function formatPhoneInput(raw: string) {
+  const digits = raw.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 function WizardField({ question }: WizardFieldProps) {
   const { values, errors, setValue } = useWizardV2Controller();
   const value = values[question.id];
@@ -109,14 +116,16 @@ function WizardField({ question }: WizardFieldProps) {
     }
 
     return (
-      <TextField
-        label={field.label}
-        required={field.required}
-        value={typeof fieldValue === 'string' ? fieldValue : ''}
-        onChange={(event) => onChange(event.target.value)}
-        error={Boolean(fieldError)}
-        helperText={fieldError}
-        fullWidth
+        <TextField
+          label={field.label}
+          required={field.required}
+          value={typeof fieldValue === 'string' ? fieldValue : ''}
+          onChange={(event) =>
+            onChange(field.type === 'phone' ? formatPhoneInput(event.target.value) : event.target.value)
+          }
+          error={Boolean(fieldError)}
+          helperText={fieldError}
+          fullWidth
         multiline={field.type === 'long_text'}
         minRows={field.type === 'long_text' ? 3 : undefined}
         type={field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text'}
