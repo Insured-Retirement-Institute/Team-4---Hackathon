@@ -28,6 +28,11 @@ export interface AllocationFund {
   id: string;
   name: string;
   description?: string | null;
+  creditingMethod?: string | null;
+  index?: string | null;
+  termYears?: number | null;
+  hasStrategyFee?: boolean;
+  strategyFeeAnnualPct?: number | null;
 }
 
 export interface AllocationConfig {
