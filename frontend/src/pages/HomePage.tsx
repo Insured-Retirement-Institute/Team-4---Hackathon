@@ -133,22 +133,31 @@ export default function HomePage() {
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <Box
         sx={{
-          bgcolor: 'primary.dark',
+          background: 'radial-gradient(ellipse at 50% 50%, #1a2a4a 0%, #212121 65%)',
           color: 'white',
           py: { xs: 10, md: 14 },
           px: 3,
           position: 'relative',
           overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(ellipse at 70% 50%, rgba(255,255,255,0.04) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          },
         }}
       >
+        {/* Lottie background — fills hero, sits behind content */}
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            opacity: 0.25,
+            '& > div, & canvas': { width: '100% !important', height: '100% !important', display: 'block' },
+          }}
+        >
+          <DotLottieReact
+            src="https://lottie.host/db642e06-8aa1-4693-b9c5-d2c658ca0af8/tjcbncDBx1.lottie"
+            loop
+            autoplay
+          />
+        </Box>
+
         <Container maxWidth="md" sx={{ position: 'relative', textAlign: 'center' }}>
           <Chip
             icon={<AutoAwesomeIcon sx={{ fontSize: '14px !important' }} />}
@@ -156,10 +165,14 @@ export default function HomePage() {
             size="small"
             sx={{
               mb: 3,
-              bgcolor: 'rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.85)',
-              border: '1px solid rgba(255,255,255,0.2)',
+              bgcolor: 'transparent',
+              color: 'secondary.main',
+              border: '1px solid',
+              borderColor: 'secondary.dark',
               fontWeight: 500,
+              '& .MuiChip-icon': {
+                color: 'secondary.main',
+              },
             }}
           />
           <Typography
@@ -183,14 +196,12 @@ export default function HomePage() {
               variant="contained"
               size="large"
               endIcon={<ArrowForwardIcon />}
-              onClick={() => navigate('/ai-chat')}
+              onClick={() => openWidget()}
+              color="secondary"
               disableElevation
               sx={{
-                bgcolor: 'white',
-                color: 'primary.dark',
                 fontWeight: 700,
                 px: 4,
-                '&:hover': { bgcolor: 'grey.100' },
               }}
             >
               Try AI Assistant
@@ -199,12 +210,15 @@ export default function HomePage() {
               variant="outlined"
               size="large"
               onClick={() => navigate('/wizard-v2')}
+              color="secondary"
               sx={{
-                borderColor: 'rgba(255,255,255,0.4)',
-                color: 'white',
+                borderColor: 'secondary.main',
                 fontWeight: 600,
                 px: 4,
-                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.06)' },
+                '&:hover': {
+                  borderColor: 'secondary.main',
+                  bgcolor: 'rgba(25,118,210,0.08)',
+                },
               }}
             >
               Open Wizard
@@ -318,7 +332,7 @@ export default function HomePage() {
                   <Typography
                     variant="h3"
                     fontWeight={800}
-                    sx={{ color: 'primary.light', lineHeight: 1, minWidth: 56 }}
+                    sx={{ color: 'secondary.main', lineHeight: 1, minWidth: 56 }}
                   >
                     {step.step}
                   </Typography>
@@ -354,7 +368,8 @@ export default function HomePage() {
               variant="contained"
               size="large"
               endIcon={<SmartToyIcon />}
-              onClick={() => navigate('/ai-chat')}
+              onClick={() => openWidget()}
+              color="secondary"
               disableElevation
               sx={{ fontWeight: 700, px: 4 }}
             >
@@ -365,7 +380,16 @@ export default function HomePage() {
               size="large"
               endIcon={<FormatListBulletedIcon />}
               onClick={() => navigate('/wizard-v2')}
-              sx={{ fontWeight: 600, px: 4 }}
+              color="secondary"
+              sx={{
+                fontWeight: 600,
+                px: 4,
+                borderColor: 'secondary.main',
+                '&:hover': {
+                  borderColor: 'secondary.main',
+                  bgcolor: 'rgba(25,118,210,0.08)',
+                },
+              }}
             >
               Guided Wizard
             </Button>
