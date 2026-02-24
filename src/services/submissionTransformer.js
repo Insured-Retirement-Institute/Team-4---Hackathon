@@ -9,7 +9,7 @@ function encryptSSN(raw) {
   const digits = String(raw).replace(/\D/g, '');
   if (digits.length === 0) return null;
   const hint = digits.slice(-4);
-  return { encrypted: true, value: raw, hint };
+  return { isEncrypted: true, value: raw, hint };
 }
 
 function yesNoToBool(val) {
@@ -40,8 +40,8 @@ function buildSignatureRecord(signatureValue) {
     attestation: {
       signedAt: new Date().toISOString(),
       method: 'drawn',
-      agentWitnessed: false,
-      witnessAgentNpn: null,
+      isProducerWitnessed: false,
+      witnessProducerNpn: null,
       ipAddress: null,
       userAgent: null,
     },
@@ -51,15 +51,15 @@ function buildSignatureRecord(signatureValue) {
 function buildPersonParty(source, prefix) {
   return {
     firstName: source[`${prefix}_first_name`] || '',
-    middleInitial: source[`${prefix}_middle_initial`] || null,
+    middleName: source[`${prefix}_middle_initial`] || null,
     lastName: source[`${prefix}_last_name`] || '',
     dateOfBirth: source[`${prefix}_dob`] || '',
     gender: source[`${prefix}_gender`] || '',
-    ssn: encryptSSN(source[`${prefix}_ssn`]),
+    taxId: encryptSSN(source[`${prefix}_ssn`]),
     address: buildAddress(source, prefix),
     phone: source[`${prefix}_phone`] || '',
     email: source[`${prefix}_email`] || null,
-    usCitizen: yesNoToBool(source[`${prefix}_us_citizen`]) === true,
+    isUsCitizen: yesNoToBool(source[`${prefix}_us_citizen`]) === true,
   };
 }
 
@@ -86,7 +86,7 @@ function buildEnvelope(product, context) {
     },
     submissionMode: product.submissionMode || 'pdf_fill',
     submissionSource: context.submissionSource || 'web',
-    submittingAgentNpn: context.submittingAgentNpn || null,
+    submittingProducerNpn: context.submittingProducerNpn || null,
     ipAddress: context.ipAddress || null,
     userAgent: context.userAgent || null,
   };
@@ -112,20 +112,20 @@ function buildJointAnnuitant(answers) {
 
 function buildOwner(answers) {
   if (yesNoToBool(answers.owner_same_as_annuitant) === true) {
-    return { sameAsAnnuitant: true };
+    return { isSameAsAnnuitant: true };
   }
 
   const ownerType = answers.owner_type;
 
   if (ownerType === 'trust' || ownerType === 'corporation') {
     return {
-      sameAsAnnuitant: false,
+      isSameAsAnnuitant: false,
       type: 'entity',
       entity: {
         entityName: answers.owner_trust_name || '',
         entityType: ownerType === 'corporation' ? 'corporation' : 'trust',
         entityDate: ownerType === 'trust' ? (answers.owner_trust_date || null) : null,
-        tin: encryptSSN(answers.owner_ssn_tin),
+        taxId: encryptSSN(answers.owner_ssn_tin),
         address: buildAddress(answers, 'owner'),
         phone: answers.owner_phone || '',
         email: answers.owner_email || null,
@@ -135,19 +135,19 @@ function buildOwner(answers) {
 
   // Default: individual
   return {
-    sameAsAnnuitant: false,
+    isSameAsAnnuitant: false,
     type: 'individual',
     person: {
       firstName: answers.owner_first_name || '',
-      middleInitial: answers.owner_middle_initial || null,
+      middleName: answers.owner_middle_initial || null,
       lastName: answers.owner_last_name || '',
       dateOfBirth: answers.owner_dob || '',
       gender: answers.owner_gender || '',
-      ssn: encryptSSN(answers.owner_ssn_tin),
+      taxId: encryptSSN(answers.owner_ssn_tin),
       address: buildAddress(answers, 'owner'),
       phone: answers.owner_phone || '',
       email: answers.owner_email || null,
-      usCitizen: true, // owner citizenship handled in identity verification
+      isUsCitizen: true, // owner citizenship handled in identity verification
     },
   };
 }
@@ -179,9 +179,9 @@ function buildBeneficiaries(answers, groupId) {
     entityType: item.bene_entity_type || 'individual',
     distributionMethod: item.bene_distribution_method || 'per_stirpes',
     firstName: item.bene_first_name || '',
-    middleInitial: item.bene_middle_initial || null,
+    middleName: item.bene_middle_initial || null,
     lastName: item.bene_last_name || '',
-    ssn: encryptSSN(item.bene_ssn),
+    taxId: encryptSSN(item.bene_ssn),
     dateOfBirth: item.bene_dob || null,
     relationship: item.bene_relationship || 'other',
     address: {
@@ -329,15 +329,15 @@ function buildTransfers(answers) {
     },
     surrenderingParties: {
       ownerName: inst.surrendering_owner_name || '',
-      ownerSsn: encryptSSN(inst.surrendering_owner_ssn),
+      ownerTaxId: encryptSSN(inst.surrendering_owner_ssn),
       jointOwnerName: inst.surrendering_joint_owner_name || null,
-      jointOwnerSsn: encryptSSN(inst.surrendering_joint_owner_ssn),
+      jointOwnerTaxId: encryptSSN(inst.surrendering_joint_owner_ssn),
       annuitantName: inst.surrendering_annuitant_name || null,
-      annuitantSsn: encryptSSN(inst.surrendering_annuitant_ssn),
+      annuitantTaxId: encryptSSN(inst.surrendering_annuitant_ssn),
       jointAnnuitantName: inst.surrendering_joint_annuitant_name || null,
-      jointAnnuitantSsn: encryptSSN(inst.surrendering_joint_annuitant_ssn),
+      jointAnnuitantTaxId: encryptSSN(inst.surrendering_joint_annuitant_ssn),
       contingentAnnuitantName: inst.surrendering_contingent_annuitant_name || null,
-      contingentAnnuitantSsn: encryptSSN(inst.surrendering_contingent_annuitant_ssn),
+      contingentAnnuitantTaxId: encryptSSN(inst.surrendering_contingent_annuitant_ssn),
     },
     transferInstructions: {
       scope: inst.transfer_scope || 'full',
@@ -348,12 +348,12 @@ function buildTransfers(answers) {
       specificDate: inst.transfer_specific_date || null,
     },
     acknowledgments: {
-      rmdAcknowledged: inst.rmd_acknowledged != null ? yesNoToBool(inst.rmd_acknowledged) : null,
-      partial1035Acknowledged: inst.partial_1035_acknowledged != null ? yesNoToBool(inst.partial_1035_acknowledged) : null,
-      tsa403bTransferAcknowledged: inst.tsa_403b_transfer_acknowledged != null ? yesNoToBool(inst.tsa_403b_transfer_acknowledged) : null,
-      generalDisclosuresAcknowledged: yesNoToBool(inst.general_disclosures_acknowledged) === true,
-      backupWithholding: yesNoToBool(inst.backup_withholding) === true,
-      taxpayerCertificationAcknowledged: yesNoToBool(inst.taxpayer_certification_acknowledged) === true,
+      isRmdAcknowledged: inst.rmd_acknowledged != null ? yesNoToBool(inst.rmd_acknowledged) : null,
+      isPartial1035Acknowledged: inst.partial_1035_acknowledged != null ? yesNoToBool(inst.partial_1035_acknowledged) : null,
+      isTsa403bTransferAcknowledged: inst.tsa_403b_transfer_acknowledged != null ? yesNoToBool(inst.tsa_403b_transfer_acknowledged) : null,
+      isGeneralDisclosuresAcknowledged: yesNoToBool(inst.general_disclosures_acknowledged) === true,
+      isBackupWithholding: yesNoToBool(inst.backup_withholding) === true,
+      isTaxpayerCertificationAcknowledged: yesNoToBool(inst.taxpayer_certification_acknowledged) === true,
     },
     signatures: {
       ownerSignature: buildSignatureRecord(inst.transfer_owner_signature),
@@ -416,8 +416,8 @@ function buildDisclosures(product, answers) {
         title: disc.title || '',
         acknowledgmentType: ack.type || 'boolean',
         acknowledgmentLabel: ack.label || '',
-        viewRequired: disc.viewRequired || false,
-        viewCompleted: disc.viewRequired ? true : true, // assume completed if submitted
+        isViewRequired: disc.viewRequired || false,
+        isViewCompleted: disc.viewRequired ? true : true, // assume completed if submitted
         acknowledgedAt: new Date().toISOString(),
         signature: buildSignatureRecord(
           ack.type === 'boolean' ? null : ackValue
@@ -426,8 +426,8 @@ function buildDisclosures(product, answers) {
           attestation: {
             signedAt: new Date().toISOString(),
             method: 'clicked',
-            agentWitnessed: false,
-            witnessAgentNpn: null,
+            isProducerWitnessed: false,
+            witnessProducerNpn: null,
             ipAddress: null,
             userAgent: null,
           },
@@ -441,8 +441,8 @@ function buildDisclosures(product, answers) {
 
 function buildApplicationSignatures(answers) {
   return {
-    ownerStatementAcknowledged: yesNoToBool(answers.owner_statement_acknowledged) === true,
-    fraudWarningAcknowledged: yesNoToBool(answers.fraud_warning_acknowledged) === true,
+    isOwnerStatementAcknowledged: yesNoToBool(answers.owner_statement_acknowledged) === true,
+    isFraudWarningAcknowledged: yesNoToBool(answers.fraud_warning_acknowledged) === true,
     ownerSignature: buildSignatureRecord(answers.owner_signature),
     ownerSignatureDate: answers.date_signed || '',
     jointOwnerSignature: buildSignatureRecord(answers.joint_owner_signature),
@@ -455,13 +455,13 @@ function buildApplicationSignatures(answers) {
   };
 }
 
-function buildAgentCertification(answers) {
-  const agents = [];
+function buildProducerCertification(answers) {
+  const producers = [];
   if (Array.isArray(answers.writing_agents)) {
     answers.writing_agents.forEach((agent, i) => {
-      agents.push({
+      producers.push({
         index: i + 1,
-        agentNumber: agent.agent_number || '',
+        producerNumber: agent.agent_number || '',
         npn: null, // NPN not collected in current product definition
         fullName: agent.agent_full_name || '',
         email: agent.agent_email || '',
@@ -475,12 +475,12 @@ function buildAgentCertification(answers) {
   }
 
   return {
-    agentAwareOfExistingInsurance: yesNoToBool(answers.agent_replacement_existing) === true,
-    agentBelievesReplacement: yesNoToBool(answers.agent_replacement_replacing) === true,
+    isProducerAwareOfExistingInsurance: yesNoToBool(answers.agent_replacement_existing) === true,
+    isProducerBelievesReplacement: yesNoToBool(answers.agent_replacement_replacing) === true,
     replacingCompanyName: yesNoToBool(answers.agent_replacement_replacing) === true
       ? (answers.agent_replacement_company || null)
       : null,
-    writingAgents: agents,
+    producers,
   };
 }
 
@@ -492,7 +492,7 @@ function buildAgentCertification(answers) {
  * Transform raw answers into the canonical ApplicationSubmission payload.
  * @param {object} product - The full application definition
  * @param {object} answers - The raw answer map
- * @param {object} context - { applicationId, submittedAt, submittingAgentNpn, ipAddress, userAgent }
+ * @param {object} context - { applicationId, submittedAt, submittingProducerNpn, ipAddress, userAgent }
  * @returns {object} ApplicationSubmission
  */
 function transformSubmission(product, answers, context = {}) {
@@ -512,7 +512,7 @@ function transformSubmission(product, answers, context = {}) {
     replacement: buildReplacement(answers),
     disclosures: buildDisclosures(product, answers),
     applicationSignatures: buildApplicationSignatures(answers),
-    agentCertification: buildAgentCertification(answers),
+    producerCertification: buildProducerCertification(answers),
   };
 }
 

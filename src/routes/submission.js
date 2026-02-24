@@ -10,6 +10,18 @@ const { validateSubmission } = require('../services/submissionValidator');
 // POST /application/:applicationId/submit
 router.post('/:applicationId/submit', async (req, res) => {
   try {
+    const { productId, answers: bodyAnswers, metadata: bodyMetadata } = req.body || {};
+
+    if (!productId || !bodyAnswers) {
+      return res.status(400).json({
+        code: 'BAD_REQUEST',
+        message: 'Both productId and answers are required in the request body.',
+        details: null
+      });
+    }
+
+    const metadata = bodyMetadata || {};
+
     const application = await getApplicationById(req.params.applicationId);
 
     if (!application) {
@@ -28,17 +40,15 @@ router.post('/:applicationId/submit', async (req, res) => {
       });
     }
 
-    const product = getProduct(application.productId);
+    const product = getProduct(productId);
     if (!product) {
       return res.status(404).json({
         code: 'PRODUCT_NOT_FOUND',
-        message: `No application definition found for product ID '${application.productId}'.`,
+        message: `No application definition found for product ID '${productId}'.`,
         details: null
       });
     }
 
-    const bodyAnswers = (req.body && req.body.answers) || {};
-    const metadata = (req.body && req.body.metadata) || {};
     const mergedAnswers = { ...application.answers, ...bodyAnswers };
 
     // 1. Run full answer validation
@@ -53,10 +63,10 @@ router.post('/:applicationId/submit', async (req, res) => {
     const payload = transformSubmission(product, mergedAnswers, {
       applicationId: application.id,
       submittedAt: now.toISOString(),
-      submittingAgentNpn: (req.body && req.body.agentNpn) || null,
-      ipAddress: req.ip || null,
-      userAgent: req.get('User-Agent') || null,
-      submissionSource: (req.body && req.body.submissionSource) || 'web',
+      submittingProducerNpn: metadata.agentId || null,
+      ipAddress: metadata.ipAddress || req.ip || null,
+      userAgent: metadata.userAgent || req.get('User-Agent') || null,
+      submissionSource: metadata.submissionSource || 'web',
     });
 
     // 3. Run submission-level business validation
@@ -88,7 +98,6 @@ router.post('/:applicationId/submit', async (req, res) => {
 
     // 5. Return confirmation response
     res.json({
-      id: submission.id,
       confirmationNumber: submission.confirmationNumber,
       status: submission.status,
       submittedAt: submission.submittedAt,

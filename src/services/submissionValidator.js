@@ -9,7 +9,7 @@ function validateSubmission(submission) {
   validateBeneficiaryPercentages(submission.ownerBeneficiaries, 'ownerBeneficiaries', errors);
   validateBeneficiaryPercentages(submission.annuitantBeneficiaries, 'annuitantBeneficiaries', errors);
   validateAllocationPercentages(submission.investmentAllocations, errors);
-  validateWritingAgentCommissions(submission.agentCertification, errors);
+  validateWritingAgentCommissions(submission.producerCertification, errors);
   validateTransferCount(submission.transfers, submission.funding, errors);
   validateEncryptedValues(submission, errors);
   validateSignatureDates(submission, errors);
@@ -59,13 +59,13 @@ function validateAllocationPercentages(allocations, errors) {
   }
 }
 
-function validateWritingAgentCommissions(agentCert, errors) {
-  if (!agentCert || !Array.isArray(agentCert.writingAgents) || agentCert.writingAgents.length === 0) return;
+function validateWritingAgentCommissions(producerCert, errors) {
+  if (!producerCert || !Array.isArray(producerCert.producers) || producerCert.producers.length === 0) return;
 
-  const sum = agentCert.writingAgents.reduce((s, a) => s + (a.commissionPercentage || 0), 0);
+  const sum = producerCert.producers.reduce((s, a) => s + (a.commissionPercentage || 0), 0);
   if (sum !== 100) {
     errors.push({
-      field: 'agentCertification.writingAgents',
+      field: 'producerCertification.producers',
       rule: 'commission_percentage_sum',
       message: `Writing agent commission percentages must sum to 100 (current: ${sum})`,
     });
@@ -93,47 +93,47 @@ function validateTransferCount(transfers, funding, errors) {
 function validateEncryptedValues(submission, errors) {
   const paths = [];
 
-  // Annuitant SSN
-  checkEncrypted(submission.annuitant?.ssn, 'annuitant.ssn', paths);
+  // Annuitant taxId
+  checkEncrypted(submission.annuitant?.taxId, 'annuitant.taxId', paths);
 
-  // Joint annuitant SSN
+  // Joint annuitant taxId
   if (submission.jointAnnuitant) {
-    checkEncrypted(submission.jointAnnuitant.ssn, 'jointAnnuitant.ssn', paths);
+    checkEncrypted(submission.jointAnnuitant.taxId, 'jointAnnuitant.taxId', paths);
   }
 
-  // Owner SSN/TIN
-  if (submission.owner && !submission.owner.sameAsAnnuitant) {
+  // Owner taxId
+  if (submission.owner && !submission.owner.isSameAsAnnuitant) {
     if (submission.owner.type === 'individual' && submission.owner.person) {
-      checkEncrypted(submission.owner.person.ssn, 'owner.person.ssn', paths);
+      checkEncrypted(submission.owner.person.taxId, 'owner.person.taxId', paths);
     } else if (submission.owner.type === 'entity' && submission.owner.entity) {
-      checkEncrypted(submission.owner.entity.tin, 'owner.entity.tin', paths);
+      checkEncrypted(submission.owner.entity.taxId, 'owner.entity.taxId', paths);
     }
   }
 
-  // Joint owner SSN
+  // Joint owner taxId
   if (submission.jointOwner) {
-    checkEncrypted(submission.jointOwner.ssn, 'jointOwner.ssn', paths);
+    checkEncrypted(submission.jointOwner.taxId, 'jointOwner.taxId', paths);
   }
 
-  // Beneficiary SSNs
+  // Beneficiary taxIds
   for (const group of ['ownerBeneficiaries', 'annuitantBeneficiaries']) {
     if (Array.isArray(submission[group])) {
       submission[group].forEach((b, i) => {
-        if (b.ssn) checkEncrypted(b.ssn, `${group}[${i}].ssn`, paths);
+        if (b.taxId) checkEncrypted(b.taxId, `${group}[${i}].taxId`, paths);
       });
     }
   }
 
-  // Transfer party SSNs
+  // Transfer party taxIds
   if (Array.isArray(submission.transfers)) {
     submission.transfers.forEach((t, i) => {
       const sp = t.surrenderingParties;
       if (sp) {
-        checkEncrypted(sp.ownerSsn, `transfers[${i}].surrenderingParties.ownerSsn`, paths);
-        if (sp.jointOwnerSsn) checkEncrypted(sp.jointOwnerSsn, `transfers[${i}].surrenderingParties.jointOwnerSsn`, paths);
-        if (sp.annuitantSsn) checkEncrypted(sp.annuitantSsn, `transfers[${i}].surrenderingParties.annuitantSsn`, paths);
-        if (sp.jointAnnuitantSsn) checkEncrypted(sp.jointAnnuitantSsn, `transfers[${i}].surrenderingParties.jointAnnuitantSsn`, paths);
-        if (sp.contingentAnnuitantSsn) checkEncrypted(sp.contingentAnnuitantSsn, `transfers[${i}].surrenderingParties.contingentAnnuitantSsn`, paths);
+        checkEncrypted(sp.ownerTaxId, `transfers[${i}].surrenderingParties.ownerTaxId`, paths);
+        if (sp.jointOwnerTaxId) checkEncrypted(sp.jointOwnerTaxId, `transfers[${i}].surrenderingParties.jointOwnerTaxId`, paths);
+        if (sp.annuitantTaxId) checkEncrypted(sp.annuitantTaxId, `transfers[${i}].surrenderingParties.annuitantTaxId`, paths);
+        if (sp.jointAnnuitantTaxId) checkEncrypted(sp.jointAnnuitantTaxId, `transfers[${i}].surrenderingParties.jointAnnuitantTaxId`, paths);
+        if (sp.contingentAnnuitantTaxId) checkEncrypted(sp.contingentAnnuitantTaxId, `transfers[${i}].surrenderingParties.contingentAnnuitantTaxId`, paths);
       }
     });
   }
@@ -142,13 +142,13 @@ function validateEncryptedValues(submission, errors) {
     errors.push({
       field: path,
       rule: 'ssn_encrypted',
-      message: `EncryptedValue at ${path} must have encrypted: true`,
+      message: `EncryptedValue at ${path} must have isEncrypted: true`,
     });
   }
 }
 
 function checkEncrypted(val, path, failures) {
-  if (val && typeof val === 'object' && val.encrypted !== true) {
+  if (val && typeof val === 'object' && val.isEncrypted !== true) {
     failures.push(path);
   }
 }
@@ -169,14 +169,14 @@ function validateSignatureDates(submission, errors) {
     });
   }
 
-  // Writing agent signature dates
-  if (submission.agentCertification?.writingAgents) {
-    submission.agentCertification.writingAgents.forEach((agent, i) => {
-      if (agent.signatureDate && agent.signatureDate !== submissionDate) {
+  // Producer signature dates
+  if (submission.producerCertification?.producers) {
+    submission.producerCertification.producers.forEach((producer, i) => {
+      if (producer.signatureDate && producer.signatureDate !== submissionDate) {
         errors.push({
-          field: `agentCertification.writingAgents[${i}].signatureDate`,
+          field: `producerCertification.producers[${i}].signatureDate`,
           rule: 'signature_date_equals_submission',
-          message: `Agent signature date (${agent.signatureDate}) must equal submission date (${submissionDate})`,
+          message: `Producer signature date (${producer.signatureDate}) must equal submission date (${submissionDate})`,
         });
       }
     });
