@@ -91,7 +91,8 @@ export function useWidgetSync() {
           // Build a friendly summary
           const fieldList = Object.entries(newFields)
             .slice(0, 15)
-            .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+            .filter(([k, v]) => k && v != null)
+            .map(([k, v]) => `${String(k).replace(/_/g, ' ')}: ${String(v)}`)
             .join(', ');
           const userMsg = `I've updated some fields in the form: ${fieldList}`;
 
@@ -106,11 +107,11 @@ export function useWidgetSync() {
           })
             .then((r) => r.json())
             .then((data) => {
-              instance._addMessage('assistant', data.reply);
+              instance._addMessage('assistant', data.reply || 'Got it, fields updated.');
               instance._setTyping(false);
               instance._setInputEnabled(true);
               if (data.phase) instance._setPhase(data.phase);
-              instance._updateProgress(data);
+              try { instance._updateProgress(data); } catch (_) { /* ignore progress update errors */ }
 
               // Track synced fields
               for (const [k, v] of Object.entries(newFields)) {
