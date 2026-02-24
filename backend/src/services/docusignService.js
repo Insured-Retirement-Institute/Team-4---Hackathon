@@ -81,24 +81,19 @@ async function startEmbeddedSigning({ applicationId, signerEmail, signerName }) 
   // If these don't appear, try straight apostrophes:
   // - "Owner's Signature"
   // - "Joint Owner's Signature"
-  const ownerSignHere = docusign.SignHere.constructFromObject({
-    documentId: "1",
-    anchorString: "Owner’s Signature",
-    anchorUnits: "pixels",
-    anchorXOffset: "0",
-    anchorYOffset: "35",
-  });
-
-  const jointOwnerSignHere = docusign.SignHere.constructFromObject({
-    documentId: "1",
-    anchorString: "Joint Owner’s Signature",
-    anchorUnits: "pixels",
-    anchorXOffset: "0",
-    anchorYOffset: "35",
-  });
+const ownerSignHere = docusign.SignHere.constructFromObject({
+  documentId: "1",
+  anchorString: "Owner’s Signature",
+  anchorUnits: "pixels",
+  anchorYOffset: "-10",
+  anchorMatchWholeWord: "true",
+  anchorIgnoreIfNotPresent: "true",
+  anchorMatchCount: "1",
+  anchorMatchIndex: "2",
+});
 
   const tabs = docusign.Tabs.constructFromObject({
-    signHereTabs: [ownerSignHere, jointOwnerSignHere],
+    signHereTabs: [ownerSignHere],
   });
 
   const signer = docusign.Signer.constructFromObject({
