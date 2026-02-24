@@ -130,7 +130,7 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getApplication('midland-national-fixed-annuity-v1')
+    getApplication('midland-fixed-annuity-001')
       .then((app) => console.log('Application definition:', app))
       .catch((err) => console.error('Failed to load application:', err));
   }, []);

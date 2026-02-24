@@ -2,7 +2,7 @@ import type { ApplicationDefinition, AnswerMap } from '../types/application';
 
 export type { ApplicationDefinition, AnswerMap };
 
-const BASE = '/application';
+const BASE = 'https://y5s8xyzi3v.us-east-1.awsapprunner.com/application';
 
 // ── GET /application/:productId ───────────────────────────────────────────────
 
