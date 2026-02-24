@@ -40,26 +40,27 @@ const greenWizardTheme = createTheme({
   },
 });
 
-type AnswerMap = Record<string, string | boolean>;
+type AnswerMap = Record<string, string | boolean | Record<string, string | boolean>[]>;
 
-function asString(value: string | boolean | undefined) {
+function asString(value: string | boolean | Record<string, string | boolean>[] | undefined) {
   if (typeof value === 'string') return value.trim();
   return '';
 }
 
-function asBool(value: string | boolean | undefined) {
+function asBool(value: string | boolean | Record<string, string | boolean>[] | undefined) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') return value.toLowerCase() === 'yes' || value.toLowerCase() === 'true';
   return false;
 }
 
-function asNumber(value: string | boolean | undefined) {
+function asNumber(value: string | boolean | Record<string, string | boolean>[] | undefined) {
   if (typeof value === 'boolean') return 0;
+  if (Array.isArray(value)) return 0;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function encryptedValue(raw: string | boolean | undefined) {
+function encryptedValue(raw: string | boolean | Record<string, string | boolean>[] | undefined) {
   const plain = asString(raw);
   const digits = plain.replace(/\D/g, '');
   const hint = digits.slice(-4);
@@ -70,7 +71,7 @@ function encryptedValue(raw: string | boolean | undefined) {
   };
 }
 
-function signatureRecord(signatureToken: string | boolean | undefined) {
+function signatureRecord(signatureToken: string | boolean | Record<string, string | boolean>[] | undefined) {
   return {
     capturedImage: asString(signatureToken) || null,
     attestation: {
@@ -378,7 +379,13 @@ function ReviewPanel() {
           <Stack spacing={1.25}>
             {page.questions.map((question) => {
               const rawValue = values[question.id];
-              const displayValue = typeof rawValue === 'boolean' ? (rawValue ? 'Yes' : 'No') : rawValue || 'Not provided';
+              const displayValue = Array.isArray(rawValue)
+                ? `${rawValue.length} item${rawValue.length === 1 ? '' : 's'}`
+                : typeof rawValue === 'boolean'
+                ? rawValue
+                  ? 'Yes'
+                  : 'No'
+                : rawValue || 'Not provided';
 
               return (
                 <Stack key={question.id} direction="row" justifyContent="space-between" spacing={2}>
@@ -487,7 +494,18 @@ function WizardPageContent() {
 
                 <Grid container spacing={2}>
                   {currentPage.questions.map((question) => (
-                    <Grid key={question.id} size={{ xs: 12, md: question.type === 'long_text' ? 12 : 6 }}>
+                    <Grid
+                      key={question.id}
+                      size={{
+                        xs: 12,
+                        md:
+                          question.type === 'long_text'
+                          || question.type === 'repeatable_group'
+                          || question.type === 'allocation_table'
+                            ? 12
+                            : 6,
+                      }}
+                    >
                       <WizardField question={question} />
                     </Grid>
                   ))}

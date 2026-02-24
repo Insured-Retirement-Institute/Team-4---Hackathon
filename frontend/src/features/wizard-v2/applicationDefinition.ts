@@ -32,6 +32,12 @@ export interface QuestionDefinition {
   options?: QuestionOption[];
   min?: number;
   max?: number;
+  groupConfig?: {
+    minItems: number;
+    maxItems: number;
+    addLabel?: string;
+    fields: QuestionDefinition[];
+  };
 }
 
 export interface PageDefinition {
@@ -65,6 +71,12 @@ interface RawQuestion {
   required?: boolean;
   options?: RawOption[] | null;
   order?: number;
+  groupConfig?: {
+    minItems: number;
+    maxItems: number;
+    addLabel?: string;
+    fields: RawQuestion[];
+  } | null;
 }
 
 interface RawPage {
@@ -112,6 +124,28 @@ function normalizeQuestionType(type: string): QuestionType {
   return 'short_text';
 }
 
+function normalizeQuestion(question: RawQuestion): QuestionDefinition {
+  return {
+    id: question.id,
+    label: question.label,
+    type: normalizeQuestionType(question.type),
+    required: question.required,
+    placeholder: question.placeholder ?? undefined,
+    hint: question.hint ?? undefined,
+    options: question.options ?? undefined,
+    groupConfig: question.groupConfig
+      ? {
+          minItems: question.groupConfig.minItems,
+          maxItems: question.groupConfig.maxItems,
+          addLabel: question.groupConfig.addLabel,
+          fields: [...question.groupConfig.fields]
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .map((field) => normalizeQuestion(field)),
+        }
+      : undefined,
+  };
+}
+
 function normalizeApplicationDefinition(raw: RawApplicationDefinition): ApplicationDefinition {
   const pages = [...raw.pages]
     .filter((page) => page.pageType !== 'disclosure')
@@ -122,15 +156,7 @@ function normalizeApplicationDefinition(raw: RawApplicationDefinition): Applicat
       description: page.description ?? null,
       questions: [...(page.questions ?? [])]
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((question) => ({
-          id: question.id,
-          label: question.label,
-          type: normalizeQuestionType(question.type),
-          required: question.required,
-          placeholder: question.placeholder ?? undefined,
-          hint: question.hint ?? undefined,
-          options: question.options ?? undefined,
-        })),
+        .map((question) => normalizeQuestion(question)),
     }));
 
   return {

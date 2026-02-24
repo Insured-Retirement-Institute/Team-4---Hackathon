@@ -1,7 +1,8 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import { APPLICATION_DEFINITION, type PageDefinition, type QuestionDefinition } from './applicationDefinition';
 
-type AnswerValue = string | boolean;
+type GroupItemValue = Record<string, string | boolean>;
+type AnswerValue = string | boolean | GroupItemValue[];
 
 type FormValues = Record<string, AnswerValue>;
 
@@ -20,6 +21,17 @@ const WizardV2Context = createContext<WizardV2Controller | undefined>(undefined)
 
 function getInitialValues(questions: QuestionDefinition[]): FormValues {
   return questions.reduce<FormValues>((acc, question) => {
+    if (question.type === 'repeatable_group' && question.groupConfig) {
+      const initialItemsCount = Math.max(1, question.groupConfig.minItems);
+      acc[question.id] = Array.from({ length: initialItemsCount }, () =>
+        question.groupConfig!.fields.reduce<GroupItemValue>((item, field) => {
+          item[field.id] = field.type === 'boolean' ? false : '';
+          return item;
+        }, {}),
+      );
+      return acc;
+    }
+
     acc[question.id] = question.type === 'boolean' ? false : '';
     return acc;
   }, {});
@@ -114,7 +126,19 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
 
   if (question.type === 'signature') return 'sig_token_alex_patel';
   if (question.type === 'allocation_table') return '{"fixed-account":100}';
-  if (question.type === 'repeatable_group') return '[{"bene_first_name":"Taylor","bene_type":"primary","bene_percentage":100}]';
+  if (question.type === 'repeatable_group') {
+    const fields = question.groupConfig?.fields ?? [];
+    const item = fields.reduce<GroupItemValue>((acc, field) => {
+      const value = createDummyValue(field);
+      if (typeof value === 'string' || typeof value === 'boolean') {
+        acc[field.id] = value;
+      } else {
+        acc[field.id] = '';
+      }
+      return acc;
+    }, {});
+    return [item];
+  }
 
   if (id.includes('first_name')) return 'Alex';
   if (id.includes('middle_initial')) return 'R';
@@ -143,11 +167,32 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
 
 function isEmptyValue(value: AnswerValue) {
   if (typeof value === 'boolean') return false;
+  if (Array.isArray(value)) return value.length === 0;
 
   return !value.trim();
 }
 
 function getValidationMessage(question: QuestionDefinition, value: AnswerValue): string | null {
+  if (question.type === 'repeatable_group' && question.groupConfig) {
+    const items = Array.isArray(value) ? value : [];
+    const minItems = Math.max(1, question.groupConfig.minItems);
+    if (items.length < minItems) {
+      return `Add at least ${minItems} item${minItems > 1 ? 's' : ''}`;
+    }
+
+    const missingRequired = items.some((item) =>
+      question.groupConfig!.fields.some((field) => {
+        if (!field.required || field.type === 'boolean') return false;
+        const fieldValue = item[field.id];
+        return typeof fieldValue !== 'string' || !fieldValue.trim();
+      }),
+    );
+
+    if (missingRequired) {
+      return 'Complete all required fields in each item';
+    }
+  }
+
   if (question.required && question.type !== 'boolean' && isEmptyValue(value)) {
     return 'This field is required';
   }
