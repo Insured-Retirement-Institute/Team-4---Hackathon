@@ -1,0 +1,807 @@
+{
+  "mappingVersion": "1.0.0",
+  "generatedAt": "2026-02-24T00:00:00Z",
+  "description": "Maps app-sample-v2.json submission data to Midland National Fixed Annuity PDF fillable fields",
+  "pdfFileName": "midland-national-fixed-annuity-v1.pdf",
+  "mappingStructure": {
+    "ANNUITANT": [
+      {
+        "jsonPath": "annuitant.firstName",
+        "pdfField": "First Name - 22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.middleName",
+        "pdfField": "MI - 22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "annuitant.lastName",
+        "pdfField": "Last Name_1 22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.taxId.value",
+        "pdfField": "Social Security NumberTIN - 22651",
+        "dataType": "text",
+        "required": true,
+        "note": "Extract tax ID if encrypted, otherwise use hint"
+      },
+      {
+        "jsonPath": "annuitant.dateOfBirth",
+        "pdfField": ["Birth Date1.1 - 22651", "Birth Date1.2 - 22651", "Birth Date1.3 - 22651"],
+        "dataType": "date",
+        "format": "MM/DD/YYYY split into 3 fields",
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.gender",
+        "pdfField": "Annuitant Gender - 22651",
+        "dataType": "radio",
+        "options": {"male": "M", "female": "F"},
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.isUsCitizen",
+        "pdfField": "Annuitant Citizen - 22651",
+        "dataType": "radio",
+        "options": {"true": "Yes", "false": "No"},
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.address.street1",
+        "pdfField": "Street Address PO Boxes are not allowed1 - 22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.address.city",
+        "pdfField": "City-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.address.state",
+        "pdfField": "State-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.address.zip",
+        "pdfField": "Zip-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "annuitant.phone",
+        "pdfField": ["Phone1.1-22651", "Phone1.2-22651", "Phone1.3-22651"],
+        "dataType": "phone",
+        "format": "Phone split by segments (XXX-XXX-XXXX)",
+        "required": false
+      },
+      {
+        "jsonPath": "annuitant.email",
+        "pdfField": "Email 1-22651",
+        "dataType": "text",
+        "required": false
+      }
+    ],
+    "JOINT_ANNUITANT": [
+      {
+        "jsonPath": "jointAnnuitant.firstName",
+        "pdfField": "First Name_2-22651",
+        "dataType": "text",
+        "required": false,
+        "conditional": "if jointAnnuitant is not null"
+      },
+      {
+        "jsonPath": "jointAnnuitant.middleName",
+        "pdfField": "MI_2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.lastName",
+        "pdfField": "Last Name_2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.taxId.value",
+        "pdfField": "Social Security NumberTIN_2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.dateOfBirth",
+        "pdfField": ["Birth Date2.1-22651", "Birth Date2.2-22651", "Birth Date2.3-22651"],
+        "dataType": "date",
+        "format": "MM/DD/YYYY split into 3 fields",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.gender",
+        "pdfField": "JointAnnuitant Gender - 22651",
+        "dataType": "radio",
+        "options": {"male": "M", "female": "F"},
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.isUsCitizen",
+        "pdfField": "JointAnnuitant Citizen - 22651",
+        "dataType": "radio",
+        "options": {"true": "Yes", "false": "No"},
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.address.street1",
+        "pdfField": "Street Address PO Boxes are not allowed1_2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.address.city",
+        "pdfField": "City_2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.address.state",
+        "pdfField": "State_2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.address.zip",
+        "pdfField": "Zip_2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.phone",
+        "pdfField": ["Phone_2.1-22651", "Phone_2.2-22651", "Phone_2.3-22651"],
+        "dataType": "phone",
+        "format": "Phone split by segments",
+        "required": false
+      },
+      {
+        "jsonPath": "jointAnnuitant.isAddressSameAsAnnuitant",
+        "pdfField": "Address and Phone Number Same as Annuitant-22651",
+        "dataType": "checkbox",
+        "required": false
+      }
+    ],
+    "OWNER": [
+      {
+        "jsonPath": "owner.person.firstName",
+        "pdfField": "First Name_3-22651",
+        "dataType": "text",
+        "required": true,
+        "conditional": "if owner.type === 'individual'"
+      },
+      {
+        "jsonPath": "owner.person.middleName",
+        "pdfField": "MI_3-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "owner.person.lastName",
+        "pdfField": "Last Name_3-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "owner.person.taxId.value",
+        "pdfField": "Social Security NumberTIN_3-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "owner.person.dateOfBirth",
+        "pdfField": ["Birth Date3.1-22651", "Birth Date3.2-22651", "Birth Date3.3-22651"],
+        "dataType": "date",
+        "format": "MM/DD/YYYY split into 3 fields",
+        "required": true
+      },
+      {
+        "jsonPath": "owner.person.gender",
+        "pdfField": "Owner Gender - 22651",
+        "dataType": "radio",
+        "options": {"male": "M", "female": "F"},
+        "required": true
+      },
+      {
+        "jsonPath": "owner.person.address.street1",
+        "pdfField": "Street Address PO Boxes are not allowed1_3-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "owner.person.address.city",
+        "pdfField": "City_3-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "owner.person.address.state",
+        "pdfField": "State_3-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "owner.person.address.zip",
+        "pdfField": "Zip_3-22651",
+        "dataType": "text",
+        "required": true
+      },
+      {
+        "jsonPath": "owner.person.phone",
+        "pdfField": ["Phone_3.1-22651", "Phone_3.2-22651", "Phone_3.3-22651"],
+        "dataType": "phone",
+        "format": "Phone split by segments",
+        "required": false
+      },
+      {
+        "jsonPath": "owner.person.email",
+        "pdfField": "Owners Email Address-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "owner.isSameAsAnnuitant",
+        "pdfField": "Not directly mapped - used for conditional logic",
+        "dataType": "boolean",
+        "required": true
+      }
+    ],
+    "JOINT_OWNER": [
+      {
+        "jsonPath": "jointOwner.person.firstName",
+        "pdfField": "First Name_4-22651",
+        "dataType": "text",
+        "required": false,
+        "conditional": "if jointOwner is not null"
+      },
+      {
+        "jsonPath": "jointOwner.person.middleName",
+        "pdfField": "MI_4-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.lastName",
+        "pdfField": "Last Name_4-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.taxId.value",
+        "pdfField": "Social Security NumberTIN_3-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.dateOfBirth",
+        "pdfField": ["Birth Date4.1-22651", "Birth Date4.2-22651", "Birth Date4.3-22651"],
+        "dataType": "date",
+        "format": "MM/DD/YYYY split into 3 fields",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.gender",
+        "pdfField": "JointOwner Gender - 22651",
+        "dataType": "radio",
+        "options": {"male": "M", "female": "F"},
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.address.street1",
+        "pdfField": "Street Address PO Boxes are not allowed1_4-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.address.city",
+        "pdfField": "City_4-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.address.state",
+        "pdfField": "State_4-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.address.zip",
+        "pdfField": "Zip_4-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.phone",
+        "pdfField": ["Phone_4.1-22651", "Phone_4.2-22651", "Phone_4.3-22651"],
+        "dataType": "phone",
+        "format": "Phone split by segments",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.person.email",
+        "pdfField": "Joint Owners Email Address-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "jointOwner.isAddressSameAsOwner",
+        "pdfField": "Address and Phone Number Same as Owner-22651",
+        "dataType": "checkbox",
+        "required": false
+      }
+    ],
+    "OWNERS_BENEFICIARIES": [
+      {
+        "jsonPath": "ownerBeneficiaries[0].firstName",
+        "pdfField": "First Name_5-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].middleName",
+        "pdfField": "MI_5-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].lastName",
+        "pdfField": "Last Name_5-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].taxId.value",
+        "pdfField": "Social Security NumberTIN_5-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].dateOfBirth",
+        "pdfField": ["Birthdate5.1-22651", "Birthdate5.2-22651", "Birthdate5.3-22651"],
+        "dataType": "date",
+        "format": "MM/DD/YYYY split into 3 fields",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].type",
+        "pdfField": "OwnersBeneficiary - 22651",
+        "dataType": "radio",
+        "options": {"primary": "Primary", "secondary": "Contingent"},
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].relationship",
+        "pdfField": "Relationship to Owner-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].percentage",
+        "pdfField": ["Percentage3.1-22651", "Percentage3.2-22651"],
+        "dataType": "number",
+        "format": "Percentage split into two fields (whole and decimal)",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].address.city",
+        "pdfField": "City_5-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].address.state",
+        "pdfField": "State_5-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].address.zip",
+        "pdfField": "Zip Code-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[0].email",
+        "pdfField": "Email 2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[1].firstName",
+        "pdfField": "First Name_6-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[1].lastName",
+        "pdfField": "Last Name_6-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[1].percentage",
+        "pdfField": ["Percentage3_2-22651"],
+        "dataType": "number",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[2].firstName",
+        "pdfField": "First Name_7-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[2].lastName",
+        "pdfField": "Last Name_7-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "ownerBeneficiaries[2].percentage",
+        "pdfField": ["Percentage3_3-22651"],
+        "dataType": "number",
+        "required": false
+      }
+    ],
+    "IDENTITY_VERIFICATION": [
+      {
+        "jsonPath": "identityVerification.citizenshipStatus",
+        "pdfField": "Identity1.1-22651",
+        "dataType": "radio",
+        "options": {"us_citizen": "U.S. Citizen", "non_us_citizen": "Non-U.S. Citizen", "qnec": "QNEC"},
+        "required": true
+      },
+      {
+        "jsonPath": "identityVerification.governmentId.type",
+        "pdfField": "Identity1.2-22651",
+        "dataType": "radio",
+        "options": {"drivers_license": "Driver's License", "passport": "Passport", "other": "Other"},
+        "required": true
+      },
+      {
+        "jsonPath": "identityVerification.governmentId.issuedBy",
+        "pdfField": "c State-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "identityVerification.governmentId.number",
+        "pdfField": "Number-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "identityVerification.governmentId.expirationDate",
+        "pdfField": ["Exp Date1.1-22651", "Exp Date1.2-22651", "Exp Date1.3-22651"],
+        "dataType": "date",
+        "format": "MM/DD/YYYY split into 3 fields",
+        "required": false
+      },
+      {
+        "jsonPath": "identityVerification.occupation",
+        "pdfField": "d Occupation-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "identityVerification.employerName",
+        "pdfField": "Employer Name-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "identityVerification.yearsEmployed",
+        "pdfField": "Years Employed-22651",
+        "dataType": "number",
+        "required": false
+      }
+    ],
+    "PRODUCT_FUNDING": [
+      {
+        "jsonPath": "product.taxStatus",
+        "pdfField": "Tax Status-22651",
+        "dataType": "checkbox",
+        "options": {"ira": "IRA", "non_qualified": "Non-Qualified"},
+        "required": true
+      },
+      {
+        "jsonPath": "product.iraContributionTaxYear",
+        "pdfField": "Complete if applicable  Contribution intended for the Tax Year-22651",
+        "dataType": "number",
+        "required": false,
+        "conditional": "if taxStatus === 'ira'"
+      },
+      {
+        "jsonPath": "funding.methods[0]",
+        "pdfField": "Check  Amount-22651",
+        "dataType": "checkbox",
+        "required": false,
+        "conditional": "if method.type === 'check'"
+      },
+      {
+        "jsonPath": "funding.methods[0].amount",
+        "pdfField": ["Check1.1-22651", "Check1.2-22651"],
+        "dataType": "currency",
+        "format": "Split currency into dollars and cents",
+        "required": false
+      },
+      {
+        "jsonPath": "funding.methods[1]",
+        "pdfField": "Direct Transfer  Amount-22651",
+        "dataType": "checkbox",
+        "required": false,
+        "conditional": "if method.type === 'direct_transfer'"
+      },
+      {
+        "jsonPath": "funding.methods[1].amount",
+        "pdfField": ["Direct Transfer1.1 - 22651", "Direct Transfer1.2 - 22651"],
+        "dataType": "currency",
+        "required": false
+      },
+      {
+        "jsonPath": "funding.methods[2]",
+        "pdfField": "1035 Exchange -22651",
+        "dataType": "checkbox",
+        "required": false,
+        "conditional": "if method.type === 'exchange_1035'"
+      },
+      {
+        "jsonPath": "funding.methods[2].amount",
+        "pdfField": ["1035 Exchange  Amount1.1-22651", "1035 Exchange  Amount1.2-22651"],
+        "dataType": "currency",
+        "required": false
+      },
+      {
+        "jsonPath": "funding.totalPremium",
+        "pdfField": "Not directly on main PDF - calculated",
+        "dataType": "currency",
+        "required": true
+      }
+    ],
+    "TRANSFERS_SURRENDER": [
+      {
+        "jsonPath": "transfers[0].surrenderingCompany.name",
+        "pdfField": "Company Name - 22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "transfers[0].surrenderingContract.accountNumber",
+        "pdfField": "Contract Number-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "transfers[0].surrenderingContract.estimatedAmount",
+        "pdfField": "1035 Exchange  Amount1.1-22651",
+        "dataType": "currency",
+        "required": false
+      },
+      {
+        "jsonPath": "transfers[0].surrenderingCompany.address.state",
+        "pdfField": "b State-22651",
+        "dataType": "text",
+        "required": false
+      }
+    ],
+    "REPLACEMENT": [
+      {
+        "jsonPath": "replacement.hasExistingInsurance",
+        "pdfField": "Replacement1.1-22651",
+        "dataType": "checkbox",
+        "required": false
+      },
+      {
+        "jsonPath": "replacement.isReplacement",
+        "pdfField": "Replacement2.1-22651",
+        "dataType": "checkbox",
+        "required": false
+      }
+    ],
+    "PRODUCER_CERTIFICATION": [
+      {
+        "jsonPath": "producerCertification.isProducerAwareOfExistingInsurance",
+        "pdfField": "AgentCertification1.1-22651",
+        "dataType": "checkbox",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.isProducerBelievesReplacement",
+        "pdfField": "AgentCertification1.2-22651",
+        "dataType": "radio",
+        "options": {"true": "Yes", "false": "No"},
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.replacingCompanyName",
+        "pdfField": "If yes please provide the name of the company-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.producers[0].npn",
+        "pdfField": "Agent Number-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.producers[0].fullName",
+        "pdfField": "AgentBrokers Full Name please print-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.producers[0].phone",
+        "pdfField": "Phone Number_7-22651",
+        "dataType": "phone",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.producers[0].email",
+        "pdfField": "Agents Email Address-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.producers[1].npn",
+        "pdfField": "Agent Number_2-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.producers[1].fullName",
+        "pdfField": "Additional Agent Name please print-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.producers[1].email",
+        "pdfField": "Additional Agents Email Address-22651",
+        "dataType": "text",
+        "required": false
+      }
+    ],
+    "APPLICATION_SIGNATURES": [
+      {
+        "jsonPath": "applicationSignatures.ownerSignatureDate",
+        "pdfField": ["Date Signed1.1-22651", "Date Signed1.2-22651", "Date Signed1.3-22651"],
+        "dataType": "date",
+        "format": "MM/DD/YYYY split into 3 fields",
+        "required": false
+      },
+      {
+        "jsonPath": "applicationSignatures.signedAtCity",
+        "pdfField": "Signed at City-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "applicationSignatures.signedAtState",
+        "pdfField": "State-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "applicationSignatures.ownerEmail",
+        "pdfField": "Owners Email Address-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "applicationSignatures.jointOwnerEmail",
+        "pdfField": "Joint Owners Email Address-22651",
+        "dataType": "text",
+        "required": false
+      },
+      {
+        "jsonPath": "producerCertification.producers[0].signatureDate",
+        "pdfField": ["Date Signed2.1-22651", "Date Signed2.2-22651", "Date Signed2.3-22651"],
+        "dataType": "date",
+        "format": "MM/DD/YYYY split into 3 fields",
+        "required": false
+      }
+    ]
+  },
+  "conversionRules": {
+    "PHONE_FORMATTING": {
+      "description": "Split 10-digit phone number into 3 parts",
+      "rule": "Extract XXX-XXX-XXXX and place into three separate fields",
+      "example": "2175550100 -> Phone1.1='217', Phone1.2='555', Phone1.3='0100'"
+    },
+    "DATE_FORMATTING": {
+      "description": "Split date into MM, DD, YYYY",
+      "rule": "Convert YYYY-MM-DD to three separate fields",
+      "example": "1965-03-15 -> Date.1='03', Date.2='15', Date.3='1965'"
+    },
+    "CURRENCY_FORMATTING": {
+      "description": "Split currency amount into dollars and cents",
+      "rule": "Split decimal currency into integer and fractional parts",
+      "example": "100000.00 -> Currency1='100000', Currency2='00'"
+    },
+    "GENDER_MAPPING": {
+      "description": "Map gender values to radio button options",
+      "mappings": {
+        "male": "M",
+        "female": "F"
+      }
+    },
+    "CITIZENSHIP_MAPPING": {
+      "description": "Map citizenship status to identity radio options",
+      "mappings": {
+        "us_citizen": "U.S. Citizen",
+        "non_us_citizen": "Non-U.S. Citizen",
+        "qnec": "QNEC"
+      }
+    },
+    "TAX_STATUS_MAPPING": {
+      "description": "Map tax status to checkbox values",
+      "mappings": {
+        "ira": {
+          "check": true,
+          "pdfField": "Tax Status-22651"
+        },
+        "non_qualified": {
+          "check": false,
+          "pdfField": "Tax Status-22651"
+        }
+      }
+    },
+    "FUNDING_METHOD_MAPPING": {
+      "description": "Map funding method types to checkbox fields",
+      "mappings": {
+        "check": "Check  Amount-22651",
+        "direct_transfer": "Direct Transfer  Amount-22651",
+        "exchange_1035": "1035 Exchange -22651",
+        "qualified_rollover": "Qualified Rollover  Amount-22651",
+        "salary_reduction": "Salary reduction - 22651",
+        "transfer": "Transfer - 22651"
+      }
+    },
+    "BENEFICIARY_TYPE_MAPPING": {
+      "description": "Map beneficiary type to radio options",
+      "mappings": {
+        "primary": "Primary",
+        "secondary": "Contingent",
+        "contingent": "Contingent"
+      }
+    }
+  },
+  "notes": {
+    "encryptedData": "taxId values may be encrypted. Use decryption key or hint field for display/validation",
+    "addressRepeat": "Address fields repeat for beneficiaries and trustees - use index [0], [1], [2] to map multiple entries",
+    "signatureFields": "Signature image data not directly mapped - store separately with reference to PDF",
+    "phoneFormatting": "10-digit phone number (2175550100) should be reformatted as 217-555-0100 and split",
+    "multipleAgents": "Array of producers can have up to 3 agents - map index [0], [1], [2] to respective agent fields",
+    "investmentAllocations": "Not directly mapped to PDF - used for backend processing, summary may appear in disclosures",
+    "disclosures": "Disclosure acknowledgments stored separately from main PDF fields - reference by disclosureId",
+    "taxYear": "IRA contribution tax year only required if taxStatus === 'ira'",
+    "jointOwnerConditional": "JointOwner fields only populated if jointOwner object is not null"
+  },
+  "exampleMapping": {
+    "description": "Sample mapping showing how to fill individual fields",
+    "example": {
+      "annuitant": {
+        "firstName": "Jane",
+        "lastNameField": "Last Name_1 22651",
+        "dateOfBirth": "1965-03-15",
+        "birthDateFields": ["Birth Date1.1 - 22651", "Birth Date1.2 - 22651", "Birth Date1.3 - 22651"],
+        "birthDateValues": ["03", "15", "1965"],
+        "phone": "2175550100",
+        "phoneFields": ["Phone1.1-22651", "Phone1.2-22651", "Phone1.3-22651"],
+        "phoneValues": ["217", "555", "0100"]
+      }
+    }
+  }
+}
