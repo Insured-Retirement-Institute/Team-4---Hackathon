@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import Grid from '@mui/material/Grid';
@@ -13,6 +12,7 @@ import Alert from '@mui/material/Alert';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import DescriptionIcon from '@mui/icons-material/Description';
+import { useWizardFormController } from '../formController';
 
 const FUNDING_METHODS = [
   { id: 'bank_transfer', label: 'Bank Transfer (ACH)', icon: <AccountBalanceIcon /> },
@@ -21,7 +21,8 @@ const FUNDING_METHODS = [
 ];
 
 function PaymentSetupStep() {
-  const [fundingMethod, setFundingMethod] = useState('bank_transfer');
+  const { values, errors, setValue } = useWizardFormController();
+  const fundingMethod = values.fundingMethod;
 
   return (
     <Stack spacing={3}>
@@ -45,7 +46,7 @@ function PaymentSetupStep() {
                 borderWidth: fundingMethod === method.id ? 2 : 1,
               }}
             >
-              <CardActionArea onClick={() => setFundingMethod(method.id)}>
+              <CardActionArea onClick={() => setValue('fundingMethod', method.id)}>
                 <CardContent>
                   <Stack spacing={1} alignItems="center" sx={{ textAlign: 'center', py: 1 }}>
                     <Box sx={{ color: fundingMethod === method.id ? 'primary.main' : 'text.secondary' }}>
@@ -74,20 +75,54 @@ function PaymentSetupStep() {
           </Alert>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField select label="Account Type" fullWidth defaultValue="">
+              <TextField
+                select
+                label="Account Type"
+                fullWidth
+                value={values.bankAccountType}
+                onChange={(event) => setValue('bankAccountType', event.target.value)}
+                error={Boolean(errors.bankAccountType)}
+                helperText={errors.bankAccountType}
+              >
                 <MenuItem value="">Select</MenuItem>
                 <MenuItem value="checking">Checking</MenuItem>
                 <MenuItem value="savings">Savings</MenuItem>
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField label="Bank Name" fullWidth placeholder="e.g. Chase Bank" />
+              <TextField
+                label="Bank Name"
+                fullWidth
+                placeholder="e.g. Chase Bank"
+                value={values.bankName}
+                onChange={(event) => setValue('bankName', event.target.value)}
+                error={Boolean(errors.bankName)}
+                helperText={errors.bankName}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField label="Routing Number" fullWidth required placeholder="9-digit ABA number" />
+              <TextField
+                label="Routing Number"
+                fullWidth
+                required
+                placeholder="9-digit ABA number"
+                value={values.bankRoutingNumber}
+                onChange={(event) => setValue('bankRoutingNumber', event.target.value)}
+                error={Boolean(errors.bankRoutingNumber)}
+                helperText={errors.bankRoutingNumber}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField label="Account Number" fullWidth required placeholder="Your account number" />
+              <TextField
+                label="Account Number"
+                fullWidth
+                required
+                placeholder="Your account number"
+                value={values.bankAccountNumber}
+                onChange={(event) => setValue('bankAccountNumber', event.target.value)}
+                error={Boolean(errors.bankAccountNumber)}
+                helperText={errors.bankAccountNumber}
+              />
             </Grid>
           </Grid>
         </Stack>
@@ -100,20 +135,52 @@ function PaymentSetupStep() {
           </Typography>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField label="Transferring Institution" fullWidth required placeholder="e.g. Fidelity" />
+              <TextField
+                label="Transferring Institution"
+                fullWidth
+                required
+                placeholder="e.g. Fidelity"
+                value={values.transferInstitution}
+                onChange={(event) => setValue('transferInstitution', event.target.value)}
+                error={Boolean(errors.transferInstitution)}
+                helperText={errors.transferInstitution}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField label="Existing Policy / Account Number" fullWidth required />
+              <TextField
+                label="Existing Policy / Account Number"
+                fullWidth
+                required
+                value={values.transferAccountNumber}
+                onChange={(event) => setValue('transferAccountNumber', event.target.value)}
+                error={Boolean(errors.transferAccountNumber)}
+                helperText={errors.transferAccountNumber}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField select label="Transfer Type" fullWidth defaultValue="">
+              <TextField
+                select
+                label="Transfer Type"
+                fullWidth
+                value={values.transferType}
+                onChange={(event) => setValue('transferType', event.target.value)}
+                error={Boolean(errors.transferType)}
+                helperText={errors.transferType}
+              >
                 <MenuItem value="">Select</MenuItem>
                 <MenuItem value="full">Full Transfer</MenuItem>
                 <MenuItem value="partial">Partial Transfer</MenuItem>
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField label="Transfer Amount" fullWidth placeholder="e.g. 50,000"
+              <TextField
+                label="Transfer Amount"
+                fullWidth
+                placeholder="e.g. 50,000"
+                value={values.transferAmount}
+                onChange={(event) => setValue('transferAmount', event.target.value)}
+                error={Boolean(errors.transferAmount)}
+                helperText={errors.transferAmount}
                 slotProps={{ input: { startAdornment: <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>$</Typography> } }}
               />
             </Grid>

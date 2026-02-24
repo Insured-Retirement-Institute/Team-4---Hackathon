@@ -7,8 +7,12 @@ import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import { useWizardFormController } from '../formController';
 
 function SuitabilityReviewStep() {
+  const { values, errors, setValue } = useWizardFormController();
+
   return (
     <Stack spacing={3}>
       <div>
@@ -32,7 +36,15 @@ function SuitabilityReviewStep() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Primary Investment Objective" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Primary Investment Objective"
+            fullWidth
+            value={values.primaryObjective}
+            onChange={(event) => setValue('primaryObjective', event.target.value)}
+            error={Boolean(errors.primaryObjective)}
+            helperText={errors.primaryObjective}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="preservation">Capital Preservation</MenuItem>
             <MenuItem value="income">Income Generation</MenuItem>
@@ -41,7 +53,15 @@ function SuitabilityReviewStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Investment Time Horizon" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Investment Time Horizon"
+            fullWidth
+            value={values.investmentTimeHorizon}
+            onChange={(event) => setValue('investmentTimeHorizon', event.target.value)}
+            error={Boolean(errors.investmentTimeHorizon)}
+            helperText={errors.investmentTimeHorizon}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="short">Short Term (under 3 years)</MenuItem>
             <MenuItem value="medium">Medium Term (3–7 years)</MenuItem>
@@ -49,7 +69,15 @@ function SuitabilityReviewStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Expected Need for Funds" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Expected Need for Funds"
+            fullWidth
+            value={values.expectedNeedForFunds}
+            onChange={(event) => setValue('expectedNeedForFunds', event.target.value)}
+            error={Boolean(errors.expectedNeedForFunds)}
+            helperText={errors.expectedNeedForFunds}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="no_need">No foreseeable need</MenuItem>
             <MenuItem value="within_3">Within 3 years</MenuItem>
@@ -58,7 +86,15 @@ function SuitabilityReviewStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Reaction to Market Loss" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Reaction to Market Loss"
+            fullWidth
+            value={values.reactionToMarketLoss}
+            onChange={(event) => setValue('reactionToMarketLoss', event.target.value)}
+            error={Boolean(errors.reactionToMarketLoss)}
+            helperText={errors.reactionToMarketLoss}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="sell">Sell to prevent further loss</MenuItem>
             <MenuItem value="hold">Hold and wait for recovery</MenuItem>
@@ -75,7 +111,12 @@ function SuitabilityReviewStep() {
 
       <Stack spacing={2}>
         <FormControlLabel
-          control={<Checkbox />}
+          control={(
+            <Checkbox
+              checked={values.replacingExistingAnnuity}
+              onChange={(event) => setValue('replacingExistingAnnuity', event.target.checked)}
+            />
+          )}
           label={
             <Typography variant="body2">
               This application is replacing an existing annuity or life insurance policy (1035 Exchange)
@@ -83,7 +124,12 @@ function SuitabilityReviewStep() {
           }
         />
         <FormControlLabel
-          control={<Checkbox />}
+          control={(
+            <Checkbox
+              checked={values.informedOfSurrenderCharges}
+              onChange={(event) => setValue('informedOfSurrenderCharges', event.target.checked)}
+            />
+          )}
           label={
             <Typography variant="body2">
               I have been informed of all surrender charges and fees associated with this product
@@ -91,7 +137,12 @@ function SuitabilityReviewStep() {
           }
         />
         <FormControlLabel
-          control={<Checkbox />}
+          control={(
+            <Checkbox
+              checked={values.understandsSurrenderPeriod}
+              onChange={(event) => setValue('understandsSurrenderPeriod', event.target.checked)}
+            />
+          )}
           label={
             <Typography variant="body2">
               I understand this annuity has a surrender period during which withdrawals may be subject to charges
@@ -111,17 +162,32 @@ function SuitabilityReviewStep() {
         multiline
         rows={3}
         fullWidth
+        value={values.suitabilityNotes}
+        onChange={(event) => setValue('suitabilityNotes', event.target.value)}
         placeholder="Any additional context about the applicant's financial situation or objectives..."
       />
 
       <FormControlLabel
-        control={<Checkbox color="primary" />}
+        control={(
+          <Checkbox
+            color="primary"
+            checked={values.applicantAcknowledgment}
+            onChange={(event) => setValue('applicantAcknowledgment', event.target.checked)}
+          />
+        )}
         label={
           <Typography variant="body2">
             I confirm the information provided in this application is accurate and complete to the best of my knowledge.
           </Typography>
         }
       />
+      {errors.applicantAcknowledgment && (
+        <Box sx={{ mt: -2 }}>
+          <Typography variant="caption" color="error.main">
+            {errors.applicantAcknowledgment}
+          </Typography>
+        </Box>
+      )}
     </Stack>
   );
 }

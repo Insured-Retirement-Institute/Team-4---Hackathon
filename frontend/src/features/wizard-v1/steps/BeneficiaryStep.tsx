@@ -6,8 +6,11 @@ import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+import { useWizardFormController } from '../formController';
 
 function BeneficiaryStep() {
+  const { values, errors, setValue } = useWizardFormController();
+
   return (
     <Stack spacing={3}>
       <div>
@@ -32,10 +35,27 @@ function BeneficiaryStep() {
 
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField label="Full Name" fullWidth required placeholder="e.g. Jane Smith" />
+            <TextField
+              label="Full Name"
+              fullWidth
+              required
+              placeholder="e.g. Jane Smith"
+              value={values.primaryBeneficiaryName}
+              onChange={(event) => setValue('primaryBeneficiaryName', event.target.value)}
+              error={Boolean(errors.primaryBeneficiaryName)}
+              helperText={errors.primaryBeneficiaryName}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField select label="Relationship" fullWidth defaultValue="">
+            <TextField
+              select
+              label="Relationship"
+              fullWidth
+              value={values.primaryBeneficiaryRelationship}
+              onChange={(event) => setValue('primaryBeneficiaryRelationship', event.target.value)}
+              error={Boolean(errors.primaryBeneficiaryRelationship)}
+              helperText={errors.primaryBeneficiaryRelationship}
+            >
               <MenuItem value="">Select</MenuItem>
               <MenuItem value="spouse">Spouse</MenuItem>
               <MenuItem value="child">Child</MenuItem>
@@ -51,11 +71,19 @@ function BeneficiaryStep() {
               label="Date of Birth"
               type="date"
               fullWidth
+              value={values.primaryBeneficiaryDateOfBirth}
+              onChange={(event) => setValue('primaryBeneficiaryDateOfBirth', event.target.value)}
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField label="SSN / Tax ID" fullWidth placeholder="XXX-XX-XXXX" />
+            <TextField
+              label="SSN / Tax ID"
+              fullWidth
+              placeholder="XXX-XX-XXXX"
+              value={values.primaryBeneficiaryTaxId}
+              onChange={(event) => setValue('primaryBeneficiaryTaxId', event.target.value)}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
@@ -63,7 +91,10 @@ function BeneficiaryStep() {
               fullWidth
               required
               placeholder="100"
-              helperText="Enter a value between 1–100"
+              value={values.primaryBeneficiaryPercentage}
+              onChange={(event) => setValue('primaryBeneficiaryPercentage', event.target.value)}
+              error={Boolean(errors.primaryBeneficiaryPercentage)}
+              helperText={errors.primaryBeneficiaryPercentage ?? 'Enter a value between 1–100'}
               slotProps={{ input: { endAdornment: <Typography variant="body2" color="text.secondary">%</Typography> } }}
             />
           </Grid>
@@ -86,10 +117,22 @@ function BeneficiaryStep() {
 
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField label="Full Name" fullWidth placeholder="e.g. Robert Smith" />
+            <TextField
+              label="Full Name"
+              fullWidth
+              placeholder="e.g. Robert Smith"
+              value={values.contingentBeneficiaryName}
+              onChange={(event) => setValue('contingentBeneficiaryName', event.target.value)}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField select label="Relationship" fullWidth defaultValue="">
+            <TextField
+              select
+              label="Relationship"
+              fullWidth
+              value={values.contingentBeneficiaryRelationship}
+              onChange={(event) => setValue('contingentBeneficiaryRelationship', event.target.value)}
+            >
               <MenuItem value="">Select</MenuItem>
               <MenuItem value="spouse">Spouse</MenuItem>
               <MenuItem value="child">Child</MenuItem>
@@ -105,6 +148,8 @@ function BeneficiaryStep() {
               label="Date of Birth"
               type="date"
               fullWidth
+              value={values.contingentBeneficiaryDateOfBirth}
+              onChange={(event) => setValue('contingentBeneficiaryDateOfBirth', event.target.value)}
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid>
@@ -113,6 +158,8 @@ function BeneficiaryStep() {
               label="Benefit Percentage"
               fullWidth
               placeholder="100"
+              value={values.contingentBeneficiaryPercentage}
+              onChange={(event) => setValue('contingentBeneficiaryPercentage', event.target.value)}
               slotProps={{ input: { endAdornment: <Typography variant="body2" color="text.secondary">%</Typography> } }}
             />
           </Grid>

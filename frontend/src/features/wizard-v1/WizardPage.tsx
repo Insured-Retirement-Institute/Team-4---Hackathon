@@ -16,6 +16,7 @@ import AnnuitySelectionStep from './steps/AnnuitySelectionStep';
 import PaymentSetupStep from './steps/PaymentSetupStep';
 import SuitabilityReviewStep from './steps/SuitabilityReviewStep';
 import ReviewSubmitStep from './steps/ReviewSubmitStep';
+import { WizardFormProvider, useWizardFormController } from './formController';
 
 const STEP_COMPONENTS = [
   PersonalDetailsStep,
@@ -29,15 +30,20 @@ const STEP_COMPONENTS = [
 
 const BREADCRUMB_LABELS = ['Welcome', 'Application', 'Review'];
 
-function WizardPage() {
+function WizardPageContent() {
   const [currentStep, setCurrentStep] = useState(1);
+  const { validateStep } = useWizardFormController();
   const totalSteps = WIZARD_STEPS.length;
   const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
 
   const StepComponent = STEP_COMPONENTS[currentStep - 1];
 
   const handleNext = () => {
-    if (currentStep < totalSteps) setCurrentStep((s) => s + 1);
+    const isStepValid = validateStep(currentStep);
+    if (!isStepValid) return;
+    if (currentStep < totalSteps) {
+      setCurrentStep((s) => s + 1);
+    }
   };
 
   const handleBack = () => {
@@ -122,7 +128,7 @@ function WizardPage() {
               <Button
                 variant="contained"
                 endIcon={!isLastStep ? <ArrowForwardIcon /> : undefined}
-                onClick={isLastStep ? undefined : handleNext}
+                onClick={handleNext}
                 size="large"
                 disableElevation
                 color={isLastStep ? 'success' : 'primary'}
@@ -146,6 +152,14 @@ function WizardPage() {
         </Box>
       </Box>
     </Box>
+  );
+}
+
+function WizardPage() {
+  return (
+    <WizardFormProvider>
+      <WizardPageContent />
+    </WizardFormProvider>
   );
 }
 

@@ -6,6 +6,7 @@ import Grid from '@mui/material/Grid';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { useWizardFormController } from '../formController';
 
 interface ReviewRowProps {
   label: string;
@@ -47,6 +48,21 @@ function ReviewSection({ title, stepNumber, children }: ReviewSectionProps) {
 }
 
 function ReviewSubmitStep() {
+  const { values } = useWizardFormController();
+  const displayValue = (value: string) => (value.trim() ? value : '—');
+  const maskedSsn = values.ssn ? `••• - •• - ${values.ssn.slice(-4)}` : '—';
+  const primaryBeneficiary = values.primaryBeneficiaryName
+    ? `${values.primaryBeneficiaryName} (${displayValue(values.primaryBeneficiaryRelationship)}) — ${displayValue(values.primaryBeneficiaryPercentage)}%`
+    : '—';
+  const contingentBeneficiary = values.contingentBeneficiaryName
+    ? `${values.contingentBeneficiaryName} (${displayValue(values.contingentBeneficiaryRelationship)}) — ${displayValue(values.contingentBeneficiaryPercentage)}%`
+    : '—';
+  const disclosuresAcknowledged = [
+    values.replacingExistingAnnuity,
+    values.informedOfSurrenderCharges,
+    values.understandsSurrenderPeriod,
+  ].filter(Boolean).length;
+
   return (
     <Stack spacing={3}>
       <div>
@@ -66,44 +82,59 @@ function ReviewSubmitStep() {
 
       <Stack spacing={3} divider={<Divider />}>
         <ReviewSection title="Personal Details" stepNumber={1}>
-          <ReviewRow label="Name" value="John Smith" />
-          <ReviewRow label="Date of Birth" value="March 15, 1962" />
-          <ReviewRow label="SSN" value="••• - •• - 4321" />
-          <ReviewRow label="Address" value="123 Main St, Los Angeles, CA 90210" />
-          <ReviewRow label="Email" value="john.smith@email.com" />
+          <ReviewRow label="Name" value={displayValue(`${values.firstName} ${values.lastName}`.trim())} />
+          <ReviewRow label="Date of Birth" value={displayValue(values.dateOfBirth)} />
+          <ReviewRow label="SSN" value={maskedSsn} />
+          <ReviewRow
+            label="Address"
+            value={displayValue(`${values.address}, ${values.city}, ${values.state} ${values.zipCode}`.replace(/\s+/g, ' ').trim())}
+          />
+          <ReviewRow label="Email" value={displayValue(values.email)} />
         </ReviewSection>
 
         <ReviewSection title="Beneficiary" stepNumber={2}>
-          <ReviewRow label="Primary" value="Jane Smith (Spouse) — 100%" />
-          <ReviewRow label="Contingent" value="Robert Smith (Child) — 100%" />
+          <ReviewRow label="Primary" value={primaryBeneficiary} />
+          <ReviewRow label="Contingent" value={contingentBeneficiary} />
         </ReviewSection>
 
         <ReviewSection title="Financial Profile" stepNumber={3}>
-          <ReviewRow label="Annual Income" value="$100,000 – $200,000" />
-          <ReviewRow label="Net Worth" value="$500,000 – $1,000,000" />
-          <ReviewRow label="Source of Funds" value="Personal Savings" />
-          <ReviewRow label="Risk Tolerance" value="Moderate" />
+          <ReviewRow label="Annual Income" value={displayValue(values.annualHouseholdIncome)} />
+          <ReviewRow label="Net Worth" value={displayValue(values.estimatedNetWorth)} />
+          <ReviewRow label="Source of Funds" value={displayValue(values.sourceOfFunds)} />
+          <ReviewRow label="Risk Tolerance" value={displayValue(values.riskTolerance)} />
         </ReviewSection>
 
         <ReviewSection title="Annuity Selection" stepNumber={4}>
-          <ReviewRow label="Product Type" value="Fixed Indexed Annuity" />
-          <ReviewRow label="Surrender Period" value="7 Years" />
-          <ReviewRow label="Premium Amount" value="$150,000" />
-          <ReviewRow label="Qualification" value="Non-Qualified" />
-          <ReviewRow label="Rider" value="Guaranteed Lifetime Withdrawal Benefit" />
+          <ReviewRow label="Product Type" value={displayValue(values.annuityType)} />
+          <ReviewRow label="Surrender Period" value={displayValue(values.surrenderPeriod)} />
+          <ReviewRow label="Premium Amount" value={displayValue(values.initialPremiumAmount)} />
+          <ReviewRow label="Qualification" value={displayValue(values.qualificationType)} />
+          <ReviewRow label="Rider" value={displayValue(values.optionalRider)} />
         </ReviewSection>
 
         <ReviewSection title="Payment Setup" stepNumber={5}>
-          <ReviewRow label="Funding Method" value="Bank Transfer (ACH)" />
-          <ReviewRow label="Bank" value="Chase Bank – Checking" />
-          <ReviewRow label="Routing" value="••••••021" />
-          <ReviewRow label="Account" value="••••••7890" />
+          <ReviewRow label="Funding Method" value={displayValue(values.fundingMethod)} />
+          {values.fundingMethod === 'bank_transfer' && (
+            <>
+              <ReviewRow label="Bank" value={displayValue(`${values.bankName} — ${values.bankAccountType}`)} />
+              <ReviewRow label="Routing" value={displayValue(values.bankRoutingNumber)} />
+              <ReviewRow label="Account" value={displayValue(values.bankAccountNumber)} />
+            </>
+          )}
+          {values.fundingMethod === 'wire' && (
+            <>
+              <ReviewRow label="Institution" value={displayValue(values.transferInstitution)} />
+              <ReviewRow label="Account / Policy" value={displayValue(values.transferAccountNumber)} />
+              <ReviewRow label="Transfer Type" value={displayValue(values.transferType)} />
+              <ReviewRow label="Transfer Amount" value={displayValue(values.transferAmount)} />
+            </>
+          )}
         </ReviewSection>
 
         <ReviewSection title="Suitability Review" stepNumber={6}>
-          <ReviewRow label="Objective" value="Income Generation" />
-          <ReviewRow label="Time Horizon" value="Long Term (7+ years)" />
-          <ReviewRow label="Disclosures" value="All acknowledged" />
+          <ReviewRow label="Objective" value={displayValue(values.primaryObjective)} />
+          <ReviewRow label="Time Horizon" value={displayValue(values.investmentTimeHorizon)} />
+          <ReviewRow label="Disclosures" value={`${disclosuresAcknowledged}/3 acknowledged`} />
         </ReviewSection>
       </Stack>
 

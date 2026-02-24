@@ -5,8 +5,11 @@ import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
+import { useWizardFormController } from '../formController';
 
 function FinancialProfileStep() {
+  const { values, errors, setValue } = useWizardFormController();
+
   return (
     <Stack spacing={3}>
       <div>
@@ -30,7 +33,15 @@ function FinancialProfileStep() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Employment Status" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Employment Status"
+            fullWidth
+            value={values.employmentStatus}
+            onChange={(event) => setValue('employmentStatus', event.target.value)}
+            error={Boolean(errors.employmentStatus)}
+            helperText={errors.employmentStatus}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="employed">Employed</MenuItem>
             <MenuItem value="self_employed">Self-Employed</MenuItem>
@@ -39,7 +50,15 @@ function FinancialProfileStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Annual Household Income" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Annual Household Income"
+            fullWidth
+            value={values.annualHouseholdIncome}
+            onChange={(event) => setValue('annualHouseholdIncome', event.target.value)}
+            error={Boolean(errors.annualHouseholdIncome)}
+            helperText={errors.annualHouseholdIncome}
+          >
             <MenuItem value="">Select range</MenuItem>
             <MenuItem value="under_50k">Under $50,000</MenuItem>
             <MenuItem value="50k_100k">$50,000 – $100,000</MenuItem>
@@ -49,7 +68,15 @@ function FinancialProfileStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Source of Funds" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Source of Funds"
+            fullWidth
+            value={values.sourceOfFunds}
+            onChange={(event) => setValue('sourceOfFunds', event.target.value)}
+            error={Boolean(errors.sourceOfFunds)}
+            helperText={errors.sourceOfFunds}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="savings">Personal Savings</MenuItem>
             <MenuItem value="ira_rollover">IRA / 401(k) Rollover</MenuItem>
@@ -59,7 +86,13 @@ function FinancialProfileStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Federal Tax Bracket" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Federal Tax Bracket"
+            fullWidth
+            value={values.federalTaxBracket}
+            onChange={(event) => setValue('federalTaxBracket', event.target.value)}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="10">10%</MenuItem>
             <MenuItem value="12">12%</MenuItem>
@@ -80,7 +113,13 @@ function FinancialProfileStep() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Estimated Net Worth" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Estimated Net Worth"
+            fullWidth
+            value={values.estimatedNetWorth}
+            onChange={(event) => setValue('estimatedNetWorth', event.target.value)}
+          >
             <MenuItem value="">Select range</MenuItem>
             <MenuItem value="under_100k">Under $100,000</MenuItem>
             <MenuItem value="100k_500k">$100,000 – $500,000</MenuItem>
@@ -90,7 +129,13 @@ function FinancialProfileStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Liquid Net Worth" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Liquid Net Worth"
+            fullWidth
+            value={values.liquidNetWorth}
+            onChange={(event) => setValue('liquidNetWorth', event.target.value)}
+          >
             <MenuItem value="">Select range</MenuItem>
             <MenuItem value="under_50k">Under $50,000</MenuItem>
             <MenuItem value="50k_250k">$50,000 – $250,000</MenuItem>
@@ -99,7 +144,13 @@ function FinancialProfileStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Investment Experience" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Investment Experience"
+            fullWidth
+            value={values.investmentExperience}
+            onChange={(event) => setValue('investmentExperience', event.target.value)}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="none">None</MenuItem>
             <MenuItem value="limited">Limited (1–3 years)</MenuItem>
@@ -108,7 +159,15 @@ function FinancialProfileStep() {
           </TextField>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Risk Tolerance" fullWidth defaultValue="">
+          <TextField
+            select
+            label="Risk Tolerance"
+            fullWidth
+            value={values.riskTolerance}
+            onChange={(event) => setValue('riskTolerance', event.target.value)}
+            error={Boolean(errors.riskTolerance)}
+            helperText={errors.riskTolerance}
+          >
             <MenuItem value="">Select</MenuItem>
             <MenuItem value="conservative">Conservative</MenuItem>
             <MenuItem value="moderate">Moderate</MenuItem>
