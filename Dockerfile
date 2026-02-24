@@ -2,13 +2,13 @@ FROM node:20-slim
 
 WORKDIR /app
 
-COPY package.json .
+COPY backend/package.json .
 RUN npm install --production
 
-COPY index.js .
-COPY src/ ./src/
-COPY Assets/ ./Assets/
+COPY backend/server.js .
+COPY backend/src/ ./src/
+COPY backend/Assets/ ./Assets/
 
 EXPOSE 8080
 
-CMD ["node", "index.js"]
+CMD ["node", "server.js"]
