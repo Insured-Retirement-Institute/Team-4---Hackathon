@@ -82,7 +82,22 @@ npm run dev:frontend   # Vite with HMR
 | POST | `/application/:applicationId/validate` | Validate answers against application rules |
 | POST | `/application/:applicationId/submit` | Submit a completed application |
 
-### Example Requests
+## DocuSign Demo
+
+- Start signing: `POST /application/:applicationId/docusign/start`
+- Open the returned `signingUrl` in a new tab/window
+- The DocuSign return page (`/docusign/return`) is currently a placeholder
+
+## Quick Start
+
+```bash
+npm install
+npm start
+```
+
+The API runs on port 8080 by default. Visit http://localhost:8080/api-docs/ for the interactive Swagger UI.
+
+## Example Requests
 
 **Get application definition:**
 ```bash
