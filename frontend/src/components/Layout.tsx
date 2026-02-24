@@ -3,61 +3,50 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
 
 function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const navItems = [
+    { label: 'AI Assistant', path: '/ai-chat' },
+    { label: 'New Application', path: '/wizard-v2' },
+  ];
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            MUI App
+            Annuity E-Application
           </Typography>
-          <Button
-            color="inherit"
-            onClick={() => navigate('/')}
-            sx={{
-              fontWeight: location.pathname === '/' ? 'bold' : 'normal',
-            }}
-          >
-            Home
-          </Button>
-          <Button
-            color="inherit"
-            onClick={() => navigate('/about')}
-            sx={{
-              fontWeight: location.pathname === '/about' ? 'bold' : 'normal',
-            }}
-          >
-            About
-          </Button>
-          {/* <Button
-            color="inherit"
-            onClick={() => navigate('/wizard-v1')}
-            variant="outlined"
-            size="small"
-            sx={{ ml: 1, borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}
-          >
-            Annuity Application
-          </Button> */}
-          <Button
-            color="inherit"
-            onClick={() => navigate('/wizard-v2')}
-            variant="outlined"
-            size="small"
-            sx={{ ml: 1, borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}
-          >
-            V2 Wizard
-          </Button>
+          {navItems.map((item) => {
+            const active = location.pathname === item.path;
+            return (
+              <Button
+                key={item.path}
+                color="inherit"
+                onClick={() => navigate(item.path)}
+                variant={active ? 'contained' : 'outlined'}
+                size="small"
+                disableElevation
+                sx={{
+                  ml: 1,
+                  borderColor: active ? 'transparent' : 'rgba(255,255,255,0.5)',
+                  bgcolor: active ? 'rgba(255,255,255,0.15)' : 'transparent',
+                  '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+                }}
+              >
+                {item.label}
+              </Button>
+            );
+          })}
         </Toolbar>
       </AppBar>
-      <Container maxWidth="lg" sx={{ py: 4, flex: 1 }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Outlet />
-      </Container>
+      </Box>
     </Box>
   );
 }
