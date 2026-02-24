@@ -19,7 +19,7 @@ The model is organized around **logical entities** (annuitant, owner, beneficiar
 - Signatures carry **both** the captured image and a structured attestation record — consumers may use either or both
 - All monetary values are stored as `number` (decimal, USD, unformatted)
 - All dates are ISO 8601 strings: `YYYY-MM-DD` for dates, `YYYY-MM-DDTHH:mm:ssZ` for timestamps
-- Encrypted values (SSN, TIN) are transmitted as encrypted strings; the `encrypted: true` flag signals this to consumers
+- Encrypted values (SSN, TIN) are transmitted as encrypted strings; the `isEncrypted: true` flag signals this to consumers
 - The `envelope.submissionMode` field signals whether to consume the data directly or transpose to a PDF form
 
 ---
@@ -47,7 +47,7 @@ interface ApplicationSubmission {
   replacement:            ReplacementDetail
   disclosures:            DisclosureRecord[]
   applicationSignatures:  ApplicationSignatures
-  agentCertification:     AgentCertification
+  producerCertification:     ProducerCertification
 }
 
 
@@ -92,9 +92,9 @@ interface SubmissionEnvelope {
    */
   submissionMode: 'data_only' | 'pdf_fill'
 
-  /** Channel and agent context for the submission. */
+  /** Channel and producer context for the submission. */
   submissionSource: 'web' | 'mobile' | 'ai_agent' | 'phone'
-  submittingAgentNpn: string | null    // NPN of the agent who submitted on behalf of the client
+  submittingProducerNpn: string | null    // NPN of the producer who submitted on behalf of the client
 
   /** Client IP address and user agent at time of submission, if available. */
   ipAddress:  string | null
@@ -121,7 +121,7 @@ interface Address {
  * FIG platform security specification.
  */
 interface EncryptedValue {
-  encrypted: true
+  isEncrypted: true
   value:     string   // encrypted ciphertext
   hint:      string   // last 4 digits for display: "6789"
 }
@@ -144,11 +144,11 @@ interface SignatureRecord {
     /** How the signature was captured. */
     method:      'drawn' | 'typed' | 'clicked'
 
-    /** Whether a licensed agent was present at the time of signing. */
-    agentWitnessed:  boolean
+    /** Whether a licensed producer was present at the time of signing. */
+    isProducerWitnessed:  boolean
 
-    /** NPN of the witnessing agent, if agentWitnessed is true. */
-    witnessAgentNpn: string | null
+    /** NPN of the witnessing producer, if isProducerWitnessed is true. */
+    witnessProducerNpn: string | null
 
     /** Client IP at time of signing. */
     ipAddress:   string | null
@@ -165,15 +165,15 @@ interface SignatureRecord {
 
 interface PersonParty {
   firstName:      string
-  middleInitial:  string | null
+  middleName:  string | null
   lastName:       string
   dateOfBirth:    string              // YYYY-MM-DD
   gender:         'male' | 'female'
-  ssn:            EncryptedValue
+  taxId:            EncryptedValue
   address:        Address
   phone:          string
   email:          string | null
-  usCitizen:      boolean
+  isUsCitizen:      boolean
 }
 
 interface EntityParty {
@@ -182,7 +182,7 @@ interface EntityParty {
   entityType:  'trust' | 'corporation' | 'estate' | 'other'
   /** Date the entity/trust was established. */
   entityDate:  string | null          // YYYY-MM-DD
-  tin:         EncryptedValue
+  taxId:         EncryptedValue
   address:     Address
   phone:       string
   email:       string | null
@@ -190,14 +190,14 @@ interface EntityParty {
 
 /**
  * The owner may be:
- * 1. The same individual as the annuitant (sameAsAnnuitant: true)
+ * 1. The same individual as the annuitant (isSameAsAnnuitant: true)
  * 2. A different natural person (type: 'individual')
  * 3. A legal entity such as a trust or corporation (type: 'entity')
  */
 type OwnerParty =
-  | { sameAsAnnuitant: true }
-  | { sameAsAnnuitant: false; type: 'individual'; person: PersonParty }
-  | { sameAsAnnuitant: false; type: 'entity';     entity: EntityParty }
+  | { isSameAsAnnuitant: true }
+  | { isSameAsAnnuitant: false; type: 'individual'; person: PersonParty }
+  | { isSameAsAnnuitant: false; type: 'entity';     entity: EntityParty }
 
 
 // ─────────────────────────────────────────────────────────────────
@@ -213,9 +213,9 @@ interface Beneficiary {
   distributionMethod:  'per_stirpes' | 'per_capita'
 
   firstName:           string
-  middleInitial:       string | null
+  middleName:       string | null
   lastName:            string
-  ssn:                 EncryptedValue | null   // null when not provided or entity beneficiary
+  taxId:                 EncryptedValue | null   // null when not provided or entity beneficiary
   dateOfBirth:         string | null           // YYYY-MM-DD
   relationship:        'spouse' | 'child' | 'parent' | 'sibling' | 'grandchild' | 'estate' | 'trust' | 'other'
 
@@ -374,15 +374,15 @@ interface TransferDetail {
 
   surrenderingParties: {
     ownerName:                   string
-    ownerSsn:                    EncryptedValue
+    ownerTaxId:                    EncryptedValue
     jointOwnerName:              string | null
-    jointOwnerSsn:               EncryptedValue | null
+    jointOwnerTaxId:               EncryptedValue | null
     annuitantName:               string | null
-    annuitantSsn:                EncryptedValue | null
+    annuitantTaxId:                EncryptedValue | null
     jointAnnuitantName:          string | null
-    jointAnnuitantSsn:           EncryptedValue | null
+    jointAnnuitantTaxId:           EncryptedValue | null
     contingentAnnuitantName:     string | null
-    contingentAnnuitantSsn:      EncryptedValue | null
+    contingentAnnuitantTaxId:      EncryptedValue | null
   }
 
   transferInstructions: {
@@ -395,12 +395,12 @@ interface TransferDetail {
   }
 
   acknowledgments: {
-    rmdAcknowledged:             boolean | null   // null when not applicable
-    partial1035Acknowledged:     boolean | null
-    tsa403bTransferAcknowledged: boolean | null
-    generalDisclosuresAcknowledged: boolean
-    backupWithholding:           boolean
-    taxpayerCertificationAcknowledged: boolean
+    isRmdAcknowledged:             boolean | null   // null when not applicable
+    isPartial1035Acknowledged:     boolean | null
+    isTsa403bTransferAcknowledged: boolean | null
+    isGeneralDisclosuresAcknowledged: boolean
+    isBackupWithholding:           boolean
+    isTaxpayerCertificationAcknowledged: boolean
   }
 
   signatures: {
@@ -475,10 +475,10 @@ interface DisclosureRecord {
   acknowledgmentLabel: string
 
   /** Whether the applicant was required to fully view the content before acknowledging. */
-  viewRequired:   boolean
+  isViewRequired:   boolean
 
   /** Whether the scroll/view gate was satisfied before acknowledgment was captured. */
-  viewCompleted:  boolean
+  isViewCompleted:  boolean
 
   /** ISO 8601 UTC timestamp of when the acknowledgment was completed. */
   acknowledgedAt: string
@@ -495,9 +495,9 @@ interface DisclosureRecord {
 
 interface ApplicationSignatures {
   /** The applicant's certification that all statements in the application are true. */
-  ownerStatementAcknowledged: boolean
+  isOwnerStatementAcknowledged: boolean
 
-  fraudWarningAcknowledged: boolean
+  isFraudWarningAcknowledged: boolean
 
   ownerSignature:          SignatureRecord
   ownerSignatureDate:      string          // YYYY-MM-DD; always equals submission date
@@ -518,38 +518,38 @@ interface ApplicationSignatures {
 
 
 // ─────────────────────────────────────────────────────────────────
-// AGENT CERTIFICATION
+// PRODUCER CERTIFICATION
 // ─────────────────────────────────────────────────────────────────
 
-interface AgentCertification {
+interface ProducerCertification {
   /**
-   * Whether the agent is aware the applicant has existing insurance.
-   * Maps to the replacement suitability questions on the agent certification page.
+   * Whether the producer is aware the applicant has existing insurance.
+   * Maps to the replacement suitability questions on the producer certification page.
    */
-  agentAwareOfExistingInsurance: boolean
+  isProducerAwareOfExistingInsurance: boolean
 
   /**
-   * Whether the agent believes this contract replaces existing insurance.
+   * Whether the producer believes this contract replaces existing insurance.
    */
-  agentBelievesReplacement: boolean
+  isProducerBelievesReplacement: boolean
 
   /**
-   * Company name of the contract being replaced, if agentBelievesReplacement is true.
+   * Company name of the contract being replaced, if isProducerBelievesReplacement is true.
    */
   replacingCompanyName: string | null
 
-  /** All writing agents on this application. Commissions must sum to 100%. */
-  writingAgents: WritingAgent[]
+  /** All producers (writing agents) on this application. Commissions must sum to 100%. */
+  producers: Producer[]
 }
 
-interface WritingAgent {
+interface Producer {
   /** 1-based index among all writing agents on this application. */
   index: number
 
-  /** Agent's carrier-assigned writing/agent number. */
-  agentNumber: string
+  /** Producer's carrier-assigned writing/producer number. */
+  producerNumber: string
 
-  /** Agent's National Producer Number (NPN) from NIPR. */
+  /** Producer's National Producer Number (NPN) from NIPR. */
   npn: string | null
 
   fullName:  string
@@ -591,18 +591,18 @@ interface WritingAgent {
     },
     "submissionMode": "pdf_fill",
     "submissionSource": "web",
-    "submittingAgentNpn": "12345678",
+    "submittingProducerNpn": "12345678",
     "ipAddress": "198.51.100.42",
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
   },
 
   "annuitant": {
     "firstName": "Jane",
-    "middleInitial": "M",
+    "middleName": "M",
     "lastName": "Smith",
     "dateOfBirth": "1965-03-15",
     "gender": "female",
-    "ssn": { "encrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
+    "taxId": { "isEncrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
     "address": {
       "street1": "742 Evergreen Terrace",
       "street2": null,
@@ -612,21 +612,21 @@ interface WritingAgent {
     },
     "phone": "2175550100",
     "email": "jane.smith@example.com",
-    "usCitizen": true
+    "isUsCitizen": true
   },
 
   "jointAnnuitant": null,
 
   "owner": {
-    "sameAsAnnuitant": false,
+    "isSameAsAnnuitant": false,
     "type": "individual",
     "person": {
       "firstName": "Jane",
-      "middleInitial": "M",
+      "middleName": "M",
       "lastName": "Smith",
       "dateOfBirth": "1965-03-15",
       "gender": "female",
-      "ssn": { "encrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
+      "taxId": { "isEncrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
       "address": {
         "street1": "742 Evergreen Terrace",
         "street2": null,
@@ -636,7 +636,7 @@ interface WritingAgent {
       },
       "phone": "2175550100",
       "email": "jane.smith@example.com",
-      "usCitizen": true
+      "isUsCitizen": true
     }
   },
 
@@ -649,9 +649,9 @@ interface WritingAgent {
       "entityType": "individual",
       "distributionMethod": "per_stirpes",
       "firstName": "Robert",
-      "middleInitial": null,
+      "middleName": null,
       "lastName": "Smith",
-      "ssn": { "encrypted": true, "value": "enc_aes256_def456...", "hint": "4321" },
+      "taxId": { "isEncrypted": true, "value": "enc_aes256_def456...", "hint": "4321" },
       "dateOfBirth": "1962-07-20",
       "relationship": "spouse",
       "address": {
@@ -759,15 +759,15 @@ interface WritingAgent {
       },
       "surrenderingParties": {
         "ownerName": "Jane M Smith",
-        "ownerSsn": { "encrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
+        "ownerTaxId": { "isEncrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
         "jointOwnerName": null,
-        "jointOwnerSsn": null,
+        "jointOwnerTaxId": null,
         "annuitantName": null,
-        "annuitantSsn": null,
+        "annuitantTaxId": null,
         "jointAnnuitantName": null,
-        "jointAnnuitantSsn": null,
+        "jointAnnuitantTaxId": null,
         "contingentAnnuitantName": null,
-        "contingentAnnuitantSsn": null
+        "contingentAnnuitantTaxId": null
       },
       "transferInstructions": {
         "scope": "full",
@@ -778,12 +778,12 @@ interface WritingAgent {
         "specificDate": null
       },
       "acknowledgments": {
-        "rmdAcknowledged": true,
-        "partial1035Acknowledged": null,
-        "tsa403bTransferAcknowledged": null,
-        "generalDisclosuresAcknowledged": true,
-        "backupWithholding": false,
-        "taxpayerCertificationAcknowledged": true
+        "isRmdAcknowledged": true,
+        "isPartial1035Acknowledged": null,
+        "isTsa403bTransferAcknowledged": null,
+        "isGeneralDisclosuresAcknowledged": true,
+        "isBackupWithholding": false,
+        "isTaxpayerCertificationAcknowledged": true
       },
       "signatures": {
         "ownerSignature": {
@@ -791,8 +791,8 @@ interface WritingAgent {
           "attestation": {
             "signedAt": "2025-06-15T14:22:10Z",
             "method": "drawn",
-            "agentWitnessed": true,
-            "witnessAgentNpn": "12345678",
+            "isProducerWitnessed": true,
+            "witnessProducerNpn": "12345678",
             "ipAddress": "198.51.100.42",
             "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
           }
@@ -820,16 +820,16 @@ interface WritingAgent {
       "title": "NAIC Annuity Buyer's Guide",
       "acknowledgmentType": "boolean",
       "acknowledgmentLabel": "I acknowledge that I have received the NAIC Annuity Buyer's Guide and have had the opportunity to review it prior to signing this application.",
-      "viewRequired": true,
-      "viewCompleted": true,
+      "isViewRequired": true,
+      "isViewCompleted": true,
       "acknowledgedAt": "2025-06-15T14:10:05Z",
       "signature": {
         "capturedImage": null,
         "attestation": {
           "signedAt": "2025-06-15T14:10:05Z",
           "method": "clicked",
-          "agentWitnessed": true,
-          "witnessAgentNpn": "12345678",
+          "isProducerWitnessed": true,
+          "witnessProducerNpn": "12345678",
           "ipAddress": "198.51.100.42",
           "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
         }
@@ -840,16 +840,16 @@ interface WritingAgent {
       "title": "MNL RetireVantage® 14 Annuity Disclosure Statement",
       "acknowledgmentType": "initials",
       "acknowledgmentLabel": "Owner initials confirming receipt and review of the MNL RetireVantage 14 Annuity Disclosure Statement (REQUIRED)",
-      "viewRequired": true,
-      "viewCompleted": true,
+      "isViewRequired": true,
+      "isViewCompleted": true,
       "acknowledgedAt": "2025-06-15T14:18:30Z",
       "signature": {
         "capturedImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH...",
         "attestation": {
           "signedAt": "2025-06-15T14:18:30Z",
           "method": "drawn",
-          "agentWitnessed": true,
-          "witnessAgentNpn": "12345678",
+          "isProducerWitnessed": true,
+          "witnessProducerNpn": "12345678",
           "ipAddress": "198.51.100.42",
           "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
         }
@@ -860,16 +860,16 @@ interface WritingAgent {
       "title": "Strategy Fee Risk Disclosure",
       "acknowledgmentType": "boolean",
       "acknowledgmentLabel": "I understand that the Enhanced Participation Rate crediting strategy I have selected includes a 1.00% annual strategy fee...",
-      "viewRequired": true,
-      "viewCompleted": true,
+      "isViewRequired": true,
+      "isViewCompleted": true,
       "acknowledgedAt": "2025-06-15T14:19:45Z",
       "signature": {
         "capturedImage": null,
         "attestation": {
           "signedAt": "2025-06-15T14:19:45Z",
           "method": "clicked",
-          "agentWitnessed": true,
-          "witnessAgentNpn": "12345678",
+          "isProducerWitnessed": true,
+          "witnessProducerNpn": "12345678",
           "ipAddress": "198.51.100.42",
           "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
         }
@@ -878,15 +878,15 @@ interface WritingAgent {
   ],
 
   "applicationSignatures": {
-    "ownerStatementAcknowledged": true,
-    "fraudWarningAcknowledged": true,
+    "isOwnerStatementAcknowledged": true,
+    "isFraudWarningAcknowledged": true,
     "ownerSignature": {
       "capturedImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
       "attestation": {
         "signedAt": "2025-06-15T14:28:00Z",
         "method": "drawn",
-        "agentWitnessed": true,
-        "witnessAgentNpn": "12345678",
+        "isProducerWitnessed": true,
+        "witnessProducerNpn": "12345678",
         "ipAddress": "198.51.100.42",
         "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
       }
@@ -901,14 +901,14 @@ interface WritingAgent {
     "jointOwnerEmail": null
   },
 
-  "agentCertification": {
-    "agentAwareOfExistingInsurance": true,
-    "agentBelievesReplacement": false,
+  "producerCertification": {
+    "isProducerAwareOfExistingInsurance": true,
+    "isProducerBelievesReplacement": false,
     "replacingCompanyName": null,
-    "writingAgents": [
+    "producers": [
       {
         "index": 1,
-        "agentNumber": "MN-98765",
+        "producerNumber": "MN-98765",
         "npn": "12345678",
         "fullName": "Michael J. Davis",
         "email": "mdavis@figbroker.com",
@@ -920,8 +920,8 @@ interface WritingAgent {
           "attestation": {
             "signedAt": "2025-06-15T14:29:15Z",
             "method": "drawn",
-            "agentWitnessed": false,
-            "witnessAgentNpn": null,
+            "isProducerWitnessed": false,
+            "witnessProducerNpn": null,
             "ipAddress": "198.51.100.42",
             "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
           }
@@ -944,11 +944,11 @@ Before a payload is accepted for transmission to a carrier, the following constr
 | Owner beneficiary percentages | Primary beneficiaries sum to 100. Contingent beneficiaries (if any) sum to 100. |
 | Annuitant beneficiary percentages | Same as owner beneficiary rule, applied independently. |
 | Investment allocations | All `percentage` values sum to 100. |
-| Writing agent commissions | All `commissionPercentage` values sum to 100. |
+| Producer commissions | All `commissionPercentage` values sum to 100. |
 | Transfer count consistency | `transfers` array length equals `funding.methods` count for `exchange_1035` + `direct_transfer` types. |
 | All required disclosure records present | Every disclosure with `required: true` in the application definition that was visible must have a corresponding entry in `disclosures[]`. |
-| Signature dates equal submission date | `ownerSignatureDate`, `agentCertification.writingAgents[*].signatureDate`, and transfer signature dates must all equal the date portion of `envelope.submittedAt`. |
-| SSN encrypted | All `EncryptedValue` fields must have `encrypted: true`. Plaintext SSNs are rejected. |
+| Signature dates equal submission date | `ownerSignatureDate`, `producerCertification.producers[*].signatureDate`, and transfer signature dates must all equal the date portion of `envelope.submittedAt`. |
+| SSN encrypted | All `EncryptedValue` fields must have `isEncrypted: true`. Plaintext SSNs are rejected. |
 
 ---
 

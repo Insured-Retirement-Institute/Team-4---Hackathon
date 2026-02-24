@@ -20,6 +20,10 @@ info:
     - **Condition** — A recursive expression tree supporting simple, compound (AND/OR/NOT),
       and computed comparisons.
     - **Validation** — Rules applied at field, cross-field, group-sum, async, and allocation levels.
+    - **Field Sync** — Bidirectional binding between questions that must share the same
+      value (e.g., owner SSN on the main application and on each 1035 transfer form).
+      Changes to any member propagate to all others; fields remain editable with a
+      desync warning.
 
     ### OpenAPI Version
     This spec targets **OpenAPI 3.1.0**, which aligns fully with JSON Schema Draft 2020-12.
@@ -205,10 +209,10 @@ paths:
                 value:
                   productId: midland-fixed-annuity-001
                   answers:
-                    annuitant_first_name: Jane
-                    annuitant_last_name: Smith
+                    annuitantFirstName: Jane
+                    annuitantLastName: Smith
                     annuitant_dob: '1965-03-15'
-                    annuitant_ssn: '123-45-6789'
+                    annuitantTaxId: '123-45-6789'
                     annuitant_gender: female
                     annuitant_us_citizen: 'yes'
       responses:
@@ -246,7 +250,7 @@ paths:
                         pageRepeatIndex: null
                         groupIndex: null
                         groupFieldId: null
-                        filterField: bene_type
+                        filterField: beneType
                         filterValue: primary
                         type: group_sum
                         message: 'Primary beneficiary percentages must total 100% (current total: 90%)'
@@ -298,16 +302,16 @@ paths:
             schema:
               $ref: '#/components/schemas/SubmissionRequest'
             examples:
-              ai_agent_submission:
+              aiProducerSubmission:
                 summary: Submission originating from an AI agent
                 value:
                   productId: midland-fixed-annuity-001
                   answers:
-                    annuitant_first_name: Jane
-                    annuitant_last_name: Smith
+                    annuitantFirstName: Jane
+                    annuitantLastName: Smith
                   metadata:
-                    submissionSource: ai_agent
-                    agentId: agent-rovo-001
+                    submissionSource: aiProducer
+                    producerId: producer-rovo-001
                     ipAddress: null
                     userAgent: null
       responses:
@@ -440,6 +444,25 @@ components:
           description: Ordered list of pages comprising the application.
           items:
             $ref: '#/components/schemas/Page'
+        fieldSyncs:
+          type: array
+          description: |
+            Bidirectional field synchronization rules. Each entry defines a group of
+            question IDs whose values should remain in sync. When a user changes any
+            field in the group, all other members are pre-filled with the new value.
+
+            Fields on **repeating pages** (`pageRepeat`) are synced across every rendered
+            instance: updating a non-repeating source propagates to all instances, and
+            updating any single instance propagates back to the non-repeating field
+            (and therefore cascades to all other instances).
+
+            Synced fields remain editable. If the user manually overrides a pre-filled
+            value, the UI should display a desync warning indicating the field no longer
+            matches its linked field(s). The override is preserved in the `AnswerMap`
+            as-is; no special envelope is required — desync state is a UI concern.
+          items:
+            $ref: '#/components/schemas/FieldSyncGroup'
+          default: []
 
     # ─────────────────────────────────────────
     # PAGE
@@ -543,8 +566,8 @@ components:
             ```json
             {
               "page-1035-transfer": [
-                { "surrendering_company_name": "Lincoln Financial", "transfer_scope": "full" },
-                { "surrendering_company_name": "Nationwide", "transfer_scope": "partial" }
+                { "surrenderingCompanyName": "Lincoln Financial", "transferScope": "full" },
+                { "surrenderingCompanyName": "Nationwide", "transferScope": "partial" }
               ]
             }
             ```
@@ -802,8 +825,8 @@ components:
             Must be unique across the entire application, following the same
             uniqueness rules as question IDs.
           examples:
-            - disc_buyers_guide_ack
-            - disc_free_look_ack
+            - isBuyersGuideAcknowledged
+            - isFreeLookAcknowledged
             - disc_replacement_signature
         type:
           type: string
@@ -860,7 +883,7 @@ components:
           type: string
           description: Unique identifier for this question across the entire application.
           examples:
-            - annuitant_first_name
+            - annuitantFirstName
         type:
           $ref: '#/components/schemas/QuestionType'
         label:
@@ -944,7 +967,7 @@ components:
         - radio             # Single choice rendered as radio buttons
         - phone             # Formatted US phone number
         - email             # Email address
-        - ssn               # Masked SSN / TIN (stored encrypted server-side)
+        - ssn               # Masked Tax ID input (SSN/TIN format, stored encrypted server-side)
         - signature         # Full electronic signature capture
         - initials          # Abbreviated initials capture (2–5 characters or stylized initial mark).
                             # Distinct from `signature` — rendered as a small inline box rather than
@@ -983,7 +1006,7 @@ components:
       description: |
         Configuration for a `repeatable_group` question, allowing the user to add
         multiple instances of a structured set of sub-fields — for example, multiple
-        beneficiaries, agent commission splits, or replacement contracts.
+        beneficiaries, producer commission splits, or replacement contracts.
       required:
         - minItems
         - maxItems
@@ -1026,7 +1049,7 @@ components:
           type: string
           description: Field identifier, unique within this group definition.
           examples:
-            - bene_first_name
+            - beneFirstName
         type:
           $ref: '#/components/schemas/QuestionType'
         label:
@@ -1590,7 +1613,7 @@ components:
           type: string
           description: Identifier for the registered external validation service.
           examples:
-            - ssn_verification
+            - ssn_verification    # Validates Tax ID format
         description:
           type: ['string', 'null']
           examples:
@@ -1614,8 +1637,8 @@ components:
         ```yaml
         type: group_sum
         questionId: owner_beneficiaries
-        field: bene_percentage
-        filterField: bene_type
+        field: benePercentage
+        filterField: beneType
         filterValue: primary
         operator: eq
         value: 100
@@ -1642,14 +1665,14 @@ components:
           type: string
           description: Sub-field ID within each group item whose values are summed.
           examples:
-            - bene_percentage
+            - benePercentage
         filterField:
           type: ['string', 'null']
           description: |
             Optional sub-field used to filter which group items are included. Must be
             paired with `filterValue`. `null` means all items are included.
           examples:
-            - bene_type
+            - beneType
         filterValue:
           description: |
             Value `filterField` must equal for an item to be included. Must be paired
@@ -1686,6 +1709,126 @@ components:
             - Primary beneficiary percentages must total 100%
 
     # ─────────────────────────────────────────
+    # FIELD SYNC
+    # ─────────────────────────────────────────
+
+    FieldSyncGroup:
+      type: object
+      description: |
+        Defines a bidirectional binding between two or more questions whose values
+        should remain synchronized throughout the application.
+
+        ### Behavior
+        All syncs are **bidirectional**: updating any member pre-fills every other
+        member with the same value. Fields remain fully editable. If the user
+        manually changes a pre-filled value so it no longer matches, the frontend
+        should display a **desync warning** (e.g., "This value no longer matches
+        Owner SSN on the Owner page"). The `overrideWarning` property provides the
+        suggested warning text; the frontend may use it as-is or adapt it to its
+        UI conventions.
+
+        Desync state is a **UI concern** — the `AnswerMap` stores whatever value
+        the user committed, with no special wrapper or flag.
+
+        ### Repeating pages
+        When a synced field lives on a **repeating page** (`pageRepeat`), the sync
+        applies to that field across **every rendered instance**:
+        - A change to the non-repeating member propagates to all instances.
+        - A change on any single instance propagates to the non-repeating member
+          (and therefore cascades to every other instance).
+        - The user may desync individual instances independently.
+
+        ### AI agent guidance
+        AI agents should treat synced fields as pre-answered unless the user
+        explicitly provides a different value. When collecting answers, the agent
+        should note: "I'll carry over your [field] from the owner section — let
+        me know if it should be different for this transfer."
+
+        ### Example
+        ```yaml
+        id: sync-owner-taxId
+        description: >-
+          Owner SSN entered on the Owner page should auto-populate the
+          surrendering owner SSN on every 1035 transfer page instance.
+        fields:
+          - ownerTaxId
+          - surrendering_ownerTaxId
+        behavior: pre_fill_warn
+        overrideWarning: >-
+          This value no longer matches the Owner SSN on the Owner page.
+          Verify this is intentional.
+        condition: null
+        ```
+      required:
+        - id
+        - fields
+        - behavior
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this sync group.
+          examples:
+            - sync-owner-taxId
+            - sync-owner-name-to-transfer
+        description:
+          type: ['string', 'null']
+          description: |
+            Human-readable explanation of why these fields are synced.
+            AI agents may reference this when explaining pre-filled values.
+          examples:
+            - >-
+              Owner SSN entered on the Owner page should auto-populate the
+              surrendering owner SSN on every 1035 transfer page instance.
+        fields:
+          type: array
+          description: |
+            Question IDs that form this sync group. Must contain at least two
+            distinct IDs. All referenced IDs must exist as question IDs somewhere
+            in the application (standard questions, group fields, or disclosure
+            acknowledgments).
+
+            Order is semantically neutral (bidirectional), but the first field
+            listed is treated as the **canonical source** for initial population —
+            meaning on first load, if only one field has a value, it flows to the
+            others.
+          items:
+            type: string
+          minItems: 2
+          examples:
+            - - ownerTaxId
+              - surrendering_ownerTaxId
+        behavior:
+          type: string
+          enum:
+            - pre_fill_warn
+          description: |
+            Governs how the frontend handles synced values:
+            - **`pre_fill_warn`** — All members are pre-filled when any member
+              changes. Fields remain editable. If the user manually overrides a
+              synced value, a desync warning is displayed.
+          examples:
+            - pre_fill_warn
+        overrideWarning:
+          type: ['string', 'null']
+          description: |
+            Suggested warning text displayed when a user manually overrides a
+            synced value, breaking the link. `null` falls back to a generic
+            default (e.g., "This field is linked to {fieldLabel} and no longer
+            matches").
+          examples:
+            - >-
+              This value no longer matches the Owner SSN on the Owner page.
+              Verify this is intentional.
+        condition:
+          description: |
+            Optional condition controlling when this sync is active. When the
+            condition evaluates to `false`, the fields behave independently.
+            `null` means the sync is always active.
+          oneOf:
+            - $ref: '#/components/schemas/ConditionExpression'
+            - type: 'null'
+
+    # ─────────────────────────────────────────
     # VALIDATION REQUEST / RESPONSE
     # ─────────────────────────────────────────
 
@@ -1711,7 +1854,7 @@ components:
 
         **Standard questions** — flat key/value keyed by question ID:
         ```json
-        { "annuitant_first_name": "Jane", "tax_status": "ira" }
+        { "annuitantFirstName": "Jane", "taxStatus": "ira" }
         ```
 
         **Repeatable group questions** — keyed by question ID, value is an ordered array
@@ -1719,7 +1862,7 @@ components:
         ```json
         {
           "owner_beneficiaries": [
-            { "bene_first_name": "John", "bene_type": "primary", "bene_percentage": 100 }
+            { "beneFirstName": "John", "beneType": "primary", "benePercentage": 100 }
           ]
         }
         ```
@@ -1729,8 +1872,8 @@ components:
         ```json
         {
           "page-1035-transfer": [
-            { "surrendering_company_name": "Lincoln Financial", "transfer_scope": "full" },
-            { "surrendering_company_name": "Nationwide", "transfer_scope": "partial" }
+            { "surrenderingCompanyName": "Lincoln Financial", "transferScope": "full" },
+            { "surrenderingCompanyName": "Nationwide", "transferScope": "partial" }
           ]
         }
         ```
@@ -1740,50 +1883,50 @@ components:
         acknowledgments store the captured signature token:
         ```json
         {
-          "disc_buyers_guide_ack": true,
-          "disc_free_look_ack": true,
+          "isBuyersGuideAcknowledged": true,
+          "isFreeLookAcknowledged": true,
           "disc_replacement_signature": "sig_token_abc123"
         }
         ```
       additionalProperties:
         $ref: '#/components/schemas/AnswerValue'
       examples:
-        - annuitant_first_name: Jane
-          annuitant_last_name: Smith
+        - annuitantFirstName: Jane
+          annuitantLastName: Smith
           annuitant_dob: '1965-03-15'
-          tax_status: ira
+          taxStatus: ira
           funding_methods:
             - exchange_1035
           transfer_count: 2
           page-1035-transfer:
-            - surrendering_company_name: Lincoln Financial Group
+            - surrenderingCompanyName: Lincoln Financial Group
               surrendering_account_number: ANN-9876543
               surrendering_plan_type: ira
               surrendering_product_type: annuity
               estimated_transfer_amount: 75000.00
-              transfer_scope: full
+              transferScope: full
               transfer_timing: asap
-              general_disclosures_acknowledged: true
-              taxpayer_certification_acknowledged: true
-            - surrendering_company_name: Nationwide Life
+              isGeneralDisclosuresAcknowledged: true
+              isTaxpayerCertificationAcknowledged: true
+            - surrenderingCompanyName: Nationwide Life
               surrendering_account_number: NW-1234567
               surrendering_plan_type: ira
               surrendering_product_type: annuity
               estimated_transfer_amount: 40000.00
-              transfer_scope: partial
+              transferScope: partial
               partial_amount_type: dollar
               partial_dollar_amount: 25000.00
               transfer_timing: asap
-              general_disclosures_acknowledged: true
-              taxpayer_certification_acknowledged: true
+              isGeneralDisclosuresAcknowledged: true
+              isTaxpayerCertificationAcknowledged: true
           owner_beneficiaries:
-            - bene_first_name: John
+            - beneFirstName: John
               bene_last_name: Smith
-              bene_type: primary
+              beneType: primary
               bene_relationship: spouse
-              bene_percentage: 100
-          disc_buyers_guide_ack: true
-          disc_free_look_ack: true
+              benePercentage: 100
+          isBuyersGuideAcknowledged: true
+          isFreeLookAcknowledged: true
           disc_suitability_ack: true
           disc_replacement_signature: sig_token_abc123
 
@@ -1859,7 +2002,7 @@ components:
           description: |
             Sub-field ID within the failing group item. `null` for non-group questions.
           examples:
-            - bene_percentage
+            - benePercentage
         filterField:
           type: ['string', 'null']
           description: |
@@ -1867,7 +2010,7 @@ components:
             failed. Enables targeted error messages distinguishing primary vs. contingent
             beneficiary failures. `null` when no filter was applied.
           examples:
-            - bene_type
+            - beneType
         filterValue:
           description: |
             The `filterValue` active when the group rule failed. Paired with `filterField`.

@@ -48,7 +48,12 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
 
   if (question.type === 'date') {
     const today = new Date().toISOString().slice(0, 10);
-    if (id.includes('signature_date') || id === 'date_signed') return today;
+    if (
+      id.includes('signature_date')
+      || id === 'date_signed'
+      || id === 'agent_date_signed'
+      || id === 'producer_date_signed'
+    ) return today;
     if (id.includes('expiration')) return '2030-12-31';
     if (id.includes('trust_date')) return '2015-06-15';
     if (id.includes('joint_annuitant_dob')) return '1982-11-03';

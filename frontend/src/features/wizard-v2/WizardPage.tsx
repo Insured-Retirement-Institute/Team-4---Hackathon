@@ -53,7 +53,7 @@ function encryptedValue(raw: string | boolean | Record<string, string | boolean>
   const digits = plain.replace(/\D/g, '');
   const hint = digits.slice(-4);
   return {
-    encrypted: true as const,
+    isEncrypted: true as const,
     value: plain ? `enc_mock_${digits || plain}` : 'enc_mock_empty',
     hint: hint || '0000',
   };
@@ -65,8 +65,8 @@ function signatureRecord(signatureToken: string | boolean | Record<string, strin
     attestation: {
       signedAt: new Date().toISOString(),
       method: 'drawn' as const,
-      agentWitnessed: false,
-      witnessAgentNpn: null,
+      isProducerWitnessed: false,
+      witnessProducerNpn: null,
       ipAddress: null,
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     },
@@ -86,6 +86,34 @@ function buildSubmissionPayload(values: AnswerMap) {
   const transferScope = asString(values.transfer_scope);
   const transferTiming = asString(values.transfer_timing);
   const ownerSameAsAnnuitant = asBool(values.owner_same_as_annuitant);
+  const allocationQuestion = APPLICATION_DEFINITION.pages
+    .flatMap((page) => page.questions)
+    .find((question) => question.id === 'investment_allocations');
+  const allocationFundsById = new Map(
+    (allocationQuestion?.allocationConfig?.funds ?? []).map((fund) => [fund.id, fund]),
+  );
+  const investmentAllocationsRaw = Array.isArray(values.investment_allocations)
+    ? values.investment_allocations
+    : [];
+  const investmentAllocations = investmentAllocationsRaw
+    .map((entry) => {
+      const fundId = asString(entry.fundId);
+      const fund = allocationFundsById.get(fundId);
+      if (!fundId || !fund) return null;
+
+      return {
+        fundId,
+        fundName: fund.name,
+        percentage: asNumber(entry.percentage),
+        creditingMethod: fund.creditingMethod ?? null,
+        index: fund.index ?? null,
+        termYears: typeof fund.termYears === 'number' ? fund.termYears : null,
+        hasStrategyFee: Boolean(fund.hasStrategyFee),
+        strategyFeeAnnualPct:
+          typeof fund.strategyFeeAnnualPct === 'number' ? fund.strategyFeeAnnualPct : null,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
   return {
     envelope: {
@@ -106,17 +134,17 @@ function buildSubmissionPayload(values: AnswerMap) {
       },
       submissionMode: 'pdf_fill' as const,
       submissionSource: 'web' as const,
-      submittingAgentNpn: null,
+      submittingProducerNpn: null,
       ipAddress: null,
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     },
     annuitant: {
       firstName: asString(values.annuitant_first_name),
-      middleInitial: asString(values.annuitant_middle_initial) || null,
+      middleName: asString(values.annuitant_middle_initial) || null,
       lastName: asString(values.annuitant_last_name),
       dateOfBirth: asString(values.annuitant_dob),
       gender: asString(values.annuitant_gender) === 'female' ? 'female' : 'male',
-      ssn: encryptedValue(values.annuitant_ssn),
+      taxId: encryptedValue(values.annuitant_ssn),
       address: {
         street1: asString(values.annuitant_street_address),
         street2: null,
@@ -126,16 +154,16 @@ function buildSubmissionPayload(values: AnswerMap) {
       },
       phone: asString(values.annuitant_phone),
       email: null,
-      usCitizen: asString(values.annuitant_us_citizen) === 'yes',
+      isUsCitizen: asString(values.annuitant_us_citizen) === 'yes',
     },
     jointAnnuitant: asBool(values.has_joint_annuitant)
       ? {
           firstName: asString(values.joint_annuitant_first_name),
-          middleInitial: asString(values.joint_annuitant_middle_initial) || null,
+          middleName: asString(values.joint_annuitant_middle_initial) || null,
           lastName: asString(values.joint_annuitant_last_name),
           dateOfBirth: asString(values.joint_annuitant_dob),
           gender: asString(values.joint_annuitant_gender) === 'female' ? 'female' : 'male',
-          ssn: encryptedValue(values.joint_annuitant_ssn),
+          taxId: encryptedValue(values.joint_annuitant_ssn),
           address: {
             street1: asString(values.joint_annuitant_street_address),
             street2: null,
@@ -145,21 +173,21 @@ function buildSubmissionPayload(values: AnswerMap) {
           },
           phone: asString(values.joint_annuitant_phone),
           email: null,
-          usCitizen: asString(values.joint_annuitant_us_citizen) === 'yes',
+          isUsCitizen: asString(values.joint_annuitant_us_citizen) === 'yes',
         }
       : null,
     owner: ownerSameAsAnnuitant
-      ? { sameAsAnnuitant: true }
+      ? { isSameAsAnnuitant: true }
       : {
-          sameAsAnnuitant: false,
+          isSameAsAnnuitant: false,
           type: 'individual',
           person: {
             firstName: asString(values.owner_first_name),
-            middleInitial: asString(values.owner_middle_initial) || null,
+            middleName: asString(values.owner_middle_initial) || null,
             lastName: asString(values.owner_last_name),
             dateOfBirth: asString(values.owner_dob),
             gender: asString(values.owner_gender) === 'female' ? 'female' : 'male',
-            ssn: encryptedValue(values.owner_ssn_tin),
+            taxId: encryptedValue(values.owner_ssn_tin),
             address: {
               street1: asString(values.owner_street_address),
               street2: null,
@@ -169,17 +197,17 @@ function buildSubmissionPayload(values: AnswerMap) {
             },
             phone: asString(values.owner_phone),
             email: asString(values.owner_email) || null,
-            usCitizen: asString(values.owner_citizenship_status) !== 'non_resident_alien',
+            isUsCitizen: asString(values.owner_citizenship_status) !== 'non_resident_alien',
           },
         },
     jointOwner: asBool(values.has_joint_owner)
       ? {
           firstName: asString(values.joint_owner_first_name),
-          middleInitial: asString(values.joint_owner_middle_initial) || null,
+          middleName: asString(values.joint_owner_middle_initial) || null,
           lastName: asString(values.joint_owner_last_name),
           dateOfBirth: asString(values.joint_owner_dob),
           gender: asString(values.joint_owner_gender) === 'female' ? 'female' : 'male',
-          ssn: encryptedValue(values.joint_owner_ssn),
+          taxId: encryptedValue(values.joint_owner_ssn),
           address: {
             street1: asString(values.joint_owner_street_address),
             street2: null,
@@ -189,7 +217,7 @@ function buildSubmissionPayload(values: AnswerMap) {
           },
           phone: asString(values.joint_owner_phone),
           email: asString(values.joint_owner_email) || null,
-          usCitizen: true,
+          isUsCitizen: true,
         }
       : null,
     ownerBeneficiaries: [],
@@ -231,7 +259,7 @@ function buildSubmissionPayload(values: AnswerMap) {
         asNumber(values.qualified_rollover_amount) +
         asNumber(values.salary_reduction_amount),
     },
-    investmentAllocations: [],
+    investmentAllocations,
     transfers: [
       {
         index: 1,
@@ -260,21 +288,21 @@ function buildSubmissionPayload(values: AnswerMap) {
         },
         surrenderingParties: {
           ownerName: asString(values.surrendering_owner_name),
-          ownerSsn: encryptedValue(values.surrendering_owner_ssn),
+          ownerTaxId: encryptedValue(values.surrendering_owner_ssn),
           jointOwnerName: asString(values.surrendering_joint_owner_name) || null,
-          jointOwnerSsn: asString(values.surrendering_joint_owner_ssn)
+          jointOwnerTaxId: asString(values.surrendering_joint_owner_ssn)
             ? encryptedValue(values.surrendering_joint_owner_ssn)
             : null,
           annuitantName: asString(values.surrendering_annuitant_name) || null,
-          annuitantSsn: asString(values.surrendering_annuitant_ssn)
+          annuitantTaxId: asString(values.surrendering_annuitant_ssn)
             ? encryptedValue(values.surrendering_annuitant_ssn)
             : null,
           jointAnnuitantName: asString(values.surrendering_joint_annuitant_name) || null,
-          jointAnnuitantSsn: asString(values.surrendering_joint_annuitant_ssn)
+          jointAnnuitantTaxId: asString(values.surrendering_joint_annuitant_ssn)
             ? encryptedValue(values.surrendering_joint_annuitant_ssn)
             : null,
           contingentAnnuitantName: asString(values.surrendering_contingent_annuitant_name) || null,
-          contingentAnnuitantSsn: asString(values.surrendering_contingent_annuitant_ssn)
+          contingentAnnuitantTaxId: asString(values.surrendering_contingent_annuitant_ssn)
             ? encryptedValue(values.surrendering_contingent_annuitant_ssn)
             : null,
         },
@@ -287,12 +315,12 @@ function buildSubmissionPayload(values: AnswerMap) {
           specificDate: asString(values.transfer_specific_date) || null,
         },
         acknowledgments: {
-          rmdAcknowledged: asBool(values.rmd_acknowledged),
-          partial1035Acknowledged: asBool(values.partial_1035_acknowledged),
-          tsa403bTransferAcknowledged: asBool(values.tsa_403b_transfer_acknowledged),
-          generalDisclosuresAcknowledged: asBool(values.general_disclosures_acknowledged),
-          backupWithholding: asBool(values.backup_withholding),
-          taxpayerCertificationAcknowledged: asBool(values.taxpayer_certification_acknowledged),
+          isRmdAcknowledged: asBool(values.rmd_acknowledged),
+          isPartial1035Acknowledged: asBool(values.partial_1035_acknowledged),
+          isTsa403bTransferAcknowledged: asBool(values.tsa_403b_transfer_acknowledged),
+          isGeneralDisclosuresAcknowledged: asBool(values.general_disclosures_acknowledged),
+          isBackupWithholding: asBool(values.backup_withholding),
+          isTaxpayerCertificationAcknowledged: asBool(values.taxpayer_certification_acknowledged),
         },
         signatures: {
           ownerSignature: signatureRecord(values.transfer_owner_signature),
@@ -326,8 +354,8 @@ function buildSubmissionPayload(values: AnswerMap) {
     },
     disclosures: [],
     applicationSignatures: {
-      ownerStatementAcknowledged: asBool(values.owner_statement_acknowledged),
-      fraudWarningAcknowledged: asBool(values.fraud_warning_acknowledged),
+      isOwnerStatementAcknowledged: asBool(values.owner_statement_acknowledged),
+      isFraudWarningAcknowledged: asBool(values.fraud_warning_acknowledged),
       ownerSignature: signatureRecord(values.owner_signature),
       ownerSignatureDate: asString(values.date_signed),
       jointOwnerSignature: asString(values.joint_owner_signature) ? signatureRecord(values.joint_owner_signature) : null,
@@ -338,11 +366,11 @@ function buildSubmissionPayload(values: AnswerMap) {
       ownerEmail: asString(values.owner_email) || null,
       jointOwnerEmail: asString(values.joint_owner_email) || null,
     },
-    agentCertification: {
-      agentAwareOfExistingInsurance: asBool(values.agent_replacement_existing),
-      agentBelievesReplacement: asBool(values.agent_replacement_replacing),
+    producerCertification: {
+      isProducerAwareOfExistingInsurance: asBool(values.agent_replacement_existing),
+      isProducerBelievesReplacement: asBool(values.agent_replacement_replacing),
       replacingCompanyName: asString(values.agent_replacement_company) || null,
-      writingAgents: [],
+      producers: [],
     },
   };
 }
