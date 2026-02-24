@@ -44,7 +44,7 @@ router.post('/:applicationId/docusign/start', async (req, res) => {
     if (!applicationId || !normalizedEmail || !normalizedName || !normalizedEmail.includes('@')) {
       return res
         .status(400)
-        .json({ message: 'signerEmail and signerName are required.' });
+        .json({ error: 'signerEmail and signerName are required.' });
     }
 
     const result = await startEmbeddedSigning({
@@ -53,10 +53,15 @@ router.post('/:applicationId/docusign/start', async (req, res) => {
       signerName: normalizedName
     });
 
+    console.info('DocuSign start success:', {
+      applicationId,
+      envelopeId: result?.envelopeId
+    });
+
     res.status(200).json(result);
   } catch (err) {
-    console.error('DocuSign start error:', err?.message || err);
-    res.status(500).json({ message: 'An unexpected error occurred. Please try again.' });
+    console.error('DocuSign start error:', err);
+    res.status(500).json({ error: 'Failed to start signing process' });
   }
 });
 
