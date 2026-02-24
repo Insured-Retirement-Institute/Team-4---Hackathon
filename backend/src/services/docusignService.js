@@ -55,7 +55,7 @@ async function startEmbeddedSigning({ applicationId, signerEmail, signerName }) 
 
   const envelopesApi = new docusign.EnvelopesApi(apiClient);
 
-  const pdfPath = path.resolve(__dirname, '..', '..', 'Assets', 'sample.pdf');
+  const pdfPath = path.join(__dirname, '..', '..', 'Assets', 'sample.pdf');
   if (!fs.existsSync(pdfPath)) {
     throw new Error(
       `Missing PDF at ${pdfPath}. Put a file at backend/Assets/sample.pdf`

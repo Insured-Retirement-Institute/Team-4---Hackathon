@@ -29,6 +29,10 @@ router.get('/:productId', (req, res) => {
 });
 
 // POST /application/:applicationId/docusign/start
+// Manual test:
+// curl -X POST http://localhost:8080/application/test-app-123/docusign/start \
+//   -H "Content-Type: application/json" \
+//   -d '{"signerEmail":"you@example.com","signerName":"Test Signer"}'
 router.post('/:applicationId/docusign/start', async (req, res) => {
   try {
     const { applicationId } = req.params;
@@ -38,11 +42,9 @@ router.post('/:applicationId/docusign/start', async (req, res) => {
     const normalizedName = typeof signerName === 'string' ? signerName.trim() : '';
 
     if (!applicationId || !normalizedEmail || !normalizedName || !normalizedEmail.includes('@')) {
-      return res.status(400).json({
-        code: 'BAD_REQUEST',
-        message: 'Request body must include valid signerEmail and signerName.',
-        details: null
-      });
+      return res
+        .status(400)
+        .json({ message: 'signerEmail and signerName are required.' });
     }
 
     const result = await startEmbeddedSigning({
@@ -51,15 +53,10 @@ router.post('/:applicationId/docusign/start', async (req, res) => {
       signerName: normalizedName
     });
 
-    res.json(result);
+    res.status(200).json(result);
   } catch (err) {
-    const errorDetails = err?.response?.data || err?.response?.body || err;
-    console.error('DocuSign start error:', errorDetails);
-    res.status(500).json({
-      code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred. Please try again.',
-      details: null
-    });
+    console.error('DocuSign start error:', err?.message || err);
+    res.status(500).json({ message: 'An unexpected error occurred. Please try again.' });
   }
 });
 
