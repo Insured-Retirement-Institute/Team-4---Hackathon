@@ -1,31 +1,64 @@
-# Define repoistory name
+# IRI Retirement Application Platform
 
-Define description.
+A schema-driven platform for processing retirement application submissions across multiple insurance carriers. Built by Team 4 for the IRI Hackathon.
 
-## Get started
-We are currently in the process of standing up [SwaggerHub](https://wwww.swaggerhub.com) to host OpenAPI definitions. More to come.
+## What It Does
 
-Please refer to the [style guide](https://github.com/Insured-Retirement-Institute/Style-Guide) for technical governance of standards, data dictionary, and the code of conduct.
+Insurance carriers each have unique application forms with different fields, validation rules, and submission requirements. This platform:
 
-## Business Case
-Define your business case for the specification.
+1. **Defines** each carrier's application as a JSON schema
+2. **Renders** a dynamic wizard UI from that schema
+3. **Validates** input on both client and server against the schema
+4. **Submits** completed applications to the carrier
 
-## User Stories, personna - supporting documents for the business case
-- Load your user stories, personna - supporting documents for the business case.
+Adding a new carrier = adding one JSON schema file. No code changes needed.
 
-## Business Owners 
-- Carrier Business Owner: contact
-- Distributor Business Owner: contact
-- Solution Provider Business Owner: contact
+## Quick Start
 
-## How to engage, contribute, and give feedback
-- These working groups are occuring on ....
-- Please contact the business owners or IRI (hpikus@irionline.org) to get added to the working group discussions. 
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+python run.py
+# API running at http://localhost:5000
 
-## Change subsmissions and reporting issues and bugs
+# Frontend
+cd frontend
+npm install
+npm run dev
+# UI running at http://localhost:5173
+```
 
-Security issues and bugs should be reported directly to Katherine Dease kdease@irionline.org. Issues and bugs can be reported directly within the issues tab of a repository. Change requests should follow the standards governance workflow outlined on the [main page](https://github.com/Insured-Retirement-Institute).
+See [docs/SETUP.md](docs/SETUP.md) for detailed setup instructions.
 
-## Code of conduct
+## Project Structure
 
-See [style guide](https://github.com/Insured-Retirement-Institute/Style-Guide)
+```
+backend/     Python Flask API server
+frontend/    React + TypeScript UI (Vite)
+docs/        Architecture and reference documentation
+scripts/     Setup and utility scripts
+infra/       Infrastructure definitions (DynamoDB)
+```
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) — System design overview
+- [Data Model](docs/DATA_MODEL.md) — Carrier schema format specification
+- [API Reference](docs/API.md) — Endpoint documentation
+- [Setup Guide](docs/SETUP.md) — Local development setup
+- [Carrier Onboarding](docs/CARRIER_ONBOARDING.md) — How to add a new carrier
+
+## Tech Stack
+
+- **Backend:** Python, Flask, boto3, jsonschema
+- **Frontend:** React, TypeScript, Vite
+- **Database:** AWS DynamoDB
+
+## Team
+
+Team 4 — IRI Hackathon
+
+## License
+
+See [LICENSE](LICENSE).

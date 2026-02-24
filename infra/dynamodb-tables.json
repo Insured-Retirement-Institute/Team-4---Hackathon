@@ -1,0 +1,36 @@
+{
+  "tables": [
+    {
+      "TableName": "CarrierSchemas",
+      "KeySchema": [
+        {"AttributeName": "carrier_id", "KeyType": "HASH"},
+        {"AttributeName": "schema_version", "KeyType": "RANGE"}
+      ],
+      "AttributeDefinitions": [
+        {"AttributeName": "carrier_id", "AttributeType": "S"},
+        {"AttributeName": "schema_version", "AttributeType": "S"}
+      ],
+      "BillingMode": "PAY_PER_REQUEST"
+    },
+    {
+      "TableName": "Applications",
+      "KeySchema": [
+        {"AttributeName": "application_id", "KeyType": "HASH"}
+      ],
+      "AttributeDefinitions": [
+        {"AttributeName": "application_id", "AttributeType": "S"},
+        {"AttributeName": "carrier_id", "AttributeType": "S"}
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "carrier_id-index",
+          "KeySchema": [
+            {"AttributeName": "carrier_id", "KeyType": "HASH"}
+          ],
+          "Projection": {"ProjectionType": "ALL"}
+        }
+      ],
+      "BillingMode": "PAY_PER_REQUEST"
+    }
+  ]
+}

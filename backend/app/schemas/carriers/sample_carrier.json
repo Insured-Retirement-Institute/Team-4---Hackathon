@@ -1,0 +1,351 @@
+{
+  "carrier_id": "sample_carrier",
+  "carrier_name": "Sample Insurance Co",
+  "schema_version": "1.0",
+  "effective_date": "2025-01-01",
+  "product_types": ["annuity", "life"],
+  "steps": [
+    {
+      "step_id": "product_selection",
+      "title": "Product Selection",
+      "description": "Choose your product type",
+      "order": 1,
+      "fields": [
+        {
+          "field_id": "product_type",
+          "type": "select",
+          "label": "Product Type",
+          "required": true,
+          "options": [
+            {"value": "annuity", "label": "Annuity"},
+            {"value": "life", "label": "Life Insurance"}
+          ]
+        }
+      ]
+    },
+    {
+      "step_id": "owner_info",
+      "title": "Owner Information",
+      "description": "Primary account owner details",
+      "order": 2,
+      "fields": [
+        {
+          "field_id": "owner_first_name",
+          "type": "text",
+          "label": "First Name",
+          "required": true,
+          "validation": {
+            "min_length": 1,
+            "max_length": 50,
+            "pattern": "^[a-zA-Z' -]+$"
+          }
+        },
+        {
+          "field_id": "owner_last_name",
+          "type": "text",
+          "label": "Last Name",
+          "required": true,
+          "validation": {
+            "min_length": 1,
+            "max_length": 50,
+            "pattern": "^[a-zA-Z' -]+$"
+          }
+        },
+        {
+          "field_id": "owner_dob",
+          "type": "date",
+          "label": "Date of Birth",
+          "required": true
+        },
+        {
+          "field_id": "owner_ssn",
+          "type": "ssn",
+          "label": "Social Security Number",
+          "required": true,
+          "placeholder": "XXX-XX-XXXX",
+          "validation": {
+            "pattern": "^\\d{3}-?\\d{2}-?\\d{4}$"
+          }
+        },
+        {
+          "field_id": "owner_email",
+          "type": "email",
+          "label": "Email Address",
+          "required": true,
+          "validation": {
+            "pattern": "^[^@]+@[^@]+\\.[^@]+$"
+          }
+        },
+        {
+          "field_id": "owner_phone",
+          "type": "phone",
+          "label": "Phone Number",
+          "required": true,
+          "placeholder": "(555) 555-5555",
+          "validation": {
+            "pattern": "^\\+?1?[-.\\s]?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}$"
+          }
+        }
+      ]
+    },
+    {
+      "step_id": "owner_address",
+      "title": "Owner Address",
+      "description": "Residential address",
+      "order": 3,
+      "fields": [
+        {
+          "field_id": "owner_address",
+          "type": "text",
+          "label": "Street Address",
+          "required": true
+        },
+        {
+          "field_id": "owner_city",
+          "type": "text",
+          "label": "City",
+          "required": true
+        },
+        {
+          "field_id": "owner_state",
+          "type": "select",
+          "label": "State",
+          "required": true,
+          "options": [
+            {"value": "AL", "label": "Alabama"},
+            {"value": "AK", "label": "Alaska"},
+            {"value": "AZ", "label": "Arizona"},
+            {"value": "AR", "label": "Arkansas"},
+            {"value": "CA", "label": "California"},
+            {"value": "CO", "label": "Colorado"},
+            {"value": "CT", "label": "Connecticut"},
+            {"value": "DE", "label": "Delaware"},
+            {"value": "FL", "label": "Florida"},
+            {"value": "GA", "label": "Georgia"},
+            {"value": "HI", "label": "Hawaii"},
+            {"value": "ID", "label": "Idaho"},
+            {"value": "IL", "label": "Illinois"},
+            {"value": "IN", "label": "Indiana"},
+            {"value": "IA", "label": "Iowa"},
+            {"value": "KS", "label": "Kansas"},
+            {"value": "KY", "label": "Kentucky"},
+            {"value": "LA", "label": "Louisiana"},
+            {"value": "ME", "label": "Maine"},
+            {"value": "MD", "label": "Maryland"},
+            {"value": "MA", "label": "Massachusetts"},
+            {"value": "MI", "label": "Michigan"},
+            {"value": "MN", "label": "Minnesota"},
+            {"value": "MS", "label": "Mississippi"},
+            {"value": "MO", "label": "Missouri"},
+            {"value": "MT", "label": "Montana"},
+            {"value": "NE", "label": "Nebraska"},
+            {"value": "NV", "label": "Nevada"},
+            {"value": "NH", "label": "New Hampshire"},
+            {"value": "NJ", "label": "New Jersey"},
+            {"value": "NM", "label": "New Mexico"},
+            {"value": "NY", "label": "New York"},
+            {"value": "NC", "label": "North Carolina"},
+            {"value": "ND", "label": "North Dakota"},
+            {"value": "OH", "label": "Ohio"},
+            {"value": "OK", "label": "Oklahoma"},
+            {"value": "OR", "label": "Oregon"},
+            {"value": "PA", "label": "Pennsylvania"},
+            {"value": "RI", "label": "Rhode Island"},
+            {"value": "SC", "label": "South Carolina"},
+            {"value": "SD", "label": "South Dakota"},
+            {"value": "TN", "label": "Tennessee"},
+            {"value": "TX", "label": "Texas"},
+            {"value": "UT", "label": "Utah"},
+            {"value": "VT", "label": "Vermont"},
+            {"value": "VA", "label": "Virginia"},
+            {"value": "WA", "label": "Washington"},
+            {"value": "WV", "label": "West Virginia"},
+            {"value": "WI", "label": "Wisconsin"},
+            {"value": "WY", "label": "Wyoming"}
+          ]
+        },
+        {
+          "field_id": "owner_zip",
+          "type": "text",
+          "label": "ZIP Code",
+          "required": true,
+          "validation": {
+            "pattern": "^\\d{5}(-\\d{4})?$"
+          }
+        }
+      ]
+    },
+    {
+      "step_id": "annuity_details",
+      "title": "Annuity Details",
+      "description": "Annuity-specific information",
+      "order": 4,
+      "conditions": [
+        {
+          "field_id": "product_type",
+          "operator": "equals",
+          "value": "annuity"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "annuity_type",
+          "type": "select",
+          "label": "Annuity Type",
+          "required": true,
+          "options": [
+            {"value": "fixed", "label": "Fixed Annuity"},
+            {"value": "variable", "label": "Variable Annuity"},
+            {"value": "indexed", "label": "Fixed Indexed Annuity"}
+          ]
+        },
+        {
+          "field_id": "initial_premium",
+          "type": "currency",
+          "label": "Initial Premium Amount",
+          "required": true,
+          "placeholder": "0.00",
+          "validation": {
+            "min_value": 5000,
+            "max_value": 1000000,
+            "custom_message": "Premium must be between $5,000 and $1,000,000"
+          }
+        },
+        {
+          "field_id": "payment_method",
+          "type": "select",
+          "label": "Payment Method",
+          "required": true,
+          "options": [
+            {"value": "check", "label": "Check"},
+            {"value": "wire", "label": "Wire Transfer"},
+            {"value": "transfer_1035", "label": "1035 Exchange"}
+          ]
+        }
+      ]
+    },
+    {
+      "step_id": "life_details",
+      "title": "Life Insurance Details",
+      "description": "Life insurance-specific information",
+      "order": 5,
+      "conditions": [
+        {
+          "field_id": "product_type",
+          "operator": "equals",
+          "value": "life"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "coverage_amount",
+          "type": "currency",
+          "label": "Coverage Amount",
+          "required": true,
+          "validation": {
+            "min_value": 25000,
+            "max_value": 5000000,
+            "custom_message": "Coverage must be between $25,000 and $5,000,000"
+          }
+        },
+        {
+          "field_id": "tobacco_use",
+          "type": "select",
+          "label": "Tobacco Use",
+          "required": true,
+          "options": [
+            {"value": "never", "label": "Never Used"},
+            {"value": "former", "label": "Former User (>12 months)"},
+            {"value": "current", "label": "Current User"}
+          ]
+        }
+      ]
+    },
+    {
+      "step_id": "beneficiary",
+      "title": "Beneficiary Information",
+      "description": "Primary beneficiary",
+      "order": 6,
+      "fields": [
+        {
+          "field_id": "beneficiary_first_name",
+          "type": "text",
+          "label": "Beneficiary First Name",
+          "required": true,
+          "validation": {
+            "min_length": 1,
+            "max_length": 50
+          }
+        },
+        {
+          "field_id": "beneficiary_last_name",
+          "type": "text",
+          "label": "Beneficiary Last Name",
+          "required": true,
+          "validation": {
+            "min_length": 1,
+            "max_length": 50
+          }
+        },
+        {
+          "field_id": "beneficiary_relationship",
+          "type": "select",
+          "label": "Relationship to Owner",
+          "required": true,
+          "options": [
+            {"value": "spouse", "label": "Spouse"},
+            {"value": "child", "label": "Child"},
+            {"value": "parent", "label": "Parent"},
+            {"value": "sibling", "label": "Sibling"},
+            {"value": "trust", "label": "Trust"},
+            {"value": "estate", "label": "Estate"},
+            {"value": "other", "label": "Other"}
+          ]
+        },
+        {
+          "field_id": "beneficiary_percentage",
+          "type": "number",
+          "label": "Benefit Percentage",
+          "required": true,
+          "default_value": 100,
+          "validation": {
+            "min_value": 1,
+            "max_value": 100,
+            "custom_message": "Percentage must be between 1 and 100"
+          }
+        }
+      ]
+    },
+    {
+      "step_id": "review_consent",
+      "title": "Review & Consent",
+      "description": "Review your information and provide consent",
+      "order": 7,
+      "fields": [
+        {
+          "field_id": "consent_accuracy",
+          "type": "checkbox",
+          "label": "I certify that all information provided is accurate and complete",
+          "required": true
+        },
+        {
+          "field_id": "consent_terms",
+          "type": "checkbox",
+          "label": "I agree to the terms and conditions",
+          "required": true
+        },
+        {
+          "field_id": "consent_electronic",
+          "type": "checkbox",
+          "label": "I consent to electronic delivery of documents",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "submission_endpoint": null,
+    "pdf_template_id": null,
+    "notes": "Sample carrier schema for development and testing"
+  }
+}

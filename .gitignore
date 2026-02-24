@@ -328,6 +328,42 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Python virtual environments
+venv/
+.venv/
+env/
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend build output
+frontend/dist/
+
+# AWS
+.aws/
+
+# IDE
+.idea/
 
 # Cake - Uncomment if you are using it
 # tools/**
