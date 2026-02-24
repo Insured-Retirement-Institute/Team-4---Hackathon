@@ -21,10 +21,12 @@ const applicationRoutes = require('./routes/application');
 const validationRoutes = require('./routes/validation');
 const submissionRoutes = require('./routes/submission');
 const productRoutes = require('./routes/products');
+const applicationsRoutes = require('./routes/applications');
 
 app.use('/application', applicationRoutes);
 app.use('/application', validationRoutes);
 app.use('/application', submissionRoutes);
 app.use('/products', productRoutes);
+app.use('/applications', applicationsRoutes);
 
 module.exports = app;

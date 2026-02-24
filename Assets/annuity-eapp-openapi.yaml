@@ -49,6 +49,8 @@ tags:
     description: Validate a partial or full set of answers against application rules.
   - name: Submission
     description: Submit a completed application.
+  - name: Applications
+    description: Create and manage application instances.
   - name: Products
     description: Manage the product catalog (CRUD operations).
 
@@ -196,16 +198,15 @@ paths:
             owner_page:
               value: page-annuitant
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ValidationRequest'
             examples:
               page_answers:
-                summary: Validate annuitant page answers
+                summary: Validate with additional answers merged on top of stored answers
                 value:
-                  productId: midland-fixed-annuity-001
                   answers:
                     annuitant_first_name: Jane
                     annuitant_last_name: Smith
@@ -213,6 +214,9 @@ paths:
                     annuitant_ssn: '123-45-6789'
                     annuitant_gender: female
                     annuitant_us_citizen: 'yes'
+              empty_body:
+                summary: Validate stored answers only
+                value: {}
       responses:
         '200':
           description: Validation completed. Returns any errors found.
@@ -259,7 +263,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Application instance not found.
+          description: Application not found in DynamoDB.
           content:
             application/json:
               schema:
@@ -294,16 +298,15 @@ paths:
             sample:
               value: app-instance-abc123
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/SubmissionRequest'
             examples:
               ai_agent_submission:
-                summary: Submission originating from an AI agent
+                summary: Submission with optional additional answers and metadata
                 value:
-                  productId: midland-fixed-annuity-001
                   answers:
                     annuitant_first_name: Jane
                     annuitant_last_name: Smith
@@ -312,6 +315,9 @@ paths:
                     agentId: agent-rovo-001
                     ipAddress: null
                     userAgent: null
+              empty_body:
+                summary: Submit using only stored answers
+                value: {}
       responses:
         '200':
           description: Application submitted successfully.
@@ -323,10 +329,24 @@ paths:
                 received:
                   summary: Application received and pending review
                   value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
                     confirmationNumber: ANN-2025-00048291
                     status: received
                     submittedAt: '2025-06-15T14:30:00Z'
                     message: Your application has been received and is pending review. You will be contacted within 2 business days.
+        '409':
+          description: Application has already been submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                already_submitted:
+                  summary: Duplicate submission attempt
+                  value:
+                    code: APPLICATION_ALREADY_SUBMITTED
+                    message: This application has already been submitted.
+                    details: null
         '422':
           description: Validation failed — application not submitted.
           content:
@@ -354,7 +374,151 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Application instance not found.
+          description: Application not found in DynamoDB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications:
+    post:
+      tags:
+        - Applications
+      summary: Create Application
+      description: |
+        Creates a new application instance for the specified product. The application
+        starts in `in_progress` status with an empty answers map. Use the returned `id`
+        for subsequent validate, answer update, and submit calls.
+      operationId: createApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApplicationRequest'
+            examples:
+              create:
+                summary: Create application for Midland fixed annuity
+                value:
+                  productId: midland-fixed-annuity-001
+      responses:
+        '201':
+          description: Application created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          description: Missing required productId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{id}:
+    get:
+      tags:
+        - Applications
+      summary: Get Application
+      description: Returns the full application record including current answers and status.
+      operationId: getApplication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the application.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Application returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '404':
+          description: Application not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{id}/answers:
+    put:
+      tags:
+        - Applications
+      summary: Update Application Answers
+      description: |
+        Merges the provided answers on top of the existing stored answers. Returns the
+        full updated application record. Returns 409 if the application has already been submitted.
+      operationId: updateApplicationAnswers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the application.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAnswersRequest'
+            examples:
+              update:
+                summary: Update annuitant answers
+                value:
+                  answers:
+                    annuitant_first_name: Jane
+                    annuitant_last_name: Smith
+      responses:
+        '200':
+          description: Answers updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          description: Missing answers in request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Application not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Application already submitted.
           content:
             application/json:
               schema:
@@ -1850,16 +2014,11 @@ components:
 
     ValidationRequest:
       type: object
-      description: Request body for the validate endpoint.
-      required:
-        - productId
-        - answers
+      description: |
+        Optional request body for the validate endpoint. The product is resolved from
+        the stored application. If answers are provided, they are merged on top of the
+        stored answers before validation.
       properties:
-        productId:
-          type: string
-          description: Product ID identifying which application definition to validate against.
-          examples:
-            - midland-fixed-annuity-001
         answers:
           $ref: '#/components/schemas/AnswerMap'
 
@@ -2056,17 +2215,10 @@ components:
     SubmissionRequest:
       type: object
       description: |
-        Request body for the submit endpoint. Full server-side validation runs prior
-        to acceptance. The answer map must include all required answers for all
-        visible questions across all pages (including all `pageRepeat` instances).
-      required:
-        - productId
-        - answers
+        Optional request body for the submit endpoint. The product and base answers are
+        resolved from the stored application. If answers are provided in the body, they
+        are merged on top of the stored answers before full validation runs.
       properties:
-        productId:
-          type: string
-          examples:
-            - midland-fixed-annuity-001
         answers:
           $ref: '#/components/schemas/AnswerMap'
         metadata:
@@ -2105,10 +2257,17 @@ components:
       type: object
       description: Confirmation returned on successful application submission.
       required:
+        - id
         - confirmationNumber
         - status
         - submittedAt
       properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID of the persisted submission record.
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
         confirmationNumber:
           type: string
           description: Human-readable unique reference number for this submission.
@@ -2227,3 +2386,119 @@ components:
         description:
           type: string
           description: Human-readable description of the product.
+
+    # ─────────────────────────────────────────
+    # APPLICATIONS & SUBMISSIONS
+    # ─────────────────────────────────────────
+
+    Application:
+      type: object
+      description: An application instance tracking answers and status.
+      required:
+        - id
+        - productId
+        - answers
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier (UUID) assigned by the system.
+        productId:
+          type: string
+          description: Product ID this application is for.
+          examples:
+            - midland-fixed-annuity-001
+        answers:
+          $ref: '#/components/schemas/AnswerMap'
+        status:
+          type: string
+          description: Current status of the application.
+          enum:
+            - in_progress
+            - submitted
+            - abandoned
+          examples:
+            - in_progress
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the application was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of the last update.
+
+    Submission:
+      type: object
+      description: A persisted submission record created when an application is submitted.
+      required:
+        - id
+        - applicationId
+        - productId
+        - answers
+        - confirmationNumber
+        - status
+        - submittedAt
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier (UUID) assigned by the system.
+        applicationId:
+          type: string
+          format: uuid
+          description: ID of the application this submission belongs to.
+        productId:
+          type: string
+          description: Product ID the submission is for.
+        answers:
+          $ref: '#/components/schemas/AnswerMap'
+        confirmationNumber:
+          type: string
+          description: Human-readable confirmation number.
+          examples:
+            - ANN-2025-00048291
+        status:
+          type: string
+          description: Submission status.
+          enum:
+            - received
+          examples:
+            - received
+        metadata:
+          oneOf:
+            - $ref: '#/components/schemas/SubmissionMetadata'
+            - type: 'null'
+        submittedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the submission was created.
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the record was created.
+
+    CreateApplicationRequest:
+      type: object
+      description: Request body for creating a new application instance.
+      required:
+        - productId
+      properties:
+        productId:
+          type: string
+          description: Product ID to create the application for. Must exist in the product store.
+          examples:
+            - midland-fixed-annuity-001
+
+    UpdateAnswersRequest:
+      type: object
+      description: Request body for updating application answers.
+      required:
+        - answers
+      properties:
+        answers:
+          $ref: '#/components/schemas/AnswerMap'
