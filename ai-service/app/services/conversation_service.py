@@ -146,7 +146,7 @@ async def handle_message(
                 }],
             })
 
-        follow_up = llm.chat(system_prompt, follow_up_messages, tools=tools or None)
+        follow_up = llm.chat(system_prompt, follow_up_messages, tools=tools or None, force_tool=False)
         reply_text = llm.extract_text(follow_up)
     else:
         reply_text = llm.extract_text(response)

@@ -42,6 +42,7 @@ class LLMService:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
         max_tokens: int = 4096,
+        force_tool: bool = True,
     ) -> anthropic.types.Message:
         """Send a chat completion request with optional tools."""
         kwargs: dict[str, Any] = {
@@ -52,6 +53,8 @@ class LLMService:
         }
         if tools:
             kwargs["tools"] = tools
+            if force_tool:
+                kwargs["tool_choice"] = {"type": "any"}
 
         logger.debug("LLM request: model=%s, messages=%d, tools=%d",
                       self.model, len(messages), len(tools or []))

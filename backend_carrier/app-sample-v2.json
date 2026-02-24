@@ -1,0 +1,359 @@
+{
+  "envelope": {
+    "submissionId": "sub_01j9kx2m4n8p3q7r5t6v",
+    "applicationId": "app_01j8mw1k3n7p2q6r4s5u",
+    "schemaVersion": "1.0.0",
+    "submittedAt": "2025-06-15T14:30:00Z",
+    "applicationDefinitionId": "midland-national-fixed-annuity-v1",
+    "applicationDefinitionVersion": "1.0.0",
+    "carrier": {
+      "name": "Midland National Life Insurance Company",
+      "carrierId": "fig-carrier-midland-national"
+    },
+    "product": {
+      "productId": "midland-retirevantage-14",
+      "productName": "MNL RetireVantage® 14",
+      "formNumbers": ["AS124A", "AR153A", "AR327A", "AR163A-1"]
+    },
+    "submissionMode": "pdf_fill",
+    "submissionSource": "web",
+    "submittingProducerNpn": "12345678",
+    "ipAddress": "198.51.100.42",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+  },
+
+  "annuitant": {
+    "firstName": "Jane",
+    "middleName": "M",
+    "lastName": "Smith",
+    "dateOfBirth": "1965-03-15",
+    "gender": "female",
+    "taxId": { "isEncrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
+    "address": {
+      "street1": "742 Evergreen Terrace",
+      "street2": null,
+      "city": "Springfield",
+      "state": "IL",
+      "zip": "62701"
+    },
+    "phone": "2175550100",
+    "email": "jane.smith@example.com",
+    "isUsCitizen": true
+  },
+
+  "jointAnnuitant": null,
+
+  "owner": {
+    "isSameAsAnnuitant": false,
+    "type": "individual",
+    "person": {
+      "firstName": "Jane",
+      "middleName": "M",
+      "lastName": "Smith",
+      "dateOfBirth": "1965-03-15",
+      "gender": "female",
+      "taxId": { "isEncrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
+      "address": {
+        "street1": "742 Evergreen Terrace",
+        "street2": null,
+        "city": "Springfield",
+        "state": "IL",
+        "zip": "62701"
+      },
+      "phone": "2175550100",
+      "email": "jane.smith@example.com",
+      "isUsCitizen": true
+    }
+  },
+
+  "jointOwner": null,
+
+  "ownerBeneficiaries": [
+    {
+      "index": 1,
+      "type": "primary",
+      "entityType": "individual",
+      "distributionMethod": "per_stirpes",
+      "firstName": "Robert",
+      "middleName": null,
+      "lastName": "Smith",
+      "taxId": { "isEncrypted": true, "value": "enc_aes256_def456...", "hint": "4321" },
+      "dateOfBirth": "1962-07-20",
+      "relationship": "spouse",
+      "address": {
+        "street1": "742 Evergreen Terrace",
+        "street2": null,
+        "city": "Springfield",
+        "state": "IL",
+        "zip": "62701"
+      },
+      "phone": "2175550101",
+      "email": null,
+      "percentage": 100
+    }
+  ],
+
+  "annuitantBeneficiaries": [],
+
+  "identityVerification": {
+    "citizenshipStatus": "us_citizen",
+    "countryOfCitizenship": null,
+    "governmentId": {
+      "type": "drivers_license",
+      "number": "IL-D123-4567-8901",
+      "issuedBy": "IL",
+      "expirationDate": "2028-03-15"
+    },
+    "occupation": "Registered Nurse",
+    "employerName": "Springfield General Hospital",
+    "yearsEmployed": "12",
+    "nonNaturalDocumentType": null
+  },
+
+  "product": {
+    "taxStatus": "ira",
+    "iraContributionTaxYear": null
+  },
+
+  "funding": {
+    "methods": [
+      { "type": "exchange_1035", "amount": 75000.00 },
+      { "type": "check",         "amount": 25000.00 }
+    ],
+    "multipleCheckHandling": null,
+    "totalPremium": 100000.00
+  },
+
+  "investmentAllocations": [
+    {
+      "fundId": "sp500-annual-pp-cap",
+      "fundName": "S&P 500® Index — Annual Point-to-Point Cap",
+      "percentage": 40,
+      "creditingMethod": "annual_point_to_point_cap",
+      "index": "S&P 500® Index",
+      "termYears": 1,
+      "hasStrategyFee": false,
+      "strategyFeeAnnualPct": null
+    },
+    {
+      "fundId": "fidelity-mfy-annual-pp-enhanced",
+      "fundName": "Fidelity Multifactor Yield Index 5% ER — Annual PP Enhanced Participation Rate",
+      "percentage": 30,
+      "creditingMethod": "annual_point_to_point_participation_enhanced",
+      "index": "Fidelity Multifactor Yield Index 5% ER",
+      "termYears": 1,
+      "hasStrategyFee": true,
+      "strategyFeeAnnualPct": 1.00
+    },
+    {
+      "fundId": "fixed-account",
+      "fundName": "Fixed Account",
+      "percentage": 30,
+      "creditingMethod": "fixed",
+      "index": null,
+      "termYears": null,
+      "hasStrategyFee": false,
+      "strategyFeeAnnualPct": null
+    }
+  ],
+
+  "transfers": [
+    {
+      "index": 1,
+      "receiving": {
+        "contractNumber": null,
+        "carrierDtcc": null
+      },
+      "surrenderingCompany": {
+        "name": "Lincoln Financial Group",
+        "address": {
+          "street1": "1300 South Clinton Street",
+          "street2": null,
+          "city": "Fort Wayne",
+          "state": "IN",
+          "zip": "46802"
+        },
+        "phone": "8005248765",
+        "phoneExt": null,
+        "fax": null
+      },
+      "surrenderingContract": {
+        "accountNumber": "ANN-9876543",
+        "planType": "ira",
+        "productType": "annuity",
+        "estimatedAmount": 75000.00
+      },
+      "surrenderingParties": {
+        "ownerName": "Jane M Smith",
+        "ownerTaxId": { "isEncrypted": true, "value": "enc_aes256_abc123...", "hint": "6789" },
+        "jointOwnerName": null,
+        "jointOwnerTaxId": null,
+        "annuitantName": null,
+        "annuitantTaxId": null,
+        "jointAnnuitantName": null,
+        "jointAnnuitantTaxId": null,
+        "contingentAnnuitantName": null,
+        "contingentAnnuitantTaxId": null
+      },
+      "transferInstructions": {
+        "scope": "full",
+        "partialAmountType": null,
+        "partialDollarAmount": null,
+        "partialPercentage": null,
+        "timing": "asap",
+        "specificDate": null
+      },
+      "acknowledgments": {
+        "isRmdAcknowledged": true,
+        "isPartial1035Acknowledged": null,
+        "isTsa403bTransferAcknowledged": null,
+        "isGeneralDisclosuresAcknowledged": true,
+        "isBackupWithholding": false,
+        "isTaxpayerCertificationAcknowledged": true
+      },
+      "signatures": {
+        "ownerSignature": {
+          "capturedImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+          "attestation": {
+            "signedAt": "2025-06-15T14:22:10Z",
+            "method": "drawn",
+            "isProducerWitnessed": true,
+            "witnessProducerNpn": "12345678",
+            "ipAddress": "198.51.100.42",
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+          }
+        },
+        "ownerSignatureDate": "2025-06-15",
+        "jointOwnerSignature": null,
+        "jointOwnerSignatureDate": null,
+        "annuitantSignature": null,
+        "spouseSignature": null,
+        "spouseSignatureDate": null,
+        "tsaEmployer": null
+      }
+    }
+  ],
+
+  "replacement": {
+    "hasExistingInsurance": true,
+    "isReplacement": false,
+    "replacedContracts": []
+  },
+
+  "disclosures": [
+    {
+      "disclosureId": "disclosure-buyers-guide",
+      "title": "NAIC Annuity Buyer's Guide",
+      "acknowledgmentType": "boolean",
+      "acknowledgmentLabel": "I acknowledge that I have received the NAIC Annuity Buyer's Guide and have had the opportunity to review it prior to signing this application.",
+      "isViewRequired": true,
+      "isViewCompleted": true,
+      "acknowledgedAt": "2025-06-15T14:10:05Z",
+      "signature": {
+        "capturedImage": null,
+        "attestation": {
+          "signedAt": "2025-06-15T14:10:05Z",
+          "method": "clicked",
+          "isProducerWitnessed": true,
+          "witnessProducerNpn": "12345678",
+          "ipAddress": "198.51.100.42",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+        }
+      }
+    },
+    {
+      "disclosureId": "disclosure-retirevantage14-product",
+      "title": "MNL RetireVantage® 14 Annuity Disclosure Statement",
+      "acknowledgmentType": "initials",
+      "acknowledgmentLabel": "Owner initials confirming receipt and review of the MNL RetireVantage 14 Annuity Disclosure Statement (REQUIRED)",
+      "isViewRequired": true,
+      "isViewCompleted": true,
+      "acknowledgedAt": "2025-06-15T14:18:30Z",
+      "signature": {
+        "capturedImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH...",
+        "attestation": {
+          "signedAt": "2025-06-15T14:18:30Z",
+          "method": "drawn",
+          "isProducerWitnessed": true,
+          "witnessProducerNpn": "12345678",
+          "ipAddress": "198.51.100.42",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+        }
+      }
+    },
+    {
+      "disclosureId": "disclosure-strategy-fee-enhanced",
+      "title": "Strategy Fee Risk Disclosure",
+      "acknowledgmentType": "boolean",
+      "acknowledgmentLabel": "I understand that the Enhanced Participation Rate crediting strategy I have selected includes a 1.00% annual strategy fee...",
+      "isViewRequired": true,
+      "isViewCompleted": true,
+      "acknowledgedAt": "2025-06-15T14:19:45Z",
+      "signature": {
+        "capturedImage": null,
+        "attestation": {
+          "signedAt": "2025-06-15T14:19:45Z",
+          "method": "clicked",
+          "isProducerWitnessed": true,
+          "witnessProducerNpn": "12345678",
+          "ipAddress": "198.51.100.42",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+        }
+      }
+    }
+  ],
+
+  "applicationSignatures": {
+    "isOwnerStatementAcknowledged": true,
+    "isFraudWarningAcknowledged": true,
+    "ownerSignature": {
+      "capturedImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+      "attestation": {
+        "signedAt": "2025-06-15T14:28:00Z",
+        "method": "drawn",
+        "isProducerWitnessed": true,
+        "witnessProducerNpn": "12345678",
+        "ipAddress": "198.51.100.42",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+      }
+    },
+    "ownerSignatureDate": "2025-06-15",
+    "jointOwnerSignature": null,
+    "jointOwnerSignatureDate": null,
+    "spouseSignature": null,
+    "signedAtCity": "Springfield",
+    "signedAtState": "IL",
+    "ownerEmail": "jane.smith@example.com",
+    "jointOwnerEmail": null
+  },
+
+  "producerCertification": {
+    "isProducerAwareOfExistingInsurance": true,
+    "isProducerBelievesReplacement": false,
+    "replacingCompanyName": null,
+    "producers": [
+      {
+        "index": 1,
+        "producerNumber": "MN-98765",
+        "npn": "12345678",
+        "fullName": "Michael J. Davis",
+        "email": "mdavis@figbroker.com",
+        "phone": "3175550200",
+        "commissionPercentage": 100,
+        "commissionOption": "A",
+        "signature": {
+          "capturedImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+          "attestation": {
+            "signedAt": "2025-06-15T14:29:15Z",
+            "method": "drawn",
+            "isProducerWitnessed": false,
+            "witnessProducerNpn": null,
+            "ipAddress": "198.51.100.42",
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+          }
+        },
+        "signatureDate": "2025-06-15"
+      }
+    ]
+  }
+}
