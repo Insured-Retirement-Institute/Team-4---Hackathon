@@ -52,6 +52,7 @@ class LLMService:
         }
         if tools:
             kwargs["tools"] = tools
+            kwargs["tool_choice"] = {"type": "any"}
 
         logger.debug("LLM request: model=%s, messages=%d, tools=%d",
                       self.model, len(messages), len(tools or []))
