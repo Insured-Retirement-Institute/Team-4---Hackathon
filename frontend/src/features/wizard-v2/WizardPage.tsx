@@ -384,7 +384,7 @@ function ReviewPanel() {
 }
 
 function WizardPageContent() {
-  const { pages, values, validatePage, populateWithDummyData } = useWizardV2Controller();
+  const { pages, values, validatePage, isPageComplete, populateWithDummyData } = useWizardV2Controller();
   const [currentStep, setCurrentStep] = useState(0);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
 
@@ -430,9 +430,19 @@ function WizardPageContent() {
     setShowSubmissionBanner(true);
   };
 
+  const handleSidebarPageClick = (pageIndex: number) => {
+    if (!isPageComplete(pages[pageIndex])) return;
+    setCurrentStep(pageIndex + 1);
+  };
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WizardSidebar pages={pages} currentStep={sidebarStep} />
+      <WizardSidebar
+        pages={pages}
+        currentStep={sidebarStep}
+        isPageComplete={(index) => isPageComplete(pages[index])}
+        onPageClick={handleSidebarPageClick}
+      />
 
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <LinearProgress variant="determinate" value={progress} color="success" sx={{ height: 6 }} />
