@@ -512,6 +512,7 @@ function WizardPageContent() {
       });
 
       const validateResult = (await validateResponse.json()) as ValidationResponse;
+      console.log(validateResult);
 
       if (!validateResponse.ok) {
         setSubmissionError(validateResult.message || 'Validation request failed.');
@@ -523,6 +524,17 @@ function WizardPageContent() {
         setSubmissionError(firstValidationMessage || 'Validation failed. Please review your answers and try again.');
         return;
       }
+
+      console.log('Submitting payload to /application/:applicationId/submit', {
+        applicationId,
+        payload: {
+          ...requestPayload,
+          metadata: {
+            submissionSource: 'web',
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+          },
+        },
+      });
 
       const submitResponse = await fetch(`/application/${applicationId}/submit`, {
         method: 'POST',

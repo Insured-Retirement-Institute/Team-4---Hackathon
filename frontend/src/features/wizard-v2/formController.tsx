@@ -23,6 +23,11 @@ const WizardV2Context = createContext<WizardV2Controller | undefined>(undefined)
 
 function getInitialValues(questions: QuestionDefinition[]): FormValues {
   return questions.reduce<FormValues>((acc, question) => {
+    if (question.type === 'allocation_table') {
+      acc[question.id] = [];
+      return acc;
+    }
+
     if (question.type === 'repeatable_group' && question.groupConfig) {
       const initialItemsCount = Math.max(1, question.groupConfig.minItems);
       acc[question.id] = Array.from({ length: initialItemsCount }, () =>
@@ -134,7 +139,11 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
   }
 
   if (question.type === 'signature') return 'sig_token_alex_patel';
-  if (question.type === 'allocation_table') return '100';
+  if (question.type === 'allocation_table') {
+    const firstFund = question.allocationConfig?.funds?.[0];
+    if (!firstFund) return [];
+    return [{ fundId: firstFund.id, percentage: String(question.allocationConfig?.totalRequired ?? 100) }];
+  }
   if (question.type === 'repeatable_group') {
     const fields = question.groupConfig?.fields ?? [];
     const item = fields.reduce<GroupItemValue>((acc, field) => {
@@ -173,6 +182,8 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
   if (id.includes('contract_number')) return 'MN-FA-2026-00091';
   if (id.includes('dtcc')) return '1234';
   if (id.includes('account_number')) return 'ACC-90871234';
+  if (id === 'surrendering_phone_ext') return '1234';
+  if (id === 'agent_replacement_company') return 'Midland National';
   if (id.includes('company_name') || id.includes('carrier')) return 'Midland National';
   if (id.includes('plan_type')) return 'Traditional IRA';
   if (id.includes('product_type')) return 'Fixed Annuity';
@@ -181,7 +192,7 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
   if (id.includes('signed_at_state')) return 'IA';
   if (id.includes('owner_id_country')) return 'United States';
   if (id.includes('owner_country_of_citizenship')) return 'U.S.A.';
-  if (id === 'owner_years_employed') return '5';
+  if (id.includes('owner_years_employed')) return '5';
 
   return 'Sample value';
 }
@@ -194,6 +205,42 @@ function isEmptyValue(value: AnswerValue) {
 }
 
 function getValidationMessage(question: QuestionDefinition, value: AnswerValue): string | null {
+  if (question.type === 'allocation_table') {
+    const allocations = Array.isArray(value) ? value : [];
+
+    if (question.required && allocations.length === 0) {
+      return 'Add at least one allocation';
+    }
+
+    if (allocations.length === 0) {
+      return null;
+    }
+
+    const invalidRow = allocations.some((item) => {
+      const fundId = item.fundId;
+      const percentage = item.percentage;
+      return (
+        typeof fundId !== 'string'
+        || !fundId.trim()
+        || typeof percentage !== 'string'
+        || !percentage.trim()
+        || Number.isNaN(Number(percentage))
+      );
+    });
+
+    if (invalidRow) {
+      return 'Choose a fund and enter a valid percentage for each allocation';
+    }
+
+    const total = allocations.reduce((sum, item) => sum + (Number(item.percentage) || 0), 0);
+    const requiredTotal = question.allocationConfig?.totalRequired ?? 100;
+    if (total !== requiredTotal) {
+      return `Allocations must total ${requiredTotal}% (current total: ${total}%)`;
+    }
+
+    return null;
+  }
+
   if (question.type === 'repeatable_group' && question.groupConfig) {
     const items = Array.isArray(value) ? value : [];
     const minItems = Math.max(1, question.groupConfig.minItems);
