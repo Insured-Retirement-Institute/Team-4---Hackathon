@@ -9,10 +9,11 @@ interface WizardSidebarProps {
   pages: PageDefinition[];
   currentStep: number;
   isPageComplete: (index: number) => boolean;
+  onIntroClick: () => void;
   onPageClick: (index: number) => void;
 }
 
-function WizardSidebar({ pages, currentStep, isPageComplete, onPageClick }: WizardSidebarProps) {
+function WizardSidebar({ pages, currentStep, isPageComplete, onIntroClick, onPageClick }: WizardSidebarProps) {
   const reviewStepIndex = pages.length;
   const isIntroActive = currentStep === -1;
   const isIntroComplete = currentStep > -1;
@@ -40,10 +41,12 @@ function WizardSidebar({ pages, currentStep, isPageComplete, onPageClick }: Wiza
 
       <Stack spacing={1.25} sx={{ flex: 1 }}>
         <Box
+          onClick={onIntroClick}
           sx={{
             borderRadius: 2,
             p: 1.25,
             bgcolor: isIntroActive ? 'rgba(255,255,255,0.15)' : 'transparent',
+            cursor: 'pointer',
           }}
         >
           <Stack direction="row" spacing={1} alignItems="center">

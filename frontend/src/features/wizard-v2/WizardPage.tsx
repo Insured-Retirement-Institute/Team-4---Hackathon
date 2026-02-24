@@ -570,12 +570,17 @@ function WizardPageContent() {
     setCurrentStep(pageIndex + 1);
   };
 
+  const handleSidebarIntroClick = () => {
+    setCurrentStep(0);
+  };
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <WizardSidebar
         pages={pages}
         currentStep={sidebarStep}
         isPageComplete={(index) => isPageComplete(pages[index])}
+        onIntroClick={handleSidebarIntroClick}
         onPageClick={handleSidebarPageClick}
       />
 
