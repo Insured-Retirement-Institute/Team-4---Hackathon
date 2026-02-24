@@ -33,6 +33,14 @@ declare global {
 }
 
 /**
+ * Opens the embedded AI widget panel programmatically.
+ */
+export function openWidget() {
+  const instance = window.IRIChat?._instance as (IRIWidgetInstance & { _openPanel?: () => void }) | undefined;
+  instance?._openPanel?.();
+}
+
+/**
  * Bridges the embedded widget.js events into ApplicationContext.
  * - Widget → React: listens for iri:field_updated, iri:session_created, iri:phase_changed
  * - React → Widget: injects wizard fields as knownData before session start,

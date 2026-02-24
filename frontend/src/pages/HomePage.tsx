@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { openWidget } from '../hooks/useWidgetSync';
 import { getApplication } from '../services/applicationService';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import Box from '@mui/material/Box';
@@ -202,7 +203,7 @@ export default function HomePage() {
               variant="contained"
               size="large"
               endIcon={<ArrowForwardIcon />}
-              onClick={() => navigate('/ai-chat')}
+              onClick={() => openWidget()}
               color="secondary"
               disableElevation
               sx={{
@@ -374,7 +375,7 @@ export default function HomePage() {
               variant="contained"
               size="large"
               endIcon={<SmartToyIcon />}
-              onClick={() => navigate('/ai-chat')}
+              onClick={() => openWidget()}
               color="secondary"
               disableElevation
               sx={{ fontWeight: 700, px: 4 }}
