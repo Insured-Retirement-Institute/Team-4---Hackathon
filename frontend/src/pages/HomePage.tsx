@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -18,6 +19,7 @@ import MicIcon from '@mui/icons-material/Mic';
 import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import catAnimation from '../animations/cat.json';
 
 const FEATURES = [
   {
@@ -87,6 +89,39 @@ const HOW_IT_WORKS = [
     body: 'The engine enforces all carrier rules, flags NIGO issues before submission, and produces a structured payload ready for the carrier API or PDF fill.',
   },
 ];
+
+function CatAnimation() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let isUnmounted = false;
+    let animation: { destroy: () => void } | null = null;
+
+    import('lottie-web')
+      .then((module) => {
+        const lottie = module.default;
+        if (isUnmounted || !containerRef.current) return;
+
+        animation = lottie.loadAnimation({
+          container: containerRef.current,
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          animationData: catAnimation,
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to load cat animation:', error);
+      });
+
+    return () => {
+      isUnmounted = true;
+      animation?.destroy();
+    };
+  }, []);
+
+  return <Box ref={containerRef} sx={{ width: '100%', height: '100%' }} />;
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -333,6 +368,17 @@ export default function HomePage() {
               Guided Wizard
             </Button>
           </Stack>
+
+          <Box
+            sx={{
+              mt: 4,
+              mx: 'auto',
+              width: { xs: 96, md: 128 },
+              pointerEvents: 'none',
+            }}
+          >
+            <CatAnimation />
+          </Box>
         </Container>
       </Box>
     </Box>

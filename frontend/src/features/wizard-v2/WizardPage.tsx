@@ -411,22 +411,43 @@ function ReviewPanel() {
 
 function WizardPageContent() {
   const { pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
-  const { collectedFields } = useApplication();
+  const { collectedFields, mergeFields } = useApplication();
   const [currentStep, setCurrentStep] = useState(0);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const appliedRef = useRef(false);
+  const lastAppliedRef = useRef<Record<string, string | boolean>>({});
 
-  // Apply AI-collected fields into the wizard form on mount
+  // Continuously apply new fields from ApplicationContext (e.g. from widget chat) into wizard
   useEffect(() => {
-    if (appliedRef.current) return;
-    const keys = Object.keys(collectedFields);
-    if (keys.length > 0) {
-      appliedRef.current = true;
-      bulkSetValues(collectedFields as Record<string, string | boolean>);
+    const newFields: Record<string, string | boolean> = {};
+    for (const [key, val] of Object.entries(collectedFields)) {
+      if ((typeof val === 'string' || typeof val === 'boolean') && lastAppliedRef.current[key] !== val) {
+        newFields[key] = val;
+      }
+    }
+    if (Object.keys(newFields).length > 0) {
+      lastAppliedRef.current = { ...lastAppliedRef.current, ...newFields };
+      bulkSetValues(newFields);
     }
   }, [collectedFields, bulkSetValues]);
+
+  // Sync wizard values back to ApplicationContext so AI chat can pick them up
+  useEffect(() => {
+    const nonEmpty: Record<string, string | boolean> = {};
+    for (const [key, val] of Object.entries(values)) {
+      if (typeof val === 'string' && val.trim()) {
+        nonEmpty[key] = val;
+      } else if (typeof val === 'boolean' && val) {
+        nonEmpty[key] = val;
+      }
+    }
+    if (Object.keys(nonEmpty).length > 0) {
+      // Track these as already applied so we don't re-apply our own changes
+      lastAppliedRef.current = { ...lastAppliedRef.current, ...nonEmpty };
+      mergeFields(nonEmpty);
+    }
+  }, [values, mergeFields]);
 
   const isIntroStep = currentStep === 0;
   const isReviewStep = currentStep === pages.length + 1;
