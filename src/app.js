@@ -20,9 +20,11 @@ app.get('/health', (req, res) => {
 const applicationRoutes = require('./routes/application');
 const validationRoutes = require('./routes/validation');
 const submissionRoutes = require('./routes/submission');
+const productRoutes = require('./routes/products');
 
 app.use('/application', applicationRoutes);
 app.use('/application', validationRoutes);
 app.use('/application', submissionRoutes);
+app.use('/products', productRoutes);
 
 module.exports = app;

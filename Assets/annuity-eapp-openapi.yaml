@@ -49,6 +49,8 @@ tags:
     description: Validate a partial or full set of answers against application rules.
   - name: Submission
     description: Submit a completed application.
+  - name: Products
+    description: Manage the product catalog (CRUD operations).
 
 # ─────────────────────────────────────────────────────────────
 # PATHS
@@ -353,6 +355,163 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Application instance not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List All Products
+      description: Returns an array of all products in the catalog.
+      operationId: listProducts
+      responses:
+        '200':
+          description: A list of products.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Products
+      summary: Create a Product
+      description: Creates a new product in the catalog. Requires carrier, productName, and productId.
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Missing required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get a Product
+      description: Returns a single product by its UUID.
+      operationId: getProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the product.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The requested product.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Products
+      summary: Update a Product
+      description: Updates an existing product. Supports partial updates.
+      operationId: updateProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the product.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Products
+      summary: Delete a Product
+      description: Deletes a product from the catalog.
+      operationId: deleteProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the product.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Product deleted successfully.
+        '404':
+          description: Product not found.
           content:
             application/json:
               schema:
@@ -2007,3 +2166,64 @@ components:
             - type: object
               additionalProperties: true
             - type: 'null'
+
+    # ─────────────────────────────────────────
+    # PRODUCTS
+    # ─────────────────────────────────────────
+
+    Product:
+      type: object
+      description: A product in the catalog.
+      required:
+        - id
+        - carrier
+        - productName
+        - productId
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier (UUID) assigned by the system.
+        carrier:
+          type: string
+          description: Insurance carrier name.
+          examples:
+            - Midland National
+        productName:
+          type: string
+          description: Display name of the product.
+          examples:
+            - Fixed Annuity Plus
+        productId:
+          type: string
+          description: Carrier-defined product identifier.
+          examples:
+            - midland-national-fixed-annuity
+        effectiveDate:
+          type: string
+          description: Date when the product becomes effective.
+          examples:
+            - '2025-01-01'
+        description:
+          type: string
+          description: Human-readable description of the product.
+
+    ProductInput:
+      type: object
+      description: Request body for creating or updating a product.
+      properties:
+        carrier:
+          type: string
+          description: Insurance carrier name.
+        productName:
+          type: string
+          description: Display name of the product.
+        productId:
+          type: string
+          description: Carrier-defined product identifier.
+        effectiveDate:
+          type: string
+          description: Date when the product becomes effective.
+        description:
+          type: string
+          description: Human-readable description of the product.
