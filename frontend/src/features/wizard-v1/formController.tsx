@@ -66,6 +66,7 @@ interface WizardFormController {
   errors: WizardFormErrors;
   setValue: <K extends WizardFieldName>(field: K, value: WizardFormValues[K]) => void;
   validateStep: (step: number) => boolean;
+  populateWithDummyData: () => void;
 }
 
 const STEP_REQUIRED_FIELDS: Record<number, WizardFieldName[]> = {
@@ -134,6 +135,63 @@ const initialValues: WizardFormValues = {
   applicantAcknowledgment: false,
 };
 
+const dummyValues: WizardFormValues = {
+  title: 'mr',
+  firstName: 'John',
+  lastName: 'Smith',
+  dateOfBirth: '1962-03-15',
+  ssn: '123-45-4321',
+  maritalStatus: 'married',
+  citizenshipStatus: 'us_citizen',
+  email: 'john.smith@email.com',
+  phone: '+1 (555) 000-0000',
+  address: '123 Main St',
+  city: 'Los Angeles',
+  state: 'CA',
+  zipCode: '90210',
+  primaryBeneficiaryName: 'Jane Smith',
+  primaryBeneficiaryRelationship: 'spouse',
+  primaryBeneficiaryDateOfBirth: '1964-07-22',
+  primaryBeneficiaryTaxId: '987-65-4321',
+  primaryBeneficiaryPercentage: '100',
+  contingentBeneficiaryName: 'Robert Smith',
+  contingentBeneficiaryRelationship: 'child',
+  contingentBeneficiaryDateOfBirth: '1990-01-12',
+  contingentBeneficiaryPercentage: '100',
+  employmentStatus: 'retired',
+  annualHouseholdIncome: '100k_200k',
+  sourceOfFunds: 'savings',
+  federalTaxBracket: '24',
+  estimatedNetWorth: '500k_1m',
+  liquidNetWorth: '250k_1m',
+  investmentExperience: 'moderate',
+  riskTolerance: 'moderate',
+  annuityType: 'fixed_indexed',
+  surrenderPeriod: '7',
+  payoutOption: 'lifetime',
+  initialPremiumAmount: '150000',
+  qualificationType: 'non_qualified',
+  optionalRider: 'glwb',
+  fundingMethod: 'bank_transfer',
+  bankAccountType: 'checking',
+  bankName: 'Chase Bank',
+  bankRoutingNumber: '021000021',
+  bankAccountNumber: '0001234567890',
+  transferInstitution: 'Fidelity',
+  transferAccountNumber: 'FI-ACC-9981',
+  transferType: 'full',
+  transferAmount: '50000',
+  primaryObjective: 'income',
+  investmentTimeHorizon: 'long',
+  expectedNeedForFunds: 'retirement',
+  reactionToMarketLoss: 'hold',
+  replacingExistingAnnuity: true,
+  informedOfSurrenderCharges: true,
+  understandsSurrenderPeriod: true,
+  suitabilityNotes: 'Client seeks stable retirement income and principal protection.',
+  applicantAcknowledgment: true,
+};
+
 const WizardFormControllerContext = createContext<WizardFormController | undefined>(undefined);
 
 interface WizardFormProviderProps {
@@ -152,6 +210,11 @@ export function WizardFormProvider({ children }: WizardFormProviderProps) {
       delete next[field];
       return next;
     });
+  };
+
+  const populateWithDummyData = () => {
+    setValues(dummyValues);
+    setErrors({});
   };
 
   const validateStep = (step: number) => {
@@ -210,6 +273,7 @@ export function WizardFormProvider({ children }: WizardFormProviderProps) {
       errors,
       setValue,
       validateStep,
+      populateWithDummyData,
     }),
     [errors, values],
   );

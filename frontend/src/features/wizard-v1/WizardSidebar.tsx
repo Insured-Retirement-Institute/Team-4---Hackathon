@@ -29,7 +29,7 @@ function WizardSidebar({ currentStep }: WizardSidebarProps) {
     >
       {/* Branding */}
       <Stack spacing={1} sx={{ mb: 3 }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ color: '#ff6b35' }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ color: 'common.white' }}>
           ✦ ANNUITY
         </Typography>
         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.4 }}>
@@ -141,6 +141,9 @@ function WizardSidebar({ currentStep }: WizardSidebarProps) {
           </Typography>
         </Stack>
       </Box>
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', mt: 2 }}>
+        All rights reserved 2025 · Annuity Application Wizard v1
+      </Typography>
     </Box>
   );
 }
