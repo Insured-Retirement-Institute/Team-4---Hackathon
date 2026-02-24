@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -131,22 +132,31 @@ export default function HomePage() {
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <Box
         sx={{
-          bgcolor: 'primary.dark',
+          background: 'radial-gradient(ellipse at 50% 50%, #1a2a4a 0%, #212121 65%)',
           color: 'white',
           py: { xs: 10, md: 14 },
           px: 3,
           position: 'relative',
           overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(ellipse at 70% 50%, rgba(255,255,255,0.04) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          },
         }}
       >
+        {/* Lottie background — fills hero, sits behind content */}
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            opacity: 0.25,
+            '& > div, & canvas': { width: '100% !important', height: '100% !important', display: 'block' },
+          }}
+        >
+          <DotLottieReact
+            src="https://lottie.host/db642e06-8aa1-4693-b9c5-d2c658ca0af8/tjcbncDBx1.lottie"
+            loop
+            autoplay
+          />
+        </Box>
+
         <Container maxWidth="md" sx={{ position: 'relative', textAlign: 'center' }}>
           <Chip
             icon={<AutoAwesomeIcon sx={{ fontSize: '14px !important' }} />}
