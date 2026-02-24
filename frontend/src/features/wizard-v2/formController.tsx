@@ -177,6 +177,8 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
   if (id.includes('title')) return 'HR Director';
   if (id.includes('signed_at_city')) return 'Des Moines';
   if (id.includes('signed_at_state')) return 'IA';
+  if (id.includes('owner_id_country')) return 'United States';
+  if (id.includes('owner_country_of_citizenship')) return 'U.S.A.';
 
   return 'Sample value';
 }
