@@ -85,6 +85,9 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
     if (id.includes('signature_date') || id === 'date_signed') return today;
     if (id.includes('expiration')) return '2030-12-31';
     if (id.includes('trust_date')) return '2015-06-15';
+    if (id.includes('joint_annuitant_dob')) return '1982-11-03';
+    if (id.includes('joint_owner_dob')) return '1982-11-03';
+    if (id.includes('owner_dob')) return '1978-05-18';
     if (id.includes('dob')) return '1978-05-18';
     return '2025-01-15';
   }
@@ -97,10 +100,14 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
 
   if (question.type === 'phone') {
     if (id.includes('fax')) return '5155551122';
+    if (id.includes('joint_annuitant')) return '5155550199';
+    if (id.includes('joint_owner')) return '5155550199';
+    if (id.includes('owner')) return '5155550188';
     return '5155550188';
   }
 
   if (question.type === 'ssn') {
+    if (id.includes('joint_annuitant')) return '234-56-7890';
     if (id.includes('joint')) return '234-56-7890';
     if (id.includes('owner')) return '345-67-8901';
     return '123-45-6789';
@@ -125,7 +132,7 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
   }
 
   if (question.type === 'signature') return 'sig_token_alex_patel';
-  if (question.type === 'allocation_table') return '{"fixed-account":100}';
+  if (question.type === 'allocation_table') return '100';
   if (question.type === 'repeatable_group') {
     const fields = question.groupConfig?.fields ?? [];
     const item = fields.reduce<GroupItemValue>((acc, field) => {
@@ -140,6 +147,15 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
     return [item];
   }
 
+  if (id.includes('joint_annuitant_first_name')) return 'Sam';
+  if (id.includes('joint_annuitant_middle_initial')) return 'K';
+  if (id.includes('joint_annuitant_last_name')) return 'Rivera';
+  if (id.includes('joint_owner_first_name')) return 'Sam';
+  if (id.includes('joint_owner_middle_initial')) return 'K';
+  if (id.includes('joint_owner_last_name')) return 'Rivera';
+  if (id.includes('owner_first_name')) return 'Alex';
+  if (id.includes('owner_middle_initial')) return 'R';
+  if (id.includes('owner_last_name')) return 'Patel';
   if (id.includes('first_name')) return 'Alex';
   if (id.includes('middle_initial')) return 'R';
   if (id.includes('last_name')) return 'Patel';
