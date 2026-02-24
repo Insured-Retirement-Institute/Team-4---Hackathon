@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { openWidget } from '../hooks/useWidgetSync';
-import { getApplication } from '../services/applicationService';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -128,12 +127,6 @@ function CatAnimation() {
 
 export default function HomePage() {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    getApplication('midland-fixed-annuity-001')
-      .then((app) => console.log('Application definition:', app))
-      .catch((err) => console.error('Failed to load application:', err));
-  }, []);
 
   return (
     <Box>
