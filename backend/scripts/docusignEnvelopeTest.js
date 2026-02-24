@@ -1,4 +1,3 @@
-// backend/scripts/docusignEnvelopeTest.js
 //
 // Creates a DocuSign envelope in DEMO and returns an embedded signing URL.
 // Requirements:
