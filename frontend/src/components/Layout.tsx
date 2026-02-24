@@ -20,8 +20,7 @@ function Layout() {
 
   const navItems = [
     { label: 'Home', path: '/' },
-    { label: 'AI Assistant', path: '/ai-chat' },
-    { label: 'New Application', path: '/wizard-v2', badge: fieldCount },
+{ label: 'New Application', path: '/wizard-v2', badge: fieldCount },
   ];
 
   return (

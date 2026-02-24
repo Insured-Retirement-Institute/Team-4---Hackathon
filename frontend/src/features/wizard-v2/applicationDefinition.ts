@@ -1,61 +1,12 @@
 import rawApplicationDefinition from '../../../midland-national-eapp.json';
+import type {
+  QuestionType,
+  QuestionDefinition,
+  PageDefinition,
+  ApplicationDefinition,
+} from '../../types/application';
 
-export type QuestionType =
-  | 'short_text'
-  | 'long_text'
-  | 'number'
-  | 'currency'
-  | 'date'
-  | 'boolean'
-  | 'select'
-  | 'multi_select'
-  | 'radio'
-  | 'phone'
-  | 'email'
-  | 'ssn'
-  | 'signature'
-  | 'repeatable_group'
-  | 'allocation_table';
-
-export interface QuestionOption {
-  value: string;
-  label: string;
-}
-
-export interface QuestionDefinition {
-  id: string;
-  label: string;
-  type: QuestionType;
-  required?: boolean;
-  placeholder?: string;
-  hint?: string;
-  options?: QuestionOption[];
-  min?: number;
-  max?: number;
-  groupConfig?: {
-    minItems: number;
-    maxItems: number;
-    addLabel?: string;
-    fields: QuestionDefinition[];
-  };
-}
-
-export interface PageDefinition {
-  id: string;
-  title: string;
-  description: string | null;
-  questions: QuestionDefinition[];
-}
-
-export interface ApplicationDefinition {
-  id: string;
-  version: string;
-  carrier: string;
-  productName: string;
-  productId: string;
-  description: string;
-  pages: PageDefinition[];
-}
+export type { QuestionType, QuestionDefinition, PageDefinition, ApplicationDefinition };
 
 interface RawOption {
   value: string;
@@ -77,6 +28,21 @@ interface RawQuestion {
     addLabel?: string;
     fields: RawQuestion[];
   } | null;
+  allocationConfig?: {
+    totalRequired?: number;
+    minPerFund?: number;
+    maxPerFund?: number;
+    funds?: Array<{
+      id: string;
+      name: string;
+      description?: string | null;
+      creditingMethod?: string | null;
+      index?: string | null;
+      termYears?: number | null;
+      hasStrategyFee?: boolean;
+      strategyFeeAnnualPct?: number | null;
+    }> | null;
+  } | null;
 }
 
 interface RawPage {
@@ -86,6 +52,16 @@ interface RawPage {
   order?: number;
   pageType?: 'standard' | 'disclosure';
   questions?: RawQuestion[] | null;
+  disclosures?: Array<{
+    id: string;
+    acknowledgment?: {
+      questionId: string;
+      type: 'boolean' | 'signature' | 'initials';
+      label: string;
+      hint?: string | null;
+      required?: boolean;
+    } | null;
+  }> | null;
 }
 
 interface RawApplicationDefinition {
@@ -143,20 +119,58 @@ function normalizeQuestion(question: RawQuestion): QuestionDefinition {
             .map((field) => normalizeQuestion(field)),
         }
       : undefined,
+    allocationConfig: question.allocationConfig
+      ? {
+          totalRequired: question.allocationConfig.totalRequired,
+          minPerFund: question.allocationConfig.minPerFund,
+          maxPerFund: question.allocationConfig.maxPerFund,
+          funds: question.allocationConfig.funds?.map((fund) => ({
+            id: fund.id,
+            name: fund.name,
+            description: fund.description ?? undefined,
+            creditingMethod: fund.creditingMethod ?? undefined,
+            index: fund.index ?? undefined,
+            termYears: fund.termYears ?? undefined,
+            hasStrategyFee: fund.hasStrategyFee ?? undefined,
+            strategyFeeAnnualPct: fund.strategyFeeAnnualPct ?? undefined,
+          })) ?? [],
+        }
+      : undefined,
   };
 }
 
 function normalizeApplicationDefinition(raw: RawApplicationDefinition): ApplicationDefinition {
+  const toQuestionFromDisclosureAck = (
+    disclosure: NonNullable<RawPage['disclosures']>[number],
+  ): QuestionDefinition | null => {
+    const ack = disclosure.acknowledgment;
+    if (!ack?.questionId || !ack.label) return null;
+
+    const questionType: QuestionType = ack.type === 'boolean' ? 'boolean' : 'signature';
+
+    return {
+      id: ack.questionId,
+      label: ack.label,
+      type: questionType,
+      required: ack.required ?? true,
+      hint: ack.hint ?? undefined,
+    };
+  };
+
   const pages = [...raw.pages]
-    .filter((page) => page.pageType !== 'disclosure')
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map<PageDefinition>((page) => ({
       id: page.id,
       title: page.title,
       description: page.description ?? null,
-      questions: [...(page.questions ?? [])]
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((question) => normalizeQuestion(question)),
+      questions:
+        page.pageType === 'disclosure'
+          ? (page.disclosures ?? [])
+              .map((disclosure) => toQuestionFromDisclosureAck(disclosure))
+              .filter((question): question is QuestionDefinition => Boolean(question))
+          : [...(page.questions ?? [])]
+              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+              .map((question) => normalizeQuestion(question)),
     }));
 
   return {
