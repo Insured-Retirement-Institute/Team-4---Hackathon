@@ -19,7 +19,7 @@ function WizardSidebar({ currentStep }: WizardSidebarProps) {
       sx={{
         width: 260,
         flexShrink: 0,
-        bgcolor: '#1a4fa0',
+        bgcolor: 'primary.dark',
         color: 'white',
         display: 'flex',
         flexDirection: 'column',
@@ -84,7 +84,7 @@ function WizardSidebar({ currentStep }: WizardSidebarProps) {
                   variant="caption"
                   fontWeight="bold"
                   sx={{
-                    color: isActive ? '#1a4fa0' : isCompleted ? '#1a4fa0' : 'rgba(255,255,255,0.6)',
+                    color: isActive || isCompleted ? 'primary.dark' : 'rgba(255,255,255,0.6)',
                     fontSize: 11,
                   }}
                 >

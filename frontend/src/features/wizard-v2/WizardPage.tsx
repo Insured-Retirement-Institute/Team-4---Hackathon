@@ -12,33 +12,11 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { green } from '@mui/material/colors';
 import { APPLICATION_DEFINITION } from './applicationDefinition';
 import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
 
-const greenWizardTheme = createTheme({
-  palette: {
-    primary: {
-      main: green[700],
-      dark: green[900],
-      light: green[500],
-      contrastText: '#fff',
-    },
-    secondary: {
-      main: green[600],
-    },
-    success: {
-      main: green[600],
-    },
-    background: {
-      default: green[50],
-      paper: '#fff',
-    },
-  },
-});
 
 type AnswerMap = Record<string, string | boolean | Record<string, string | boolean>[]>;
 
@@ -573,11 +551,9 @@ function WizardPageContent() {
 
 function WizardPageV2() {
   return (
-    <ThemeProvider theme={greenWizardTheme}>
-      <WizardV2FormProvider>
-        <WizardPageContent />
-      </WizardV2FormProvider>
-    </ThemeProvider>
+    <WizardV2FormProvider>
+      <WizardPageContent />
+    </WizardV2FormProvider>
   );
 }
 
