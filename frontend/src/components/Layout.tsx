@@ -6,11 +6,15 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import { useApplication } from '../context/ApplicationContext';
+import { useWidgetSync } from '../hooks/useWidgetSync';
 
 function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { collectedFields } = useApplication();
+
+  // Bridge widget.js events (iri:field_updated, etc.) into ApplicationContext
+  useWidgetSync();
 
   const fieldCount = Object.keys(collectedFields).length;
 
