@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckIcon from '@mui/icons-material/Check';
@@ -12,6 +12,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { useApplication } from '../../context/ApplicationContext';
 import { APPLICATION_DEFINITION } from './applicationDefinition';
 import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
@@ -409,11 +410,23 @@ function ReviewPanel() {
 }
 
 function WizardPageContent() {
-  const { pages, values, validatePage, isPageComplete, populateWithDummyData } = useWizardV2Controller();
+  const { pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
+  const { collectedFields } = useApplication();
   const [currentStep, setCurrentStep] = useState(0);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const appliedRef = useRef(false);
+
+  // Apply AI-collected fields into the wizard form on mount
+  useEffect(() => {
+    if (appliedRef.current) return;
+    const keys = Object.keys(collectedFields);
+    if (keys.length > 0) {
+      appliedRef.current = true;
+      bulkSetValues(collectedFields as Record<string, string | boolean>);
+    }
+  }, [collectedFields, bulkSetValues]);
 
   const isIntroStep = currentStep === 0;
   const isReviewStep = currentStep === pages.length + 1;
@@ -560,6 +573,12 @@ function WizardPageContent() {
             {submissionError && (
               <Alert severity="error" sx={{ mb: 3 }}>
                 {submissionError}
+              </Alert>
+            )}
+
+            {isIntroStep && Object.keys(collectedFields).length > 0 && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {Object.keys(collectedFields).length} fields have been pre-filled from your AI conversation. Review and complete the remaining sections.
               </Alert>
             )}
 
