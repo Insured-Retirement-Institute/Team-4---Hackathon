@@ -43,8 +43,10 @@ export interface PageDefinition {
 
 export interface ApplicationDefinition {
   id: string;
+  version: string;
   carrier: string;
   productName: string;
+  productId: string;
   description: string;
   pages: PageDefinition[];
 }
@@ -76,8 +78,10 @@ interface RawPage {
 
 interface RawApplicationDefinition {
   id: string;
+  version: string;
   carrier: string;
   productName: string;
+  productId: string;
   description: string;
   pages: RawPage[];
 }
@@ -131,8 +135,10 @@ function normalizeApplicationDefinition(raw: RawApplicationDefinition): Applicat
 
   return {
     id: raw.id,
+    version: raw.version,
     carrier: raw.carrier,
     productName: raw.productName,
+    productId: raw.productId,
     description: raw.description,
     pages,
   };

@@ -35,7 +35,7 @@ function Layout() {
           >
             About
           </Button>
-          <Button
+          {/* <Button
             color="inherit"
             onClick={() => navigate('/wizard-v1')}
             variant="outlined"
@@ -43,7 +43,7 @@ function Layout() {
             sx={{ ml: 1, borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}
           >
             Annuity Application
-          </Button>
+          </Button> */}
           <Button
             color="inherit"
             onClick={() => navigate('/wizard-v2')}
@@ -51,7 +51,7 @@ function Layout() {
             size="small"
             sx={{ ml: 1, borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}
           >
-            Green Wizard
+            V2 Wizard
           </Button>
         </Toolbar>
       </AppBar>
