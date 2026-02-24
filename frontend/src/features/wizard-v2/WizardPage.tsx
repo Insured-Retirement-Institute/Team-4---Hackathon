@@ -410,19 +410,25 @@ function WizardPageContent() {
   const [currentStep, setCurrentStep] = useState(0);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
 
-  const isReviewStep = currentStep === pages.length;
-  const totalSteps = pages.length + 1;
+  const isIntroStep = currentStep === 0;
+  const isReviewStep = currentStep === pages.length + 1;
+  const totalSteps = pages.length + 2;
   const progress = (currentStep / (totalSteps - 1)) * 100;
 
-  const currentPage = isReviewStep ? null : pages[currentStep];
+  const currentPage = !isIntroStep && !isReviewStep ? pages[currentStep - 1] : null;
+  const sidebarStep = isIntroStep ? -1 : isReviewStep ? pages.length : currentStep - 1;
 
   const stepLabel = useMemo(() => {
+    if (isIntroStep) {
+      return 'Application Overview';
+    }
+
     if (isReviewStep) {
       return 'Review & Submit';
     }
 
     return currentPage?.title ?? '';
-  }, [currentPage, isReviewStep]);
+  }, [currentPage, isIntroStep, isReviewStep]);
 
   const handleNext = () => {
     if (!isReviewStep && currentPage && !validatePage(currentPage)) {
@@ -448,24 +454,15 @@ function WizardPageContent() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WizardSidebar pages={pages} currentStep={currentStep} />
+      <WizardSidebar pages={pages} currentStep={sidebarStep} />
 
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <LinearProgress variant="determinate" value={progress} color="success" sx={{ height: 6 }} />
 
         <Box sx={{ p: { xs: 2, md: 4 }, flex: 1 }}>
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
-            <Paper
-              variant="outlined"
-              sx={{ mb: 3, p: { xs: 2.5, md: 3 }, borderColor: 'success.light', bgcolor: 'background.paper' }}
-            >
-              <Typography variant="h5" component="h1" fontWeight="bold" color="primary.main" gutterBottom>
-                {APPLICATION_DEFINITION.productName}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {APPLICATION_DEFINITION.description}
-              </Typography>
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            {isIntroStep && (
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
                 <Chip label={APPLICATION_DEFINITION.carrier} color="success" size="small" />
                 <Chip label={`Step ${currentStep + 1} of ${totalSteps}`} variant="outlined" color="success" size="small" />
                 <Typography variant="caption" color="text.secondary">
@@ -475,12 +472,26 @@ function WizardPageContent() {
                   Fill Dummy Data
                 </Button>
               </Stack>
-            </Paper>
+            )}
 
             {showSubmissionBanner && (
               <Alert icon={<CheckIcon fontSize="inherit" />} severity="success" sx={{ mb: 3 }}>
                 Application submitted successfully. You can review data and navigate back if updates are needed.
               </Alert>
+            )}
+
+            {isIntroStep && (
+              <Paper
+                variant="outlined"
+                sx={{ p: { xs: 2.5, md: 3.5 }, borderColor: 'success.light', bgcolor: 'background.paper' }}
+              >
+                <Typography variant="h4" component="h1" fontWeight="bold" color="primary.main" gutterBottom>
+                  {APPLICATION_DEFINITION.productName}
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  {APPLICATION_DEFINITION.description}
+                </Typography>
+              </Paper>
             )}
 
             {!isReviewStep && currentPage && (
@@ -543,7 +554,7 @@ function WizardPageContent() {
               <Stack direction="row" spacing={1.5}>
                 {!isReviewStep && (
                   <Button variant="contained" color="success" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
-                    Save & Next
+                    {isIntroStep ? 'Start Application' : 'Save & Next'}
                   </Button>
                 )}
                 {isReviewStep && (
