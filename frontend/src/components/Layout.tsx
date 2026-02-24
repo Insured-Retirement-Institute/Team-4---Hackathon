@@ -1,17 +1,27 @@
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
+import Badge from '@mui/material/Badge';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
+import { useApplication } from '../context/ApplicationContext';
+import { useWidgetSync } from '../hooks/useWidgetSync';
 
 function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { collectedFields } = useApplication();
+
+  // Bridge widget.js events (iri:field_updated, etc.) into ApplicationContext
+  useWidgetSync();
+
+  const fieldCount = Object.keys(collectedFields).length;
 
   const navItems = [
+    { label: 'Home', path: '/' },
     { label: 'AI Assistant', path: '/ai-chat' },
-    { label: 'New Application', path: '/wizard-v2' },
+    { label: 'New Application', path: '/wizard-v2', badge: fieldCount },
   ];
 
   return (
@@ -23,7 +33,7 @@ function Layout() {
           </Typography>
           {navItems.map((item) => {
             const active = location.pathname === item.path;
-            return (
+            const btn = (
               <Button
                 key={item.path}
                 color="inherit"
@@ -41,6 +51,16 @@ function Layout() {
                 {item.label}
               </Button>
             );
+
+            if (item.badge) {
+              return (
+                <Badge key={item.path} badgeContent={item.badge} color="success" max={999}>
+                  {btn}
+                </Badge>
+              );
+            }
+
+            return btn;
           })}
         </Toolbar>
       </AppBar>

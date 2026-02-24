@@ -1,14 +1,79 @@
-# eAppAPI — Annuity E-Application API
+# Team 4 Hackathon — Annuity E-Application
 
-A dynamic, renderable e-application API for annuity products. Designed for frontend applications and AI agents to retrieve application definitions, validate answers, and submit completed applications.
+A monorepo containing the Express backend API and React frontend for the annuity e-application wizard.
 
-## Live API
+## Project Structure
+
+```
+├── backend/               # Express API
+│   ├── server.js          # Entry point (port 3001 locally)
+│   ├── src/
+│   │   ├── app.js
+│   │   ├── routes/        # application, validation, submission
+│   │   ├── services/      # productStore, validationEngine
+│   │   └── utils/
+│   ├── Assets/            # OpenAPI spec + product definitions
+│   └── package.json
+├── frontend/              # React + Vite app (port 5173 locally)
+│   ├── src/
+│   │   ├── features/
+│   │   │   ├── wizard-v1/ # Annuity application wizard (v1)
+│   │   │   └── wizard-v2/ # Annuity application wizard (v2)
+│   │   ├── pages/
+│   │   └── components/
+│   └── package.json
+└── package.json           # Root scripts — runs both together
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js v18+
+- npm v9+
+
+### 1. Install all dependencies
+
+```bash
+# Install root dev tools (concurrently)
+npm install
+
+# Install backend + frontend dependencies
+npm run install:all
+```
+
+### 2. Run in development
+
+Start both servers simultaneously:
+
+```bash
+npm run dev
+```
+
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:3001
+- **Swagger UI:** http://localhost:3001/api-docs
+
+Run individually:
+
+```bash
+npm run dev:backend    # Express with --watch (auto-restarts on file changes)
+npm run dev:frontend   # Vite with HMR
+```
+
+> The frontend proxies `/application`, `/health`, and `/api-docs` to the backend automatically — no CORS config needed during development.
+
+---
+
+## Backend
+
+### Live API
 
 **Swagger UI:** https://y5s8xyzi3v.us-east-1.awsapprunner.com/api-docs/
 
 **Base URL:** https://y5s8xyzi3v.us-east-1.awsapprunner.com
 
-## Endpoints
+### Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -80,9 +145,7 @@ curl -X POST https://y5s8xyzi3v.us-east-1.awsapprunner.com/application/app-001/s
   }'
 ```
 
-## Validation Rules
-
-The API enforces all validation rules defined in the product definition:
+### Validation Rules
 
 - **required** — Non-null, non-empty value
 - **min / max** — Numeric range
@@ -96,16 +159,17 @@ The API enforces all validation rules defined in the product definition:
 - **group_sum** — Sum a field across repeatable group items (with optional filter)
 - **async** — External service validation (stub)
 
-## Docker
+### Docker
 
 ```bash
 docker build --platform linux/amd64 -t eappapi .
 docker run -d --name eappapi -p 8080:8080 eappapi
 ```
 
+---
+
 ## Tech Stack
 
-- Node.js 20
-- Express.js
-- Swagger UI Express
-- AWS App Runner + ECR
+- **Frontend:** React 18, TypeScript, Vite, MUI v7, React Router v6, React Hook Form
+- **Backend:** Node.js 20, Express.js, Swagger UI Express
+- **Infrastructure:** AWS App Runner + ECR

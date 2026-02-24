@@ -13,6 +13,7 @@ interface WizardV2Controller {
   errors: FormErrors;
   pages: PageDefinition[];
   setValue: (questionId: string, value: AnswerValue) => void;
+  bulkSetValues: (fields: Record<string, AnswerValue>) => void;
   validatePage: (page: PageDefinition) => boolean;
   isPageComplete: (page: PageDefinition) => boolean;
   populateWithDummyData: () => void;
@@ -180,6 +181,7 @@ function createDummyValue(question: QuestionDefinition): AnswerValue {
   if (id.includes('signed_at_state')) return 'IA';
   if (id.includes('owner_id_country')) return 'United States';
   if (id.includes('owner_country_of_citizenship')) return 'U.S.A.';
+  if (id === 'owner_years_employed') return '5';
 
   return 'Sample value';
 }
@@ -277,6 +279,17 @@ export function WizardV2FormProvider({ children }: WizardV2FormProviderProps) {
     });
   };
 
+  const bulkSetValues = (fields: Record<string, AnswerValue>) => {
+    setValues((prev) => ({ ...prev, ...fields }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(fields)) {
+        delete next[key];
+      }
+      return next;
+    });
+  };
+
   const populateWithDummyData = () => {
     const dummyValues = allQuestions.reduce<FormValues>((acc, question) => {
       acc[question.id] = createDummyValue(question);
@@ -301,6 +314,7 @@ export function WizardV2FormProvider({ children }: WizardV2FormProviderProps) {
       errors,
       pages,
       setValue,
+      bulkSetValues,
       validatePage,
       isPageComplete,
       populateWithDummyData,
