@@ -19,7 +19,20 @@ export default function AiChatPage() {
     if (initRef.current) return;
     initRef.current = true;
 
-    createSession()
+    // If we already have a session (user navigated away and back), keep it
+    if (sessionId) return;
+
+    // Build known_data from any fields already collected (e.g. from the wizard)
+    const knownData: Record<string, string> = {};
+    for (const [key, val] of Object.entries(collectedFields)) {
+      if (typeof val === 'string' && val.trim()) {
+        knownData[key] = val;
+      } else if (typeof val === 'boolean') {
+        knownData[key] = val ? 'true' : 'false';
+      }
+    }
+
+    createSession('midland-fixed-annuity-001', Object.keys(knownData).length > 0 ? knownData : undefined)
       .then((session) => {
         setSessionId(session.session_id);
         setPhase(session.phase);
@@ -44,7 +57,7 @@ export default function AiChatPage() {
           },
         ]);
       });
-  }, [setSessionId, setPhase, setStepProgress]);
+  }, [setSessionId, setPhase, setStepProgress, sessionId, collectedFields]);
 
   const handleSendMessage = useCallback(
     async (message: string): Promise<string> => {
