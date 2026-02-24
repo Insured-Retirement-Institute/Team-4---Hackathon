@@ -9,7 +9,7 @@ Annuity E-Application API built with Express.js, deployed to AWS App Runner. Ser
 ```
 simpleAPI/
 ├── Assets/                        # Product definition JSON files + OpenAPI spec
-│   ├── annuity-eapp-openapi.yaml  # OpenAPI 3.1.0 specification
+│   ├── annuity-eapp-openapi-3.yaml # OpenAPI 3.1.0 specification (active)
 │   └── midland-national-eapp.json # Midland National fixed annuity product
 ├── src/
 │   ├── app.js                     # Express app setup, middleware, Swagger UI, routes
@@ -56,6 +56,12 @@ Key behaviors:
 - Repeating pages (pageRepeat) with per-instance validation
 - Repeatable groups with per-item field validation
 - Disclosure acknowledgment validation
+
+## API Contract Notes
+
+- The validate (`POST /application/:applicationId/validate`) and submit (`POST /application/:applicationId/submit`) endpoints require `productId` and `answers` in the request body
+- Submission metadata (`agentId`, `ipAddress`, `userAgent`, `submissionSource`) is nested under `req.body.metadata`
+- The active OpenAPI spec is `Assets/annuity-eapp-openapi-3.yaml` (3 public endpoints)
 
 ## Adding New Products
 

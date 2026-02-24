@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json({ limit: '5mb' }));
 
 // Swagger UI
-const swaggerDoc = YAML.load(path.resolve(__dirname, '../Assets/annuity-eapp-openapi.yaml'));
+const swaggerDoc = YAML.load(path.resolve(__dirname, '../Assets/annuity-eapp-openapi-3.yaml'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
 // Health check

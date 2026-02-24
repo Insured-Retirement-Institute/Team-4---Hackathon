@@ -6,6 +6,7 @@ const { getProduct } = require('../services/productStore');
 router.get('/:productId', (req, res) => {
   try {
     const { productId } = req.params;
+    const locale = req.query.locale || 'en-US';
     const product = getProduct(productId);
 
     if (!product) {

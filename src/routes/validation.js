@@ -7,6 +7,16 @@ const { getApplicationById, updateApplicationAnswers } = require('../services/ap
 // POST /application/:applicationId/validate
 router.post('/:applicationId/validate', async (req, res) => {
   try {
+    const { productId, answers: bodyAnswers } = req.body || {};
+
+    if (!productId || !bodyAnswers) {
+      return res.status(400).json({
+        code: 'BAD_REQUEST',
+        message: 'Both productId and answers are required in the request body.',
+        details: null
+      });
+    }
+
     const application = await getApplicationById(req.params.applicationId);
 
     if (!application) {
@@ -17,16 +27,15 @@ router.post('/:applicationId/validate', async (req, res) => {
       });
     }
 
-    const product = getProduct(application.productId);
+    const product = getProduct(productId);
     if (!product) {
       return res.status(404).json({
         code: 'PRODUCT_NOT_FOUND',
-        message: `No application definition found for product ID '${application.productId}'.`,
+        message: `No application definition found for product ID '${productId}'.`,
         details: null
       });
     }
 
-    const bodyAnswers = (req.body && req.body.answers) || {};
     const mergedAnswers = { ...application.answers, ...bodyAnswers };
 
     // Persist merged answers back if body included new answers
