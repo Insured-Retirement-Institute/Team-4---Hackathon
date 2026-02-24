@@ -27,7 +27,7 @@ router.post('/:applicationId/validate', async (req, res) => {
       });
     }
 
-    const product = getProduct(productId);
+    const product = await getProduct(productId);
     if (!product) {
       return res.status(404).json({
         code: 'PRODUCT_NOT_FOUND',

@@ -3,11 +3,11 @@ const router = express.Router();
 const { getProduct } = require('../services/productStore');
 
 // GET /application/:productId
-router.get('/:productId', (req, res) => {
+router.get('/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
     const locale = req.query.locale || 'en-US';
-    const product = getProduct(productId);
+    const product = await getProduct(productId);
 
     if (!product) {
       return res.status(404).json({

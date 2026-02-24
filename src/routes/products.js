@@ -7,6 +7,7 @@ const {
   updateProduct,
   deleteProduct,
 } = require('../services/productService');
+const { addProduct } = require('../services/productStore');
 
 // GET /products
 router.get('/', async (req, res) => {
@@ -63,6 +64,7 @@ router.post('/', async (req, res) => {
     }
 
     const product = await createProduct(req.body);
+    addProduct(product);
     res.status(201).json(product);
   } catch (err) {
     console.error('Error creating product:', err);
@@ -78,6 +80,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const product = await updateProduct(req.params.id, req.body);
+    addProduct(product);
     res.json(product);
   } catch (err) {
     if (err.name === 'ConditionalCheckFailedException') {

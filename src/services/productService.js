@@ -23,13 +23,12 @@ async function getProductById(id) {
 }
 
 async function createProduct(data) {
+  const now = new Date().toISOString();
   const item = {
+    ...data,
     id: crypto.randomUUID(),
-    carrier: data.carrier,
-    productName: data.productName,
-    productId: data.productId,
-    effectiveDate: data.effectiveDate,
-    description: data.description,
+    createdAt: now,
+    updatedAt: now,
   };
 
   await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
@@ -37,36 +36,23 @@ async function createProduct(data) {
 }
 
 async function updateProduct(id, data) {
-  const fields = ['carrier', 'productName', 'productId', 'effectiveDate', 'description'];
-  const expressionParts = [];
-  const expressionValues = {};
-  const expressionNames = {};
-
-  for (const field of fields) {
-    if (data[field] !== undefined) {
-      expressionParts.push(`#${field} = :${field}`);
-      expressionValues[`:${field}`] = data[field];
-      expressionNames[`#${field}`] = field;
-    }
+  const existing = await getProductById(id);
+  if (!existing) {
+    const err = new Error('Product not found');
+    err.name = 'ConditionalCheckFailedException';
+    throw err;
   }
 
-  if (expressionParts.length === 0) {
-    return getProductById(id);
-  }
+  const item = {
+    ...existing,
+    ...data,
+    id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
 
-  const result = await docClient.send(
-    new UpdateCommand({
-      TableName: TABLE_NAME,
-      Key: { id },
-      UpdateExpression: `SET ${expressionParts.join(', ')}`,
-      ExpressionAttributeValues: expressionValues,
-      ExpressionAttributeNames: expressionNames,
-      ConditionExpression: 'attribute_exists(id)',
-      ReturnValues: 'ALL_NEW',
-    })
-  );
-
-  return result.Attributes;
+  await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+  return item;
 }
 
 async function deleteProduct(id) {
