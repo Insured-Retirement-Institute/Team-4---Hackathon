@@ -8,6 +8,7 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
+    "docusign-esign": "^8.6.0",
     "dotenv": "^17.3.1",
     "express": "^4.21.0",
     "swagger-ui-express": "^5.0.1",
