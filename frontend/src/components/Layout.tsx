@@ -10,6 +10,7 @@ function Layout() {
   const location = useLocation();
 
   const navItems = [
+    { label: 'Home', path: '/' },
     { label: 'AI Assistant', path: '/ai-chat' },
     { label: 'New Application', path: '/wizard-v2' },
   ];

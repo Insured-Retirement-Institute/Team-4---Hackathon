@@ -1,45 +1,340 @@
-import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
+import { useNavigate } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Container from '@mui/material/Container';
+import Divider from '@mui/material/Divider';
+import Grid from '@mui/material/Grid';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import ApiIcon from '@mui/icons-material/Api';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import MicIcon from '@mui/icons-material/Mic';
+import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 
-const items = [
-  { id: 1, title: 'Getting Started', description: 'Learn the basics of React and MUI to build modern web applications.' },
-  { id: 2, title: 'Components', description: 'Explore the rich set of pre-built MUI components for rapid development.' },
-  { id: 3, title: 'Theming', description: 'Customize the look and feel of your app with the MUI theme system.' },
-  { id: 4, title: 'Responsive Design', description: 'Build layouts that work seamlessly across all screen sizes.' },
-  { id: 5, title: 'Accessibility', description: 'Create inclusive apps with built-in accessibility features.' },
-  { id: 6, title: 'Performance', description: 'Optimize your app with tree-shaking, lazy loading, and more.' },
+const FEATURES = [
+  {
+    icon: <ApiIcon sx={{ fontSize: 32 }} />,
+    label: 'Universal Application API',
+    story: 'US-01',
+    description:
+      'A single normalized schema that decouples the input experience from carrier-specific form logic. Any frontend, any carrier — no rebuilding.',
+    status: 'built',
+  },
+  {
+    icon: <FormatListBulletedIcon sx={{ fontSize: 32 }} />,
+    label: 'Guided Wizard',
+    story: 'US-02',
+    description:
+      'A step-by-step, data-driven application wizard with conditional logic, progress tracking, and pre-fill support. Embeddable anywhere.',
+    status: 'built',
+  },
+  {
+    icon: <SmartToyIcon sx={{ fontSize: 32 }} />,
+    label: 'AI Chat Interface',
+    story: 'US-03',
+    description:
+      'Complete an entire annuity application through natural conversation. The AI guides, confirms, and clarifies — no forms, no friction.',
+    status: 'built',
+  },
+  {
+    icon: <MicIcon sx={{ fontSize: 32 }} />,
+    label: 'Voice Input',
+    story: 'US-04',
+    description:
+      'Speak your answers — live or via uploaded call recording. AI transcribes, maps to schema fields, and flags low-confidence extractions.',
+    status: 'coming',
+  },
+  {
+    icon: <UploadFileIcon sx={{ fontSize: 32 }} />,
+    label: 'Contract Auto-Population',
+    story: 'US-05',
+    description:
+      "Upload a prior carrier's PDF contract. AI extracts key fields and maps them to the new application — replacing manual re-entry.",
+    status: 'coming',
+  },
+  {
+    icon: <PrecisionManufacturingIcon sx={{ fontSize: 32 }} />,
+    label: 'Agentic Orchestration',
+    story: 'US-08',
+    description:
+      'Initiate 8 applications in the time it takes to start 1. An AI agent pulls from CRM, call transcripts, and public records — surfacing only gaps.',
+    status: 'coming',
+  },
 ];
 
-function HomePage() {
+const HOW_IT_WORKS = [
+  {
+    step: '01',
+    title: 'Load the Application Schema',
+    body: 'The backend API returns a normalized question set for the carrier, state, and distribution channel. One schema, any frontend.',
+  },
+  {
+    step: '02',
+    title: 'Complete via Wizard or AI Chat',
+    body: 'Advisors choose their path: a structured step-by-step wizard or a natural language conversation with the AI assistant.',
+  },
+  {
+    step: '03',
+    title: 'Validate & Submit',
+    body: 'The engine enforces all carrier rules, flags NIGO issues before submission, and produces a structured payload ready for the carrier API or PDF fill.',
+  },
+];
+
+export default function HomePage() {
+  const navigate = useNavigate();
+
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Welcome
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        A React + MUI starter project scaffolded with Vite and TypeScript.
-      </Typography>
-      <Grid container spacing={3}>
-        {items.map((item) => (
-          <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="h6" component="h2" gutterBottom>
-                  {item.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {item.description}
-                </Typography>
-              </CardContent>
-            </Card>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <Box
+        sx={{
+          bgcolor: 'primary.dark',
+          color: 'white',
+          py: { xs: 10, md: 14 },
+          px: 3,
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(ellipse at 70% 50%, rgba(255,255,255,0.04) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          },
+        }}
+      >
+        <Container maxWidth="md" sx={{ position: 'relative', textAlign: 'center' }}>
+          <Chip
+            icon={<AutoAwesomeIcon sx={{ fontSize: '14px !important' }} />}
+            label="Hackathon Demo — Annuity Application Modernization"
+            size="small"
+            sx={{
+              mb: 3,
+              bgcolor: 'rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.85)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              fontWeight: 500,
+            }}
+          />
+          <Typography
+            variant="h2"
+            fontWeight={800}
+            sx={{ mb: 2, lineHeight: 1.1, letterSpacing: '-0.5px' }}
+          >
+            Annuity Applications.
+            <br />
+            Reimagined.
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={{ mb: 5, color: 'rgba(255,255,255,0.7)', fontWeight: 400, maxWidth: 560, mx: 'auto' }}
+          >
+            What today takes 4 hours of data entry should take 4 minutes of conversation.
+            We built the tech to make that real.
+          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+            <Button
+              variant="contained"
+              size="large"
+              endIcon={<ArrowForwardIcon />}
+              onClick={() => navigate('/ai-chat')}
+              disableElevation
+              sx={{
+                bgcolor: 'white',
+                color: 'primary.dark',
+                fontWeight: 700,
+                px: 4,
+                '&:hover': { bgcolor: 'grey.100' },
+              }}
+            >
+              Try AI Assistant
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={() => navigate('/wizard-v2')}
+              sx={{
+                borderColor: 'rgba(255,255,255,0.4)',
+                color: 'white',
+                fontWeight: 600,
+                px: 4,
+                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.06)' },
+              }}
+            >
+              Open Wizard
+            </Button>
+          </Stack>
+        </Container>
+      </Box>
+
+      {/* ── Problem strip ────────────────────────────────────────────────── */}
+      <Box sx={{ bgcolor: 'grey.900', color: 'white', py: 4, px: 3 }}>
+        <Container maxWidth="md">
+          <Typography
+            variant="body1"
+            sx={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', fontStyle: 'italic' }}
+          >
+            "For an advisor who meets 12 clients a week, completing 8 annuity applications is a
+            multi-day administrative burden — often outsourced to dedicated data entry staff just to
+            keep pace."
+          </Typography>
+        </Container>
+      </Box>
+
+      {/* ── Features ─────────────────────────────────────────────────────── */}
+      <Box sx={{ py: { xs: 8, md: 12 }, px: 3, bgcolor: 'background.default' }}>
+        <Container maxWidth="lg">
+          <Typography variant="overline" color="primary" fontWeight={700} display="block" mb={1}>
+            What We Built
+          </Typography>
+          <Typography variant="h4" fontWeight={700} mb={1}>
+            End-to-end application modernization
+          </Typography>
+          <Typography variant="body1" color="text.secondary" mb={6} maxWidth={520}>
+            Three user stories delivered at the hackathon, with a clear roadmap for what comes next.
+          </Typography>
+
+          <Grid container spacing={3}>
+            {FEATURES.map((f) => {
+              const built = f.status === 'built';
+              return (
+                <Grid key={f.label} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Card
+                    elevation={0}
+                    sx={{
+                      height: '100%',
+                      border: '1px solid',
+                      borderColor: built ? 'primary.light' : 'divider',
+                      opacity: built ? 1 : 0.6,
+                      transition: 'box-shadow 0.2s, transform 0.2s',
+                      '&:hover': built
+                        ? { boxShadow: 4, transform: 'translateY(-2px)' }
+                        : {},
+                    }}
+                  >
+                    <CardContent sx={{ p: 3 }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                        <Box sx={{ color: built ? 'primary.main' : 'text.disabled' }}>{f.icon}</Box>
+                        <Stack direction="row" spacing={0.75}>
+                          <Chip
+                            label={f.story}
+                            size="small"
+                            sx={{ fontSize: 10, height: 20, bgcolor: 'grey.100' }}
+                          />
+                          {built ? (
+                            <Chip
+                              icon={<CheckCircleIcon sx={{ fontSize: '12px !important' }} />}
+                              label="Built"
+                              size="small"
+                              color="success"
+                              sx={{ fontSize: 10, height: 20 }}
+                            />
+                          ) : (
+                            <Chip
+                              label="Coming Soon"
+                              size="small"
+                              sx={{ fontSize: 10, height: 20, bgcolor: 'grey.200' }}
+                            />
+                          )}
+                        </Stack>
+                      </Stack>
+                      <Typography variant="subtitle1" fontWeight={700} mb={0.75}>
+                        {f.label}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" lineHeight={1.6}>
+                        {f.description}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              );
+            })}
           </Grid>
-        ))}
-      </Grid>
+        </Container>
+      </Box>
+
+      <Divider />
+
+      {/* ── How it works ─────────────────────────────────────────────────── */}
+      <Box sx={{ py: { xs: 8, md: 12 }, px: 3, bgcolor: 'background.paper' }}>
+        <Container maxWidth="lg">
+          <Typography variant="overline" color="primary" fontWeight={700} display="block" mb={1}>
+            How It Works
+          </Typography>
+          <Typography variant="h4" fontWeight={700} mb={6}>
+            One schema. Any input. Any carrier.
+          </Typography>
+
+          <Grid container spacing={4}>
+            {HOW_IT_WORKS.map((step) => (
+              <Grid key={step.step} size={{ xs: 12, md: 4 }}>
+                <Stack direction="row" spacing={3} alignItems="flex-start">
+                  <Typography
+                    variant="h3"
+                    fontWeight={800}
+                    sx={{ color: 'primary.light', lineHeight: 1, minWidth: 56 }}
+                  >
+                    {step.step}
+                  </Typography>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={700} mb={0.75}>
+                      {step.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" lineHeight={1.7}>
+                      {step.body}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      <Divider />
+
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      <Box sx={{ py: { xs: 8, md: 10 }, px: 3, bgcolor: 'background.default', textAlign: 'center' }}>
+        <Container maxWidth="sm">
+          <Typography variant="h4" fontWeight={700} mb={1.5}>
+            See it in action
+          </Typography>
+          <Typography variant="body1" color="text.secondary" mb={4}>
+            Start with the AI assistant for a conversational demo, or jump straight into the wizard
+            to see the data-driven application engine.
+          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+            <Button
+              variant="contained"
+              size="large"
+              endIcon={<SmartToyIcon />}
+              onClick={() => navigate('/ai-chat')}
+              disableElevation
+              sx={{ fontWeight: 700, px: 4 }}
+            >
+              AI Assistant
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              endIcon={<FormatListBulletedIcon />}
+              onClick={() => navigate('/wizard-v2')}
+              sx={{ fontWeight: 600, px: 4 }}
+            >
+              Guided Wizard
+            </Button>
+          </Stack>
+        </Container>
+      </Box>
     </Box>
   );
 }
-
-export default HomePage;
