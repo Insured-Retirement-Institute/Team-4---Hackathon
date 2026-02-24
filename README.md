@@ -17,6 +17,12 @@ A dynamic, renderable e-application API for annuity products. Designed for front
 | POST | `/application/:applicationId/validate` | Validate answers against application rules |
 | POST | `/application/:applicationId/submit` | Submit a completed application |
 
+## DocuSign Demo
+
+- Start signing: `POST /application/:applicationId/docusign/start`
+- Open the returned `signingUrl` in a new tab/window
+- The DocuSign return page (`/docusign/return`) is currently a placeholder
+
 ## Quick Start
 
 ```bash
