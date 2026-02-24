@@ -32,7 +32,7 @@ const BREADCRUMB_LABELS = ['Welcome', 'Application', 'Review'];
 
 function WizardPageContent() {
   const [currentStep, setCurrentStep] = useState(1);
-  const { validateStep } = useWizardFormController();
+  const { validateStep, populateWithDummyData } = useWizardFormController();
   const totalSteps = WIZARD_STEPS.length;
   const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
 
@@ -86,6 +86,9 @@ function WizardPageContent() {
               </Typography>
             ))}
             <Box sx={{ flex: 1 }} />
+            <Button size="small" variant="outlined" onClick={populateWithDummyData}>
+              Fill Dummy Data
+            </Button>
             <Typography variant="caption" color="text.secondary">
               Step {currentStep} of {totalSteps}
             </Typography>
