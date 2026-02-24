@@ -25,13 +25,23 @@ export interface MessageResponse {
   total_steps: number | null;
 }
 
+async function fetchSchema(): Promise<unknown[]> {
+  const res = await fetch(`${AI_SERVICE_BASE}/api/v1/demo/midland-schema`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch schema: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function createSession(productId = 'midland-fixed-annuity-001', knownData?: Record<string, string>): Promise<SessionResponse> {
-  const body: Record<string, unknown> = { product_id: productId };
+  const questions = await fetchSchema();
+
+  const body: Record<string, unknown> = { questions, product_id: productId };
   if (knownData && Object.keys(knownData).length > 0) {
     body.known_data = knownData;
   }
 
-  const res = await fetch(`${AI_SERVICE_BASE}/sessions`, {
+  const res = await fetch(`${AI_SERVICE_BASE}/api/v1/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -46,7 +56,7 @@ export async function createSession(productId = 'midland-fixed-annuity-001', kno
 }
 
 export async function sendMessage(sessionId: string, message: string): Promise<MessageResponse> {
-  const res = await fetch(`${AI_SERVICE_BASE}/sessions/${sessionId}/message`, {
+  const res = await fetch(`${AI_SERVICE_BASE}/api/v1/sessions/${sessionId}/message`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),
@@ -61,7 +71,7 @@ export async function sendMessage(sessionId: string, message: string): Promise<M
 }
 
 export async function getSession(sessionId: string): Promise<SessionResponse> {
-  const res = await fetch(`${AI_SERVICE_BASE}/sessions/${sessionId}`);
+  const res = await fetch(`${AI_SERVICE_BASE}/api/v1/sessions/${sessionId}`);
 
   if (!res.ok) {
     const text = await res.text();
