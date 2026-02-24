@@ -13,20 +13,11 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useApplication } from '../../context/ApplicationContext';
+import { submitApplication, validateApplication } from '../../services/applicationService';
 import { APPLICATION_DEFINITION } from './applicationDefinition';
 import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
-
-type ValidationError = {
-  message?: string;
-};
-
-type ValidationResponse = {
-  valid?: boolean;
-  errors?: ValidationError[];
-  message?: string;
-};
 
 type AnswerMap = Record<string, string | boolean | Record<string, string | boolean>[]>;
 
@@ -527,25 +518,12 @@ function WizardPageContent() {
     const applicationId = `app_${APPLICATION_DEFINITION.id}`;
     const requestPayload = {
       productId: APPLICATION_DEFINITION.productId,
-      answers: values,
+      // service types are currently flat; wizard answers include nested structures
+      answers: values as unknown as Record<string, string | number | boolean | null>,
     };
 
     try {
-      const validateResponse = await fetch(`/application/${applicationId}/validate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      const validateResult = (await validateResponse.json()) as ValidationResponse;
-      console.log(validateResult);
-
-      if (!validateResponse.ok) {
-        setSubmissionError(validateResult.message || 'Validation request failed.');
-        return;
-      }
+      const validateResult = await validateApplication(applicationId, requestPayload, 'full');
 
       if (!validateResult.valid) {
         const firstValidationMessage = validateResult.errors?.[0]?.message;
@@ -564,30 +542,18 @@ function WizardPageContent() {
         },
       });
 
-      const submitResponse = await fetch(`/application/${applicationId}/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      await submitApplication(applicationId, {
+        ...requestPayload,
+        metadata: {
+          submissionSource: 'web',
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         },
-        body: JSON.stringify({
-          ...requestPayload,
-          metadata: {
-            submissionSource: 'web',
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-          },
-        }),
       });
-
-      if (!submitResponse.ok) {
-        const submitResult = (await submitResponse.json()) as ValidationResponse;
-        setSubmissionError(submitResult.message || 'Submission failed. Please try again.');
-        return;
-      }
 
       console.log('eapp_submission_payload', submissionPayload);
       setShowSubmissionBanner(true);
     } catch (error) {
-      setSubmissionError('Unable to reach the server. Please try again.');
+      setSubmissionError(error instanceof Error ? error.message : 'Unable to reach the server. Please try again.');
       console.error('Submission request failed:', error);
     } finally {
       setIsSubmitting(false);

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { openWidget } from '../hooks/useWidgetSync';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
