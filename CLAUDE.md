@@ -24,8 +24,8 @@ Each service has its own `CLAUDE.md` with service-specific details.
 
 ## Key Routes
 
-- `/` — Landing page with feature overview, CTAs to wizard and AI chat
-- `/ai-chat` — Full-page AI conversational chat
+- `/` — Landing page with feature overview, CTAs to wizard, AI chat, and CRM pre-fill
+- `/prefill` — Pre-fill page: select CRM client or upload document → AI agent gathers data → start session
 - `/wizard-v2` — Dynamic form wizard (data-driven from product JSON)
 - Widget popup available on all pages (floating chat bubble, bottom-right)
 
@@ -82,6 +82,8 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 - Widget → Wizard: `iri:field_updated` CustomEvents → `useWidgetSync` hook → `mergeFields()` → `collectedFields` in `ApplicationContext` → `bulkSetValues()` in form controller
 - Wizard → Widget: Form `values` change → `mergeFields()` → on widget reopen, new fields sent as message to existing session
 - `lastAppliedRef` prevents infinite sync loops
+
+**Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client`, `lookup_prior_policies`, `extract_document_fields` tools → returns `known_data` → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
 
 **State hub:** `ApplicationContext.tsx` holds `collectedFields`, `sessionId`, `phase`, and step progress shared across wizard and chat.
 

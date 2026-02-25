@@ -20,9 +20,9 @@ npm run lint     # ESLint
 |------|---------|
 | `src/context/ApplicationContext.tsx` | Shared state: `collectedFields`, `sessionId`, `phase`, step progress |
 | `src/services/aiService.ts` | AI service client: `fetchSchema()`, `createSession()`, `sendMessage()` |
-| `src/hooks/useWidgetSync.ts` | Bridges widget.js CustomEvents ↔ React context |
-| `src/features/ai-chat/AiChat.tsx` | Chat UI component with `react-markdown` rendering |
-| `src/pages/AiChatPage.tsx` | Full-page chat wired to AI service |
+| `src/services/prefillService.ts` | Pre-fill API client: `fetchClients()`, `runPrefill()`, `runPrefillWithDocument()` |
+| `src/hooks/useWidgetSync.ts` | Bridges widget.js CustomEvents ↔ React context, exports `openWidget()` |
+| `src/pages/PrefillPage.tsx` | CRM client selector + doc upload → agent results → session start |
 | `src/features/wizard-v2/WizardPage.tsx` | Dynamic wizard with bidirectional field sync |
 | `src/features/wizard-v2/formController.tsx` | Form state management, includes `bulkSetValues()` |
 | `public/widget.js` | Embeddable chat widget (self-contained IIFE) |
@@ -59,15 +59,24 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 - Visibility conditions evaluated per-question (same AND/OR/NOT logic as backend validation engine)
 - Supports repeating pages and repeatable groups
 
-## AI Chat Page
+## Pre-Fill Page
 
-`src/pages/AiChatPage.tsx` + `src/features/ai-chat/AiChat.tsx`:
+`src/pages/PrefillPage.tsx` — three-stage UI for gathering data before the application starts:
 
-1. `aiService.fetchSchema()` — `GET /api/v1/demo/midland-schema` (adapted question list)
-2. `aiService.createSession(questions, knownData)` — `POST /api/v1/sessions`
-3. `aiService.sendMessage(sessionId, text)` — `POST /api/v1/sessions/{id}/message`
-4. Response includes `reply`, `updated_fields`, `phase`, `field_summary`
-5. Messages rendered with `react-markdown`
+1. **Input stage**: Client selector (`Autocomplete` from `fetchClients()`) and/or document upload (drag-and-drop zone)
+2. **Loading stage**: Progress indicator while the AI agent gathers data from CRM, policies, and documents
+3. **Results stage**: Shows summary, field count, source chips, and scrollable field preview
+
+**"Start Application" flow:** Calls `createSession('midland-fixed-annuity-001', result.known_data)` → stores session in `ApplicationContext` → navigates to `/` → opens widget with `openWidget()`. Session starts in SPOT_CHECK phase with all pre-filled data as `known_data`.
+
+**API client** (`src/services/prefillService.ts`):
+- `fetchClients()` — `GET /api/v1/prefill/clients`
+- `runPrefill(clientId)` — `POST /api/v1/prefill`
+- `runPrefillWithDocument(file, clientId?)` — `POST /api/v1/prefill/document` (multipart FormData)
+
+## AI Chat
+
+AI chat is delivered exclusively via the embeddable widget (`public/widget.js`), not a dedicated page. The widget is available on all pages as a floating chat bubble (bottom-right). It can be opened programmatically via `openWidget()` from `useWidgetSync.ts`.
 
 ## Environment
 

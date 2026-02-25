@@ -72,7 +72,29 @@ All routes under `/api/v1/`:
 | POST | `/sessions/{id}/message` | Send message → reply + `updated_fields` |
 | POST | `/sessions/{id}/submit` | Submit completed application |
 | GET | `/demo/midland-schema` | Fetch adapted product schema |
+| GET | `/prefill/clients` | List CRM clients for dropdown selection |
+| POST | `/prefill` | Run pre-fill agent for a CRM client (`{client_id}` in body) |
+| POST | `/prefill/document` | Run pre-fill agent with uploaded document (multipart form: `file` + optional `client_id`) |
 | GET | `/health` | Health check |
+
+## Pre-Fill Agent
+
+`app/services/prefill_agent.py` — LLM-orchestrated agent that gathers client data from external sources before the application begins, feeding results into the existing `known_data` → SPOT_CHECK flow.
+
+**Agent tools** (Anthropic tool_use format):
+- `lookup_crm_client` — Queries `MockRedtailCRM` for client profile (name, DOB, SSN, contact, address)
+- `lookup_prior_policies` — Queries `MockPolicySystem` for suitability data (income, net worth, risk tolerance)
+- `extract_document_fields` — LLM extracts fields from uploaded document via vision
+- `report_prefill_results` — Terminal tool, returns combined `{known_data, sources_used, fields_found, summary}`
+
+**Agent loop:** `run_prefill_agent(client_id, document_base64, document_media_type)` — up to 5 iterations with `force_tool=True`. Terminates when `report_prefill_results` is called. Uses same `LLMService.chat()` and `extract_tool_calls()` as the conversation flow.
+
+**Data sources** (`app/services/datasources/`):
+- `MockRedtailCRM` — 4 mock clients with ~18 CRM fields each. `list_clients()` for dropdown, `query({client_id})` for profile data. Designed for clean swap to live Redtail API.
+- `MockPolicySystem` — 10 suitability/financial fields per client (income, net worth, risk tolerance, investment details).
+- `DataSource` base class — `async query(params) -> dict` and `available_fields() -> list[str]`.
+
+**Response format:** `{known_data: dict, sources_used: list[str], fields_found: int, summary: str}`
 
 ## API Flow
 
@@ -109,6 +131,11 @@ All routes under `/api/v1/`:
 | `app/services/conversation_service.py` | Session store, message handling, phase transitions |
 | `app/services/extraction_service.py` | Tool definitions, field validation, phase-aware tool sets |
 | `app/services/schema_adapter.py` | eApp JSON → internal question format |
+| `app/services/prefill_agent.py` | LLM-orchestrated pre-fill agent: tool defs, agent loop, source execution |
+| `app/services/datasources/mock_redtail.py` | Mock CRM: 4 clients, ~18 fields each, `list_clients()` for dropdown |
+| `app/services/datasources/mock_policy.py` | Mock prior policy/suitability data: 10 fields per client |
+| `app/services/datasources/base.py` | Abstract `DataSource` interface |
+| `app/routes/prefill.py` | Pre-fill endpoints: client list, CRM prefill, document prefill |
 | `app/models/conversation.py` | Enums, TrackedField, ConversationState, condition evaluator |
 | `app/prompts/system_prompt.py` | Phase-aware system prompt builder |
 | `app/config.py` | Pydantic settings |
