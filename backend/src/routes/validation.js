@@ -56,8 +56,6 @@ router.post('/:applicationId/validate', async (req, res) => {
       });
     }
 
-    const result = validate(product, mergedAnswers, scope, pageId);
-
     if (scope === 'full') {
       const applicationId = req.params.applicationId;
       const payload = transformSubmission(product, mergedAnswers, { applicationId });
@@ -65,16 +63,16 @@ router.post('/:applicationId/validate', async (req, res) => {
 
       await updateApplicationSuitabilityDecision(applicationId, suitabilityDecision);
 
-      if (suitabilityDecision.valid === false) {
-        result.valid = false;
-      }
+      const result = { valid: suitabilityDecision.valid !== false, errors: [] };
       if (Array.isArray(suitabilityDecision.errors) && suitabilityDecision.errors.length > 0) {
-        result.errors = result.errors.concat(suitabilityDecision.errors);
+        result.errors = suitabilityDecision.errors;
       }
 
       return res.json({ ...result, suitabilityDecision });
     }
 
+    // For 'page' scope, still run structure validation as before
+    const result = validate(product, mergedAnswers, scope, pageId);
     res.json(result);
   } catch (err) {
     console.error('Validation error:', err);
