@@ -51,6 +51,19 @@ router.post('/:applicationId/submit', async (req, res) => {
 
     const mergedAnswers = { ...application.answers, ...bodyAnswers };
 
+    // Server-stamp signature dates with current UTC date.
+    // This prevents timezone-mismatch rejections (e.g. user signs at 11pm CST
+    // but server UTC date has already rolled to the next day) and ensures the
+    // authoritative signature date always comes from the server, not the client.
+    const serverDate = new Date().toISOString().split('T')[0];
+    mergedAnswers.date_signed = serverDate;
+    if (Array.isArray(mergedAnswers.writing_agents)) {
+      mergedAnswers.writing_agents = mergedAnswers.writing_agents.map(agent => ({
+        ...agent,
+        agent_date_signed: serverDate,
+      }));
+    }
+
     // 1. Run full answer validation
     const validationResult = validate(product, mergedAnswers, 'full', null);
 

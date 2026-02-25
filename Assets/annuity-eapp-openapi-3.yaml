@@ -368,6 +368,314 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # ───────────────────────────────────────────────────────────
+  # PRODUCTS
+  # ───────────────────────────────────────────────────────────
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List All Products
+      description: Returns a list of all available product definitions.
+      operationId: listProducts
+      responses:
+        '200':
+          description: A list of products.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductSummary'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Products
+      summary: Create Product
+      description: Creates a new product definition.
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - carrier
+                - productName
+                - productId
+              properties:
+                carrier:
+                  type: string
+                productName:
+                  type: string
+                productId:
+                  type: string
+      responses:
+        '201':
+          description: Product created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '400':
+          description: Missing required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get Product by ID
+      description: Returns a single product definition by its ID.
+      operationId: getProductById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The product definition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Products
+      summary: Update Product
+      description: Updates an existing product definition.
+      operationId: updateProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                carrier:
+                  type: string
+                productName:
+                  type: string
+      responses:
+        '200':
+          description: Product updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Products
+      summary: Delete Product
+      description: Deletes a product definition by its ID.
+      operationId: deleteProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Product deleted successfully.
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ───────────────────────────────────────────────────────────
+  # APPLICATIONS
+  # ───────────────────────────────────────────────────────────
+
+  /applications:
+    post:
+      tags:
+        - Applications
+      summary: Create Application
+      description: Creates a new application instance for a given product.
+      operationId: createApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+              properties:
+                productId:
+                  type: string
+      responses:
+        '201':
+          description: Application created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '400':
+          description: Missing productId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{id}:
+    get:
+      tags:
+        - Applications
+      summary: Get Application by ID
+      description: Returns an application instance by its ID.
+      operationId: getApplicationById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The application instance.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '404':
+          description: Application not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{id}/answers:
+    put:
+      tags:
+        - Applications
+      summary: Update Application Answers
+      description: Merges the provided answers into the application's existing answers. Cannot update a submitted application.
+      operationId: updateApplicationAnswers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - answers
+              properties:
+                answers:
+                  type: object
+      responses:
+        '200':
+          description: Answers updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '400':
+          description: Missing answers in request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Application not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Application already submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 # ─────────────────────────────────────────────────────────────
 # COMPONENTS
 # ─────────────────────────────────────────────────────────────
@@ -2150,3 +2458,35 @@ components:
             - type: object
               additionalProperties: true
             - type: 'null'
+
+    ProductSummary:
+      type: object
+      description: A product definition summary.
+      properties:
+        productId:
+          type: string
+        carrier:
+          type: string
+        productName:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ApplicationInstance:
+      type: object
+      description: An application instance tied to a product.
+      properties:
+        applicationId:
+          type: string
+        productId:
+          type: string
+        status:
+          type: string
+        answers:
+          type: object
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
