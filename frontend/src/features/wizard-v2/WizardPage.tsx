@@ -32,6 +32,7 @@ import {
 import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
+import { evaluateVisibility } from './visibility';
 
 type AnswerMap = Record<string, string | boolean | Record<string, string | boolean>[]>;
 
@@ -163,67 +164,67 @@ function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefini
     },
     jointAnnuitant: asBool(values.has_joint_annuitant)
       ? {
-          firstName: asString(values.joint_annuitant_first_name),
-          middleName: asString(values.joint_annuitant_middle_initial) || null,
-          lastName: asString(values.joint_annuitant_last_name),
-          dateOfBirth: asString(values.joint_annuitant_dob),
-          gender: asString(values.joint_annuitant_gender) === 'female' ? 'female' : 'male',
-          taxId: encryptedValue(values.joint_annuitant_ssn),
-          address: {
-            street1: asString(values.joint_annuitant_street_address),
-            street2: null,
-            city: asString(values.joint_annuitant_city),
-            state: asString(values.joint_annuitant_state),
-            zip: asString(values.joint_annuitant_zip),
-          },
-          phone: asString(values.joint_annuitant_phone),
-          email: null,
-          isUsCitizen: asString(values.joint_annuitant_us_citizen) === 'yes',
-        }
+        firstName: asString(values.joint_annuitant_first_name),
+        middleName: asString(values.joint_annuitant_middle_initial) || null,
+        lastName: asString(values.joint_annuitant_last_name),
+        dateOfBirth: asString(values.joint_annuitant_dob),
+        gender: asString(values.joint_annuitant_gender) === 'female' ? 'female' : 'male',
+        taxId: encryptedValue(values.joint_annuitant_ssn),
+        address: {
+          street1: asString(values.joint_annuitant_street_address),
+          street2: null,
+          city: asString(values.joint_annuitant_city),
+          state: asString(values.joint_annuitant_state),
+          zip: asString(values.joint_annuitant_zip),
+        },
+        phone: asString(values.joint_annuitant_phone),
+        email: null,
+        isUsCitizen: asString(values.joint_annuitant_us_citizen) === 'yes',
+      }
       : null,
     owner: ownerSameAsAnnuitant
       ? { isSameAsAnnuitant: true }
       : {
-          isSameAsAnnuitant: false,
-          type: 'individual',
-          person: {
-            firstName: asString(values.owner_first_name),
-            middleName: asString(values.owner_middle_initial) || null,
-            lastName: asString(values.owner_last_name),
-            dateOfBirth: asString(values.owner_dob),
-            gender: asString(values.owner_gender) === 'female' ? 'female' : 'male',
-            taxId: encryptedValue(values.owner_ssn_tin),
-            address: {
-              street1: asString(values.owner_street_address),
-              street2: null,
-              city: asString(values.owner_city),
-              state: asString(values.owner_state),
-              zip: asString(values.owner_zip),
-            },
-            phone: asString(values.owner_phone),
-            email: asString(values.owner_email) || null,
-            isUsCitizen: asString(values.owner_citizenship_status) !== 'non_resident_alien',
+        isSameAsAnnuitant: false,
+        type: 'individual',
+        person: {
+          firstName: asString(values.owner_first_name),
+          middleName: asString(values.owner_middle_initial) || null,
+          lastName: asString(values.owner_last_name),
+          dateOfBirth: asString(values.owner_dob),
+          gender: asString(values.owner_gender) === 'female' ? 'female' : 'male',
+          taxId: encryptedValue(values.owner_ssn_tin),
+          address: {
+            street1: asString(values.owner_street_address),
+            street2: null,
+            city: asString(values.owner_city),
+            state: asString(values.owner_state),
+            zip: asString(values.owner_zip),
           },
+          phone: asString(values.owner_phone),
+          email: asString(values.owner_email) || null,
+          isUsCitizen: asString(values.owner_citizenship_status) !== 'non_resident_alien',
         },
+      },
     jointOwner: asBool(values.has_joint_owner)
       ? {
-          firstName: asString(values.joint_owner_first_name),
-          middleName: asString(values.joint_owner_middle_initial) || null,
-          lastName: asString(values.joint_owner_last_name),
-          dateOfBirth: asString(values.joint_owner_dob),
-          gender: asString(values.joint_owner_gender) === 'female' ? 'female' : 'male',
-          taxId: encryptedValue(values.joint_owner_ssn),
-          address: {
-            street1: asString(values.joint_owner_street_address),
-            street2: null,
-            city: asString(values.joint_owner_city),
-            state: asString(values.joint_owner_state),
-            zip: asString(values.joint_owner_zip),
-          },
-          phone: asString(values.joint_owner_phone),
-          email: asString(values.joint_owner_email) || null,
-          isUsCitizen: true,
-        }
+        firstName: asString(values.joint_owner_first_name),
+        middleName: asString(values.joint_owner_middle_initial) || null,
+        lastName: asString(values.joint_owner_last_name),
+        dateOfBirth: asString(values.joint_owner_dob),
+        gender: asString(values.joint_owner_gender) === 'female' ? 'female' : 'male',
+        taxId: encryptedValue(values.joint_owner_ssn),
+        address: {
+          street1: asString(values.joint_owner_street_address),
+          street2: null,
+          city: asString(values.joint_owner_city),
+          state: asString(values.joint_owner_state),
+          zip: asString(values.joint_owner_zip),
+        },
+        phone: asString(values.joint_owner_phone),
+        email: asString(values.joint_owner_email) || null,
+        isUsCitizen: true,
+      }
       : null,
     ownerBeneficiaries: [],
     annuitantBeneficiaries: [],
@@ -343,11 +344,11 @@ function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefini
           spouseSignatureDate: asString(values.transfer_spouse_signature_date) || null,
           tsaEmployer: asString(values.tsa_employer_signature)
             ? {
-                name: asString(values.tsa_employer_name),
-                title: asString(values.tsa_employer_title),
-                signature: signatureRecord(values.tsa_employer_signature),
-                signatureDate: asString(values.tsa_employer_signature_date),
-              }
+              name: asString(values.tsa_employer_name),
+              title: asString(values.tsa_employer_title),
+              signature: signatureRecord(values.tsa_employer_signature),
+              signatureDate: asString(values.tsa_employer_signature_date),
+            }
             : null,
         },
       },
@@ -409,10 +410,10 @@ function ReviewPanel() {
               const displayValue = Array.isArray(rawValue)
                 ? `${rawValue.length} item${rawValue.length === 1 ? '' : 's'}`
                 : typeof rawValue === 'boolean'
-                ? rawValue
-                  ? 'Yes'
-                  : 'No'
-                : rawValue || 'Not provided';
+                  ? rawValue
+                    ? 'Yes'
+                    : 'No'
+                  : rawValue || 'Not provided';
 
               return (
                 <Stack
@@ -602,7 +603,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: 'calc(100vh - 48px)', overflow: 'hidden', bgcolor: 'background.default' }}>
       <WizardSidebar
         pages={pages}
         currentStep={sidebarStep}
@@ -613,10 +614,10 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
         onPageClick={handleSidebarPageClick}
       />
 
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <LinearProgress variant="determinate" value={progress} color="secondary" sx={{ height: 6 }} />
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <LinearProgress variant="determinate" value={progress} color="secondary" sx={{ height: 6, flexShrink: 0 }} />
 
-        <Box sx={{ p: { xs: 2, md: 4 }, flex: 1 }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, flex: 1, overflowY: 'auto' }}>
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
             {isIntroStep && (
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
@@ -683,15 +684,15 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
                 </Typography>
 
                 <Grid container spacing={2}>
-                  {currentPage.questions.map((question) => (
+                  {currentPage.questions.filter((q) => evaluateVisibility(q.visibility, values)).map((question) => (
                     <Grid
                       key={question.id}
                       size={{
                         xs: 12,
                         md:
                           question.type === 'long_text'
-                          || question.type === 'repeatable_group'
-                          || question.type === 'allocation_table'
+                            || question.type === 'repeatable_group'
+                            || question.type === 'allocation_table'
                             ? 12
                             : 6,
                       }}
@@ -712,7 +713,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
         {/* ── Bottom navigation ────────────────────────────────────────── */}
         <Box
           sx={{
-            p: { xs: 2, md: 3 },
+            p: { xs: 2 },
             bgcolor: 'background.paper',
             position: 'sticky',
             bottom: 0,
@@ -725,17 +726,10 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" spacing={1} alignItems="center">
                 <Button
-                  startIcon={<ArrowBackIcon />}
-                  onClick={handleBack}
-                  disabled={currentStep === 0}
-                  color="inherit"
-                >
-                  Back
-                </Button>
-                <Button
                   startIcon={<ExitToAppIcon />}
                   onClick={() => setExitDialogOpen(true)}
-                  color="inherit"
+                  color="warning"
+                  variant="outlined"
                   size="small"
                 >
                   Exit
@@ -743,8 +737,18 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
               </Stack>
 
               <Stack direction="row" spacing={1.5}>
+                <Button
+                  startIcon={<ArrowBackIcon />}
+                  onClick={handleBack}
+                  disabled={currentStep === 0}
+                  color="secondary"
+                  variant="outlined"
+                  size="small"
+                >
+                  Back
+                </Button>
                 {!isReviewStep && (
-                  <Button variant="contained" color="secondary" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
+                  <Button variant="contained" color="secondary" size="small" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
                     {isIntroStep ? 'Start Application' : 'Save & Next'}
                   </Button>
                 )}
@@ -752,6 +756,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
                   <Button
                     variant="contained"
                     color="secondary"
+                    size="small"
                     onClick={handleSubmit}
                     disabled={isSubmitting || !isFormComplete}
                   >
@@ -769,7 +774,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
         open={exitDialogOpen}
         onClose={() => setExitDialogOpen(false)}
         aria-labelledby="exit-dialog-title"
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
       >
         <DialogTitle id="exit-dialog-title">Save your progress?</DialogTitle>
@@ -779,11 +784,11 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setExitDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleExitDiscard} color="inherit">
+          <Button size='small' onClick={() => setExitDialogOpen(false)}>Cancel</Button>
+          <Button size='small' onClick={handleExitDiscard} color="warning">
             Exit without saving
           </Button>
-          <Button onClick={handleExitSaveAndLeave} variant="contained" color="primary">
+          <Button size='small' onClick={handleExitSaveAndLeave} variant="contained" color="secondary">
             Save & Exit
           </Button>
         </DialogActions>
@@ -799,13 +804,19 @@ function WizardPageV2() {
 
   const [definition, setDefinition] = useState<ApplicationDefinition | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>(undefined);
-  const [initialStep, setInitialStep] = useState(0);
+
+  // Load saved resume data once at mount — no effect needed, localStorage is synchronous
+  const [initialValues] = useState<Record<string, unknown> | undefined>(() => {
+    if (!resumeId) return undefined;
+    return loadApplicationData(resumeId)?.values;
+  });
+  const [initialStep] = useState<number>(() => {
+    if (!resumeId) return 0;
+    return loadApplicationData(resumeId)?.currentStep ?? 0;
+  });
 
   // Each save has its own UUID — stable for the lifetime of this session
-  const saveIdRef = useRef<string>(
-    resumeId ?? (typeof crypto !== 'undefined' ? crypto.randomUUID() : `save_${Date.now()}`),
-  );
+  const [saveId] = useState<string>(() => resumeId ?? crypto.randomUUID());
 
   useEffect(() => {
     if (!productId) return;
@@ -813,15 +824,7 @@ function WizardPageV2() {
     getApplication(decodeURIComponent(productId))
       .then(setDefinition)
       .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load application definition'));
-
-    if (resumeId) {
-      const saved = loadApplicationData(resumeId);
-      if (saved) {
-        setInitialValues(saved.values);
-        setInitialStep(saved.currentStep);
-      }
-    }
-  }, [productId, resumeId]);
+  }, [productId]);
 
   if (loadError) {
     return (
@@ -841,7 +844,7 @@ function WizardPageV2() {
 
   return (
     <WizardV2FormProvider definition={definition} initialValues={initialValues}>
-      <WizardPageContent saveId={saveIdRef.current} initialStep={initialStep} />
+      <WizardPageContent saveId={saveId} initialStep={initialStep} />
     </WizardV2FormProvider>
   );
 }

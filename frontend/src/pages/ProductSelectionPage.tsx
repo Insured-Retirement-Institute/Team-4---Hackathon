@@ -223,18 +223,15 @@ export default function ProductSelectionPage() {
           bgcolor: 'background.paper',
           borderTop: '1px solid',
           borderColor: 'divider',
-          p: { xs: 2, md: 3 },
+          p: { xs: 2},
           boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
         }}
       >
-        <Box sx={{ maxWidth: 1000, mx: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            {selected ? `Selected: ${selected.productName || selected.productId}` : 'No product selected'}
-          </Typography>
+        <Box sx={{ maxWidth: 1000, mx: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
           <Button
             variant="contained"
             color="secondary"
-            size="large"
+            size="small"
             endIcon={<ArrowForwardIcon />}
             disabled={!selected}
             onClick={handleStart}

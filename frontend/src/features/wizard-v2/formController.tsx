@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import type { ApplicationDefinition, PageDefinition, QuestionDefinition } from '../../types/application';
 import { createDummyValue } from './createDummyValue';
+import { evaluateVisibility } from './visibility';
 
 type GroupItemValue = Record<string, string | boolean>;
 type AnswerValue = string | boolean | GroupItemValue[];
@@ -148,8 +149,7 @@ interface WizardV2FormProviderProps {
 }
 
 export function WizardV2FormProvider({ definition, initialValues, children }: WizardV2FormProviderProps) {
-  const pages = definition.pages;
-  const allQuestions = pages.flatMap((page) => page.questions);
+  const allQuestions = definition.pages.flatMap((page) => page.questions);
 
   const [values, setValues] = useState<FormValues>(() => {
     const initial = getInitialValues(allQuestions);
@@ -157,8 +157,16 @@ export function WizardV2FormProvider({ definition, initialValues, children }: Wi
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // Only show pages whose visibility condition is satisfied by current values
+  const visiblePages = useMemo(
+    () => definition.pages.filter((page) => evaluateVisibility(page.visibility, values)),
+    [definition.pages, values],
+  );
+
   const getPageErrors = (page: PageDefinition) =>
     page.questions.reduce<FormErrors>((acc, question) => {
+      // Skip validation entirely for hidden questions
+      if (!evaluateVisibility(question.visibility, values)) return acc;
       const value = values[question.id];
       const message = getValidationMessage(question, value);
       if (message) {
@@ -209,20 +217,17 @@ export function WizardV2FormProvider({ definition, initialValues, children }: Wi
 
   const isPageComplete = (page: PageDefinition) => Object.keys(getPageErrors(page)).length === 0;
 
-  const controller = useMemo<WizardV2Controller>(
-    () => ({
-      definition,
-      values,
-      errors,
-      pages,
-      setValue,
-      bulkSetValues,
-      validatePage,
-      isPageComplete,
-      populateWithDummyData,
-    }),
-    [definition, errors, pages, values],
-  );
+  const controller: WizardV2Controller = {
+    definition,
+    values,
+    errors,
+    pages: visiblePages,
+    setValue,
+    bulkSetValues,
+    validatePage,
+    isPageComplete,
+    populateWithDummyData,
+  };
 
   return <WizardV2Context.Provider value={controller}>{children}</WizardV2Context.Provider>;
 }

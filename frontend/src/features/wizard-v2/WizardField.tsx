@@ -20,6 +20,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { QuestionDefinition } from './applicationDefinition';
 import { useWizardV2Controller } from './formController';
+import { evaluateVisibility } from './visibility';
 
 interface WizardFieldProps {
   question: QuestionDefinition;
@@ -34,6 +35,9 @@ function formatPhoneInput(raw: string) {
 
 function WizardField({ question }: WizardFieldProps) {
   const { values, errors, setValue } = useWizardV2Controller();
+
+  if (!evaluateVisibility(question.visibility, values)) return null;
+
   const value = values[question.id];
   const error = errors[question.id];
 
@@ -68,7 +72,7 @@ function WizardField({ question }: WizardFieldProps) {
           </FormLabel>
           <FormControlLabel
             control={<Switch checked={Boolean(fieldValue)} onChange={(event) => onChange(event.target.checked)} color="secondary" />}
-            label={Boolean(fieldValue) ? 'Yes' : 'No'}
+            label={fieldValue ? 'Yes' : 'No'}
           />
           {fieldError && <FormHelperText>{fieldError}</FormHelperText>}
         </FormControl>
@@ -80,6 +84,7 @@ function WizardField({ question }: WizardFieldProps) {
         return (
           <TextField
             select
+            size="small"
             label={field.label}
             required={field.required}
             value={typeof fieldValue === 'string' ? fieldValue : ''}
@@ -119,6 +124,7 @@ function WizardField({ question }: WizardFieldProps) {
       return (
         <TextField
           select
+          size="small"
           label={field.label}
           required={field.required}
           value={typeof fieldValue === 'string' ? fieldValue : ''}
@@ -140,6 +146,7 @@ function WizardField({ question }: WizardFieldProps) {
     return (
         <TextField
           label={field.label}
+          size="small"
           required={field.required}
           value={typeof fieldValue === 'string' ? fieldValue : ''}
           onChange={(event) =>
@@ -213,6 +220,7 @@ function WizardField({ question }: WizardFieldProps) {
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
                   <TextField
                     select
+                    size="small"
                     label="Fund"
                     value={item.fundId}
                     onChange={(event) => updateAllocation(index, 'fundId', event.target.value)}
@@ -228,6 +236,7 @@ function WizardField({ question }: WizardFieldProps) {
 
                   <TextField
                     label="Allocation %"
+                    size="small"
                     value={item.percentage}
                     onChange={(event) => updateAllocation(index, 'percentage', event.target.value)}
                     type="number"
@@ -356,7 +365,7 @@ function WizardField({ question }: WizardFieldProps) {
               color="secondary"
             />
           }
-          label={Boolean(value) ? 'Yes' : 'No'}
+          label={value ? 'Yes' : 'No'}
         />
         {error && <FormHelperText>{error}</FormHelperText>}
       </FormControl>
@@ -368,6 +377,7 @@ function WizardField({ question }: WizardFieldProps) {
       return (
         <TextField
           select
+          size="small"
           label={question.label}
           required={question.required}
           value={typeof value === 'string' ? value : ''}
@@ -412,6 +422,7 @@ function WizardField({ question }: WizardFieldProps) {
     return (
       <TextField
         select
+        size="small"
         label={question.label}
         required={question.required}
         value={typeof value === 'string' ? value : ''}

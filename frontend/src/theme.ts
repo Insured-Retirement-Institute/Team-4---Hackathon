@@ -2,6 +2,7 @@ import { createTheme } from '@mui/material/styles';
 import { blue, green, grey } from '@mui/material/colors';
 
 const theme = createTheme({
+  cssVariables: true,
   palette: {
     primary: {
       main: grey[700],
@@ -21,7 +22,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: 'Figtree, Arial, sans-serif',
+    fontFamily: 'Roboto, Arial, sans-serif',
   },
 });
 
