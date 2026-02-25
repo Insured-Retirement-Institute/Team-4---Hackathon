@@ -25,6 +25,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import MicIcon from '@mui/icons-material/Mic';
+import PeopleIcon from '@mui/icons-material/People';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import PhoneIcon from '@mui/icons-material/Phone';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -74,6 +75,7 @@ interface MatchedField {
 
 const TOOL_META: Record<string, { label: string; icon: React.ReactNode }> = {
   lookup_crm_client: { label: 'CRM Client Lookup', icon: <PersonSearchIcon fontSize="small" /> },
+  lookup_family_members: { label: 'Family & Spouse Lookup', icon: <PeopleIcon fontSize="small" /> },
   lookup_crm_notes: { label: 'CRM Notes Analysis', icon: <DescriptionIcon fontSize="small" /> },
   lookup_prior_policies: { label: 'Prior Policy Lookup', icon: <PolicyIcon fontSize="small" /> },
   lookup_annual_statements: { label: 'Annual Statement Retrieval', icon: <PictureAsPdfIcon fontSize="small" /> },
