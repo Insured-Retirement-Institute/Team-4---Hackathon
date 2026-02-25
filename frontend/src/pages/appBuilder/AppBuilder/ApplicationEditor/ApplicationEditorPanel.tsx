@@ -15,7 +15,16 @@ import type { QuestionType as ApiQuestionType } from '../../../../types/applicat
 import PagesColumn from './components/PagesColumn';
 import QuestionDetailsPanel from './components/QuestionDetailsPanel';
 import QuestionsColumn from './components/QuestionsColumn';
-import type { BuilderForm, BuilderPage, BuilderQuestion, BuilderSection, BuilderPalette, DragState } from './types';
+import type {
+  BuilderForm,
+  BuilderPage,
+  BuilderQuestion,
+  BuilderSection,
+  BuilderPalette,
+  BuilderValidationRule,
+  BuilderValidationType,
+  DragState,
+} from './types';
 
 function safeId(input: string) {
   return input
@@ -58,7 +67,59 @@ function createEmptyQuestion(index: number): BuilderQuestion {
     placeholder: '',
     required: false,
     optionsInput: '',
+    validations: [],
   };
+}
+
+function toBuilderValidationType(type: string): BuilderValidationType | null {
+  const supportedTypes: BuilderValidationType[] = [
+    'min',
+    'max',
+    'min_length',
+    'max_length',
+    'pattern',
+    'min_date',
+    'max_date',
+    'equals',
+    'equals_today',
+    'allocation_sum',
+    'async',
+  ];
+  return supportedTypes.includes(type as BuilderValidationType) ? (type as BuilderValidationType) : null;
+}
+
+function toBuilderValidationRules(
+  validation: Array<{ type: string; value?: string | number | boolean; description?: string | null; serviceKey?: string }> | undefined,
+): BuilderValidationRule[] {
+  if (!validation?.length) return [];
+
+  return validation
+    .map((rule) => {
+      const type = toBuilderValidationType(rule.type);
+      if (!type) return null;
+      return {
+        uid: makeUid(),
+        type,
+        value: rule.value === undefined || rule.value === null ? '' : String(rule.value),
+        description: rule.description ?? '',
+        serviceKey: rule.serviceKey ?? '',
+      };
+    })
+    .filter((rule): rule is BuilderValidationRule => Boolean(rule));
+}
+
+function toApiValidationValue(type: BuilderValidationType, value: string): string | number | boolean | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  if (['min', 'max', 'min_length', 'max_length', 'allocation_sum'].includes(type)) {
+    const numeric = Number(trimmed);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+
+  if (trimmed.toLowerCase() === 'true') return true;
+  if (trimmed.toLowerCase() === 'false') return false;
+  return trimmed;
 }
 
 function createEmptySection(index: number): BuilderSection {
@@ -165,8 +226,9 @@ function createFormFromProduct(product: Product): BuilderForm {
         label: question.label ?? '',
         hint: question.hint ?? '',
         placeholder: question.placeholder ?? '',
-        required: Boolean(question.required),
+        required: Boolean(question.required || question.validation?.some((rule) => rule.type === 'required')),
         optionsInput: toOptionsInput(question.options ?? undefined),
+        validations: toBuilderValidationRules(question.validation ?? undefined),
       });
     });
 
@@ -371,6 +433,20 @@ function ApplicationEditorPanel({
           runningOrder += 1;
           const questionId = safeId(question.id) || `question_${runningOrder}`;
           const options = question.type === 'radio' || question.type === 'select' ? parseOptions(question.optionsInput) : null;
+          const validationRules = [
+            ...(question.required ? [{ type: 'required' as const }] : []),
+            ...question.validations.map((rule) => {
+              const value = toApiValidationValue(rule.type, rule.value);
+              return {
+                type: rule.type,
+                ...(value !== undefined ? { value } : {}),
+                ...(rule.description.trim() ? { description: rule.description.trim() } : {}),
+                ...(rule.type === 'async' && rule.serviceKey.trim()
+                  ? { serviceKey: rule.serviceKey.trim() }
+                  : {}),
+              };
+            }),
+          ];
 
           return {
             id: questionId,
@@ -382,7 +458,7 @@ function ApplicationEditorPanel({
             required: question.required,
             visibility: null,
             options,
-            validation: question.required ? [{ type: 'required' as const }] : undefined,
+            validation: validationRules.length ? validationRules : undefined,
             groupConfig: undefined,
             allocationConfig: undefined,
           };
@@ -728,6 +804,44 @@ function ApplicationEditorPanel({
                   updateQuestion(activePage.uid, activeSection.uid, activeQuestion.uid, (current) => ({
                     ...current,
                     required: value,
+                  }))
+                }
+                onAddValidationRule={() =>
+                  activePage &&
+                  activeSection &&
+                  activeQuestion &&
+                  updateQuestion(activePage.uid, activeSection.uid, activeQuestion.uid, (current) => ({
+                    ...current,
+                    validations: [
+                      ...current.validations,
+                      {
+                        uid: makeUid(),
+                        type: 'max_length',
+                        value: '',
+                        description: '',
+                        serviceKey: '',
+                      },
+                    ],
+                  }))
+                }
+                onRemoveValidationRule={(validationUid) =>
+                  activePage &&
+                  activeSection &&
+                  activeQuestion &&
+                  updateQuestion(activePage.uid, activeSection.uid, activeQuestion.uid, (current) => ({
+                    ...current,
+                    validations: current.validations.filter((rule) => rule.uid !== validationUid),
+                  }))
+                }
+                onUpdateValidationRule={(validationUid, field, value) =>
+                  activePage &&
+                  activeSection &&
+                  activeQuestion &&
+                  updateQuestion(activePage.uid, activeSection.uid, activeQuestion.uid, (current) => ({
+                    ...current,
+                    validations: current.validations.map((rule) =>
+                      rule.uid === validationUid ? { ...rule, [field]: value } : rule,
+                    ),
                   }))
                 }
               />
