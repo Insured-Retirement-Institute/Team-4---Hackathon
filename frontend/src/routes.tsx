@@ -17,7 +17,7 @@ function AppRoutes() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
-<Route path="/docusign/return" element={<DocusignReturnPage />} />
+          <Route path="/docusign/return" element={<DocusignReturnPage />} />
           <Route path="/wizard-v1" element={<WizardPage />} />
           <Route path="/wizard-v2" element={<ProductSelectionPage />} />
           <Route path="/wizard-v2/:productId" element={<WizardPageV2 />} />
