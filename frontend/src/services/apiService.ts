@@ -309,3 +309,30 @@ export async function deleteDistributor(distributorId: string): Promise<void> {
     throw new Error(`Failed to delete distributor: ${res.status} ${text}`);
   }
 }
+
+// ── DocuSign ──────────────────────────────────────────────────────────────────
+
+export interface DocusignStartRequest {
+  signerEmail: string;
+  signerName: string;
+}
+
+export interface DocusignStartResponse {
+  envelopeId?: string;
+  signingUrl?: string;
+  error?: string;
+  message?: string;
+}
+
+/** POST /applications/:applicationId/docusign/start — create envelope and get embedded signing URL */
+export async function startDocusignSigning(
+  applicationId: string,
+  body: DocusignStartRequest,
+): Promise<DocusignStartResponse> {
+  const res = await fetch(`${BASE}/applications/${encodeURIComponent(applicationId)}/docusign/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}

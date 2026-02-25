@@ -17,7 +17,6 @@ A monorepo containing the Express backend API, React frontend, FastAPI AI servic
 ├── frontend/              # React + Vite app (port 5173 locally)
 │   ├── src/
 │   │   ├── features/
-│   │   │   ├── wizard-v1/ # Annuity application wizard (v1)
 │   │   │   ├── wizard-v2/ # Data-driven wizard (v2)
 │   │   │   └── ai-chat/   # AI conversational chat UI
 │   │   ├── pages/
