@@ -5,7 +5,8 @@ from __future__ import annotations
 import base64
 import json
 import logging
-from typing import Any
+import time
+from typing import Any, AsyncGenerator
 
 from app.services.datasources.redtail_client import RedtailClient
 from app.services.datasources.redtail_crm import RedtailCRM
@@ -140,9 +141,9 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_carrier_suitability",
         "description": (
-            "Evaluate a client's suitability for a specific carrier's product. Compares the "
-            "client's gathered data (age, income, net worth, risk tolerance, etc.) against the "
-            "carrier's suitability guidelines and returns a weighted score with detailed breakdown. "
+            "Run the carrier's suitability decision engine for a specific product. Evaluates 14 rules "
+            "(R01-R13 hard denials + MR01 manual review) against the client's data and returns "
+            "approved/declined/pending_manual_review with per-rule findings and data completeness gaps. "
             "Valid carrier IDs: 'midland-national', 'aspida', 'equitrust'."
         ),
         "input_schema": {
@@ -155,9 +156,13 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
                 "client_data": {
                     "type": "object",
                     "description": (
-                        "Client data gathered so far. Include any available fields: age, annual_income, "
-                        "net_worth, risk_tolerance, investment_objective, time_horizon, source_of_funds, "
-                        "liquid_net_worth, premium_amount."
+                        "Client data gathered so far. Include all available fields: age, owner_dob, "
+                        "annual_household_income (or annual_income), annual_household_expenses, "
+                        "total_net_worth (or net_worth), liquid_net_worth, has_emergency_funds, "
+                        "expected_hold_years (or time_horizon), total_premium (or premium_amount), "
+                        "source_of_funds, signed_at_state (or state), is_replacement, "
+                        "replacement_penalty_pct, nursing_home_status, risk_tolerance, "
+                        "investment_objective, existing_annuity_value."
                     ),
                     "additionalProperties": {},
                 },
@@ -214,7 +219,7 @@ risk tolerance, investment goals, family info, and beneficiary details
 (fallback if CRM notes lack financial data)
 - Annual Statements (S3 Document Store): Contract values, interest rates, balances, beneficiary info
 - Advisor Preferences: Advisor's investment philosophy, preferred carriers, allocation strategy
-- Carrier Suitability: Carrier-specific suitability guidelines with weighted scoring
+- Carrier Suitability: Rule-based decision engine (14 rules: R01-R13 hard denials + MR01 manual review)
 
 Workflow:
 1. If a client_id is provided, call lookup_crm_client to get their CRM profile
@@ -228,10 +233,14 @@ lookup_prior_policies as a fallback to get suitability data
 6. If a document is attached by the user, also call extract_document_fields for it
 7. If an advisor_id is provided, call get_advisor_preferences to understand the advisor's approach
 8. Call get_carrier_suitability for the most relevant carrier(s) based on advisor preferences \
-and client profile. Pass gathered client data (age, annual_income, net_worth, risk_tolerance, \
-investment_objective, time_horizon, source_of_funds, liquid_net_worth) to get a suitability score.
+and client profile. Pass ALL gathered financial data — the decision engine evaluates 14 rules \
+including premium-to-net-worth ratio, liquid asset sufficiency, emergency funds, holding period, \
+and more. Include: age, annual_household_income, annual_household_expenses, total_net_worth, \
+liquid_net_worth, has_emergency_funds, expected_hold_years, total_premium, source_of_funds, \
+signed_at_state, is_replacement, nursing_home_status.
 9. Once all sources are exhausted, call report_prefill_results with the combined data. \
-Include suitability_score, suitability_rating, advisor_name, advisor_philosophy, and \
+Include suitability_decision (approved/declined/pending_manual_review), suitability_rule_evaluations, \
+declined_reasons, manual_review_reasons, advisor_name, advisor_philosophy, and \
 recommended_allocation_strategy in the known_data if available.
 
 Combine data from structured CRM fields AND notes-extracted data. When notes contain financial \
@@ -310,7 +319,7 @@ async def _execute_tool(name: str, input_data: dict[str, Any]) -> str | list[dic
         guidelines = _suitability.fetch_guidelines(carrier_id)
         if not guidelines:
             return json.dumps({"error": f"No suitability guidelines found for carrier '{carrier_id}'."})
-        evaluation = S3SuitabilityStore.evaluate_suitability(guidelines, client_data)
+        evaluation = await _suitability.evaluate_suitability(guidelines, client_data)
         return json.dumps(evaluation)
 
     elif name == "extract_document_fields":
@@ -425,4 +434,173 @@ async def run_prefill_agent(
         "sources_used": [],
         "fields_found": 0,
         "summary": "Pre-fill agent was unable to gather data within the allowed iterations.",
+    }
+
+
+# ── Streaming agent loop ────────────────────────────────────────────────────
+
+TOOL_DESCRIPTIONS: dict[str, str] = {
+    "lookup_crm_client": "Looking up client in Redtail CRM",
+    "lookup_crm_notes": "Analyzing CRM notes and meeting transcripts",
+    "lookup_prior_policies": "Retrieving prior policy and suitability data",
+    "lookup_annual_statements": "Fetching annual statement from document store",
+    "extract_document_fields": "Extracting fields from document",
+    "get_advisor_preferences": "Loading advisor preference profile",
+    "get_carrier_suitability": "Running suitability decision engine",
+    "report_prefill_results": "Compiling final results",
+}
+
+
+async def run_prefill_agent_stream(
+    client_id: str | None = None,
+    document_base64: str | None = None,
+    document_media_type: str | None = None,
+    advisor_id: str | None = None,
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Run the pre-fill agent, yielding SSE events at each step."""
+    agent_start = time.time()
+    llm = LLMService()
+
+    yield {
+        "type": "agent_start",
+        "message": "Starting AI agent...",
+        "timestamp": time.time(),
+    }
+
+    # Build initial user message (same as run_prefill_agent)
+    content_blocks: list[dict[str, Any]] = []
+    instruction_parts = ["Please gather all available pre-fill data."]
+    if client_id:
+        instruction_parts.append(f"Client ID: {client_id}")
+    if advisor_id:
+        instruction_parts.append(f"Advisor ID: {advisor_id}")
+    if document_base64:
+        instruction_parts.append("A document has been uploaded — please extract any relevant fields from it.")
+        content_blocks.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": document_media_type or "image/png",
+                "data": document_base64,
+            },
+        })
+    content_blocks.append({"type": "text", "text": " ".join(instruction_parts)})
+
+    messages: list[dict[str, Any]] = [{"role": "user", "content": content_blocks}]
+
+    max_iterations = 10
+    for i in range(max_iterations):
+        logger.info("Prefill stream iteration %d/%d", i + 1, max_iterations)
+
+        response = llm.chat(
+            system_prompt=SYSTEM_PROMPT,
+            messages=messages,
+            tools=PREFILL_TOOLS,
+            force_tool=True,
+        )
+
+        tool_calls = LLMService.extract_tool_calls(response)
+        if not tool_calls:
+            break
+
+        messages.append({"role": "assistant", "content": response.content})
+
+        tool_results: list[dict[str, Any]] = []
+        terminal_result = None
+
+        for call in tool_calls:
+            tool_name = call["name"]
+            yield {
+                "type": "tool_start",
+                "name": tool_name,
+                "description": TOOL_DESCRIPTIONS.get(tool_name, tool_name),
+                "iteration": i + 1,
+                "timestamp": time.time(),
+            }
+
+            tool_start = time.time()
+            result = await _execute_tool(tool_name, call["input"])
+            duration_ms = int((time.time() - tool_start) * 1000)
+
+            # Extract fields for the event
+            fields_extracted: dict[str, str] = {}
+            if tool_name == "extract_document_fields":
+                fields_extracted = call["input"].get("extracted_fields", {})
+            elif tool_name == "report_prefill_results":
+                fields_extracted = call["input"].get("known_data", {})
+            elif tool_name == "lookup_crm_client":
+                # Parse the JSON result to show extracted CRM fields
+                try:
+                    parsed = json.loads(result) if isinstance(result, str) else {}
+                    fields_extracted = {k: str(v) for k, v in parsed.items() if v and k != "error"}
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            elif tool_name == "get_carrier_suitability":
+                try:
+                    parsed = json.loads(result) if isinstance(result, str) else {}
+                    if "decision" in parsed:
+                        fields_extracted["suitability_decision"] = str(parsed["decision"])
+                    if "declinedReasons" in parsed and parsed["declinedReasons"]:
+                        fields_extracted["declined_reasons"] = "; ".join(parsed["declinedReasons"])
+                    if "summary" in parsed:
+                        fields_extracted["suitability_summary"] = str(parsed["summary"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            elif tool_name == "get_advisor_preferences":
+                try:
+                    parsed = json.loads(result) if isinstance(result, str) else {}
+                    if "advisor_name" in parsed:
+                        fields_extracted["advisor_name"] = str(parsed["advisor_name"])
+                    if "philosophy" in parsed:
+                        fields_extracted["advisor_philosophy"] = str(parsed["philosophy"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            yield {
+                "type": "tool_result",
+                "name": tool_name,
+                "fields_extracted": fields_extracted,
+                "duration_ms": duration_ms,
+                "iteration": i + 1,
+                "timestamp": time.time(),
+            }
+
+            if isinstance(result, list):
+                content = result
+            else:
+                content = result
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": call["id"],
+                "content": content,
+            })
+
+            if tool_name == "report_prefill_results":
+                terminal_result = call["input"]
+
+        messages.append({"role": "user", "content": tool_results})
+
+        if terminal_result:
+            total_duration_ms = int((time.time() - agent_start) * 1000)
+            yield {
+                "type": "agent_complete",
+                "known_data": terminal_result.get("known_data", {}),
+                "sources_used": terminal_result.get("sources_used", []),
+                "fields_found": terminal_result.get("fields_found", 0),
+                "summary": terminal_result.get("summary", ""),
+                "total_duration_ms": total_duration_ms,
+                "timestamp": time.time(),
+            }
+            return
+
+    # Fallback
+    total_duration_ms = int((time.time() - agent_start) * 1000)
+    yield {
+        "type": "agent_complete",
+        "known_data": {},
+        "sources_used": [],
+        "fields_found": 0,
+        "summary": "Pre-fill agent was unable to gather data within the allowed iterations.",
+        "total_duration_ms": total_duration_ms,
+        "timestamp": time.time(),
     }

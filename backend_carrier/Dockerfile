@@ -12,6 +12,7 @@ COPY lib/pdfHelper.js ./lib/pdfHelper.js
 COPY api/ ./api/
 COPY forms/ ./forms/
 COPY maps/ ./maps/
+COPY openapi.yaml ./openapi.yaml
 
 ENV PORT=8080
 EXPOSE 8080

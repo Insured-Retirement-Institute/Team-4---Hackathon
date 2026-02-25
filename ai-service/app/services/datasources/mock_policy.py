@@ -7,32 +7,32 @@ from typing import Any
 from app.services.datasources.base import DataSource
 
 MOCK_POLICIES: dict[str, dict[str, Any]] = {
-    "client_001": {
+    "101": {
         "annual_income": "85000",
         "net_worth": "450000",
         "tax_bracket": "22",
-        "risk_tolerance": "moderate",
+        "risk_tolerance": "conservative",
         "investment_experience": "moderate",
-        "investment_objective": "accumulation",
-        "time_horizon": "10_plus_years",
+        "investment_objective": "income",
+        "time_horizon": "5_to_10_years",
         "source_of_funds": "savings",
         "existing_annuity_count": "1",
         "existing_life_insurance": "yes",
     },
-    "client_002": {
-        "annual_income": "120000",
-        "net_worth": "780000",
-        "tax_bracket": "24",
+    "102": {
+        "annual_income": "70000",
+        "net_worth": "720000",
+        "tax_bracket": "22",
         "risk_tolerance": "conservative",
         "investment_experience": "extensive",
-        "investment_objective": "income",
-        "time_horizon": "5_to_10_years",
-        "source_of_funds": "retirement_rollover",
-        "existing_annuity_count": "2",
+        "investment_objective": "preservation",
+        "time_horizon": "3_to_5_years",
+        "source_of_funds": "inheritance",
+        "existing_annuity_count": "0",
         "existing_life_insurance": "yes",
     },
-    "client_003": {
-        "annual_income": "200000",
+    "103": {
+        "annual_income": "247000",
         "net_worth": "1200000",
         "tax_bracket": "32",
         "risk_tolerance": "moderate",
@@ -43,14 +43,14 @@ MOCK_POLICIES: dict[str, dict[str, Any]] = {
         "existing_annuity_count": "0",
         "existing_life_insurance": "no",
     },
-    "client_004": {
-        "annual_income": "65000",
-        "net_worth": "320000",
+    "104": {
+        "annual_income": "52000",
+        "net_worth": "745000",
         "tax_bracket": "12",
         "risk_tolerance": "conservative",
         "investment_experience": "limited",
-        "investment_objective": "preservation",
-        "time_horizon": "3_to_5_years",
+        "investment_objective": "income",
+        "time_horizon": "5_to_10_years",
         "source_of_funds": "savings",
         "existing_annuity_count": "1",
         "existing_life_insurance": "no",

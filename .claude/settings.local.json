@@ -5,7 +5,8 @@
       "Bash(npm install:*)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://y5s8xyzi3v.us-east-1.awsapprunner.com/api-docs.json\")",
       "Bash(curl -s \"https://y5s8xyzi3v.us-east-1.awsapprunner.com/api-docs/\")",
-      "Bash(curl -v \"https://y5s8xyzi3v.us-east-1.awsapprunner.com/api-docs/\")"
+      "Bash(curl -v \"https://y5s8xyzi3v.us-east-1.awsapprunner.com/api-docs/\")",
+      "WebSearch"
     ]
   }
 }
