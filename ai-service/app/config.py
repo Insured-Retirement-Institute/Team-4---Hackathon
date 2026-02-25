@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     redtail_password: str = ""
     redtail_base_url: str = "https://smf.crm3.redtailtechnology.com/api/public/v1"
 
+    # Retell AI settings — loaded from env vars (locally) or SSM Parameter Store (prod)
+    retell_api_key: str = ""
+    retell_agent_id: str = ""
+    retell_phone_number: str = ""
+
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "info"
@@ -34,12 +39,15 @@ class Settings(BaseSettings):
 
 
 def _resolve_ssm_params(s: Settings) -> Settings:
-    """If Redtail creds are missing, attempt to fetch from SSM Parameter Store.
+    """If Redtail/Retell creds are missing, attempt to fetch from SSM Parameter Store.
 
     This runs at startup so App Runner instances pick up secrets automatically
-    via the attached IAM role (RedtailSSMParameterAccess policy).
+    via the attached IAM role.
     """
-    if s.redtail_api_key and s.redtail_username and s.redtail_password:
+    redtail_resolved = s.redtail_api_key and s.redtail_username and s.redtail_password
+    retell_resolved = s.retell_api_key and s.retell_agent_id
+
+    if redtail_resolved and retell_resolved:
         return s  # Already populated from env vars
 
     try:
@@ -54,7 +62,10 @@ def _resolve_ssm_params(s: Settings) -> Settings:
             kwargs["aws_session_token"] = s.aws_session_token
 
         ssm = boto3.client("ssm", **kwargs)
-        names = ["REDTAIL_API_KEY", "REDTAIL_USERNAME", "REDTAIL_PASSWORD", "REDTAIL_BASE_URL"]
+        names = [
+            "REDTAIL_API_KEY", "REDTAIL_USERNAME", "REDTAIL_PASSWORD", "REDTAIL_BASE_URL",
+            "RETELL_API_KEY", "RETELL_AGENT_ID", "RETELL_PHONE_NUMBER",
+        ]
         resp = ssm.get_parameters(Names=names, WithDecryption=True)
 
         for p in resp.get("Parameters", []):
@@ -68,15 +79,21 @@ def _resolve_ssm_params(s: Settings) -> Settings:
                 s.redtail_password = value
             elif name == "REDTAIL_BASE_URL":
                 s.redtail_base_url = value
+            elif name == "RETELL_API_KEY":
+                s.retell_api_key = value
+            elif name == "RETELL_AGENT_ID":
+                s.retell_agent_id = value
+            elif name == "RETELL_PHONE_NUMBER":
+                s.retell_phone_number = value
 
         resolved = [p["Name"] for p in resp.get("Parameters", [])]
         if resolved:
-            logger.info("Resolved Redtail credentials from SSM Parameter Store: %s", resolved)
+            logger.info("Resolved credentials from SSM Parameter Store: %s", resolved)
         invalid = resp.get("InvalidParameters", [])
         if invalid:
             logger.warning("SSM parameters not found: %s", invalid)
     except Exception as exc:
-        logger.warning("Could not fetch Redtail credentials from SSM: %s", exc)
+        logger.warning("Could not fetch credentials from SSM: %s", exc)
 
     return s
 

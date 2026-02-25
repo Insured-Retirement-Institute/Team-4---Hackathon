@@ -141,9 +141,9 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_carrier_suitability",
         "description": (
-            "Evaluate a client's suitability for a specific carrier's product. Compares the "
-            "client's gathered data (age, income, net worth, risk tolerance, etc.) against the "
-            "carrier's suitability guidelines and returns a weighted score with detailed breakdown. "
+            "Run the carrier's suitability decision engine for a specific product. Evaluates 14 rules "
+            "(R01-R13 hard denials + MR01 manual review) against the client's data and returns "
+            "approved/declined/pending_manual_review with per-rule findings and data completeness gaps. "
             "Valid carrier IDs: 'midland-national', 'aspida', 'equitrust'."
         ),
         "input_schema": {
@@ -156,9 +156,13 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
                 "client_data": {
                     "type": "object",
                     "description": (
-                        "Client data gathered so far. Include any available fields: age, annual_income, "
-                        "net_worth, risk_tolerance, investment_objective, time_horizon, source_of_funds, "
-                        "liquid_net_worth, premium_amount."
+                        "Client data gathered so far. Include all available fields: age, owner_dob, "
+                        "annual_household_income (or annual_income), annual_household_expenses, "
+                        "total_net_worth (or net_worth), liquid_net_worth, has_emergency_funds, "
+                        "expected_hold_years (or time_horizon), total_premium (or premium_amount), "
+                        "source_of_funds, signed_at_state (or state), is_replacement, "
+                        "replacement_penalty_pct, nursing_home_status, risk_tolerance, "
+                        "investment_objective, existing_annuity_value."
                     ),
                     "additionalProperties": {},
                 },
@@ -215,7 +219,7 @@ risk tolerance, investment goals, family info, and beneficiary details
 (fallback if CRM notes lack financial data)
 - Annual Statements (S3 Document Store): Contract values, interest rates, balances, beneficiary info
 - Advisor Preferences: Advisor's investment philosophy, preferred carriers, allocation strategy
-- Carrier Suitability: Carrier-specific suitability guidelines with weighted scoring
+- Carrier Suitability: Rule-based decision engine (14 rules: R01-R13 hard denials + MR01 manual review)
 
 Workflow:
 1. If a client_id is provided, call lookup_crm_client to get their CRM profile
@@ -229,10 +233,14 @@ lookup_prior_policies as a fallback to get suitability data
 6. If a document is attached by the user, also call extract_document_fields for it
 7. If an advisor_id is provided, call get_advisor_preferences to understand the advisor's approach
 8. Call get_carrier_suitability for the most relevant carrier(s) based on advisor preferences \
-and client profile. Pass gathered client data (age, annual_income, net_worth, risk_tolerance, \
-investment_objective, time_horizon, source_of_funds, liquid_net_worth) to get a suitability score.
+and client profile. Pass ALL gathered financial data — the decision engine evaluates 14 rules \
+including premium-to-net-worth ratio, liquid asset sufficiency, emergency funds, holding period, \
+and more. Include: age, annual_household_income, annual_household_expenses, total_net_worth, \
+liquid_net_worth, has_emergency_funds, expected_hold_years, total_premium, source_of_funds, \
+signed_at_state, is_replacement, nursing_home_status.
 9. Once all sources are exhausted, call report_prefill_results with the combined data. \
-Include suitability_score, suitability_rating, advisor_name, advisor_philosophy, and \
+Include suitability_decision (approved/declined/pending_manual_review), suitability_rule_evaluations, \
+declined_reasons, manual_review_reasons, advisor_name, advisor_philosophy, and \
 recommended_allocation_strategy in the known_data if available.
 
 Combine data from structured CRM fields AND notes-extracted data. When notes contain financial \
@@ -311,7 +319,7 @@ async def _execute_tool(name: str, input_data: dict[str, Any]) -> str | list[dic
         guidelines = _suitability.fetch_guidelines(carrier_id)
         if not guidelines:
             return json.dumps({"error": f"No suitability guidelines found for carrier '{carrier_id}'."})
-        evaluation = S3SuitabilityStore.evaluate_suitability(guidelines, client_data)
+        evaluation = await _suitability.evaluate_suitability(guidelines, client_data)
         return json.dumps(evaluation)
 
     elif name == "extract_document_fields":
@@ -438,7 +446,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     "lookup_annual_statements": "Fetching annual statement from document store",
     "extract_document_fields": "Extracting fields from document",
     "get_advisor_preferences": "Loading advisor preference profile",
-    "get_carrier_suitability": "Evaluating carrier suitability score",
+    "get_carrier_suitability": "Running suitability decision engine",
     "report_prefill_results": "Compiling final results",
 }
 
@@ -530,10 +538,12 @@ async def run_prefill_agent_stream(
             elif tool_name == "get_carrier_suitability":
                 try:
                     parsed = json.loads(result) if isinstance(result, str) else {}
-                    if "overall_score" in parsed:
-                        fields_extracted["suitability_score"] = str(parsed["overall_score"])
-                    if "rating" in parsed:
-                        fields_extracted["suitability_rating"] = str(parsed["rating"])
+                    if "decision" in parsed:
+                        fields_extracted["suitability_decision"] = str(parsed["decision"])
+                    if "declinedReasons" in parsed and parsed["declinedReasons"]:
+                        fields_extracted["declined_reasons"] = "; ".join(parsed["declinedReasons"])
+                    if "summary" in parsed:
+                        fields_extracted["suitability_summary"] = str(parsed["summary"])
                 except (json.JSONDecodeError, TypeError):
                     pass
             elif tool_name == "get_advisor_preferences":

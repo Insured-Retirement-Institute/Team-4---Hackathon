@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getProduct } = require('../services/productStore');
 const { validate } = require('../services/validationEngine');
-const { getApplicationById, updateApplicationStatus } = require('../services/applicationService');
-const { createSubmission } = require('../services/submissionService');
+const { getApplicationById, updateApplicationStatus, updateApplicationCarrierData } = require('../services/applicationService');
+const { createSubmission, updateSubmissionCarrierResponse } = require('../services/submissionService');
+const { submitToCarrier } = require('../services/carrierService');
 const { transformSubmission } = require('../services/submissionTransformer');
 const { validateSubmission } = require('../services/submissionValidator');
 
@@ -32,7 +33,7 @@ router.post('/:applicationId/submit', async (req, res) => {
       });
     }
 
-    if (application.status === 'submitted') {
+    if (application.status === 'submitted' || application.status === 'carrier_accepted') {
       return res.status(409).json({
         code: 'APPLICATION_ALREADY_SUBMITTED',
         message: 'This application has already been submitted.',
@@ -108,13 +109,40 @@ router.post('/:applicationId/submit', async (req, res) => {
     // Mark application as submitted
     await updateApplicationStatus(application.id, 'submitted');
 
-    // 5. Return confirmation response
-    res.json({
+    // 6. Call carrier API (non-fatal — log and continue on failure)
+    let carrierResult = null;
+    try {
+      const carrierResponse = await submitToCarrier(payload);
+      carrierResult = carrierResponse;
+
+      // Persist carrier response to both Submission and Application records
+      await Promise.all([
+        updateSubmissionCarrierResponse(submission.id, carrierResponse),
+        updateApplicationCarrierData(application.id, carrierResponse),
+      ]);
+    } catch (carrierErr) {
+      // Non-fatal: local submission succeeded, so we log and continue.
+      // Submissions with status 'received' (vs 'carrier_accepted') can be retried later.
+      console.error('Carrier API call failed (non-fatal):', carrierErr.message);
+      if (carrierErr.status === 409) {
+        console.warn('Carrier returned 409 — submission already exists.');
+      }
+    }
+
+    // 7. Return confirmation response
+    const response = {
       confirmationNumber: submission.confirmationNumber,
-      status: submission.status,
+      status: carrierResult ? 'carrier_accepted' : submission.status,
       submittedAt: submission.submittedAt,
-      message: 'Your application has been received and is pending review. You will be contacted within 2 business days.'
-    });
+      message: 'Your application has been received and is pending review. You will be contacted within 2 business days.',
+    };
+
+    if (carrierResult) {
+      response.submissionId = carrierResult.submissionId;
+      response.policyNumber = carrierResult.policyNumber;
+    }
+
+    res.json(response);
   } catch (err) {
     console.error('Submission error:', err);
     res.status(500).json({

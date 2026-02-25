@@ -1,4 +1,4 @@
-"""S3-backed carrier suitability guidelines store with scoring engine."""
+"""S3-backed carrier suitability guidelines store with LLM-based decision engine."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class S3SuitabilityStore:
-    """Fetches carrier suitability guidelines from S3 and evaluates client fit."""
+    """Fetches carrier suitability guidelines from S3 and evaluates client fit via LLM."""
 
     def __init__(self) -> None:
         kwargs: dict[str, Any] = {"region_name": settings.aws_region}
@@ -46,125 +46,163 @@ class S3SuitabilityStore:
                 logger.error("S3 get_object failed for %s: %s", key, exc)
             return None
 
-    @staticmethod
-    def evaluate_suitability(
+    async def evaluate_suitability(
+        self,
         guidelines: dict[str, Any],
         client_data: dict[str, Any],
     ) -> dict[str, Any]:
-        """Evaluate a client against carrier suitability criteria.
+        """Run LLM-based suitability evaluation using the carrier's decision prompt.
 
-        Returns {score, rating, carrier, product, criteria_results, reasoning}.
+        1. Build product parameters from guidelines
+        2. Build submission payload from client_data
+        3. Call LLM with the suitability decision prompt + product params + payload
+        4. Parse structured JSON response
+        5. Return: {decision, ruleEvaluations, declinedReasons, ...}
         """
-        criteria = guidelines.get("suitability_criteria", {})
-        scoring = guidelines.get("scoring", {})
+        from app.services.llm_service import LLMService
 
-        total_weight = 0
-        earned_weight = 0
-        criteria_results: list[dict[str, Any]] = []
+        decision_prompt = guidelines.get("suitability_decision_prompt", "")
+        if not decision_prompt:
+            return {
+                "decision": "pending_manual_review",
+                "error": "No suitability decision prompt configured for this carrier.",
+                "carrier": guidelines.get("carrier_name", ""),
+                "product": guidelines.get("product_name", ""),
+            }
 
-        for criterion_name, criterion in criteria.items():
-            weight = criterion.get("weight", 0)
-            total_weight += weight
-            passed = _check_criterion(criterion_name, criterion, client_data)
+        product_params = guidelines.get("product_parameters", {})
 
-            earned_weight += weight if passed else 0
-            criteria_results.append({
-                "criterion": criterion_name,
-                "weight": weight,
-                "passed": passed,
-                "description": criterion.get("description", ""),
-            })
+        # Map client_data to the submission payload format expected by the decision prompt
+        payload = _build_submission_payload(client_data, product_params)
 
-        score = round(earned_weight / total_weight * 100) if total_weight > 0 else 0
+        user_message = json.dumps({
+            "productParameters": product_params,
+            "submissionPayload": payload,
+        }, indent=2)
 
-        # Determine rating from scoring thresholds
-        rating = "Poor Fit — Not Recommended"
-        for level in ["excellent", "good", "fair", "poor"]:
-            threshold = scoring.get(level, {})
-            if score >= threshold.get("min", 0):
-                rating = threshold.get("label", level.title())
-                break
+        try:
+            llm = LLMService()
+            response = llm.chat(
+                system_prompt=decision_prompt,
+                messages=[{"role": "user", "content": user_message}],
+                tools=None,
+                max_tokens=4096,
+                force_tool=False,
+            )
 
-        passed_list = [r["criterion"] for r in criteria_results if r["passed"]]
-        failed_list = [r["criterion"] for r in criteria_results if not r["passed"]]
+            response_text = LLMService.extract_text(response)
 
-        reasoning_parts = []
-        if passed_list:
-            reasoning_parts.append(f"Met criteria: {', '.join(passed_list)}.")
-        if failed_list:
-            reasoning_parts.append(f"Did not meet criteria: {', '.join(failed_list)}.")
+            # Parse the JSON response — strip any markdown fences if present
+            clean_text = response_text.strip()
+            if clean_text.startswith("```"):
+                # Remove opening fence
+                first_newline = clean_text.index("\n")
+                clean_text = clean_text[first_newline + 1:]
+            if clean_text.endswith("```"):
+                clean_text = clean_text[:-3]
+            clean_text = clean_text.strip()
 
-        return {
-            "score": score,
-            "rating": rating,
-            "carrier": guidelines.get("carrier_name", ""),
-            "product": guidelines.get("product_name", ""),
-            "carrier_id": guidelines.get("carrier_id", ""),
-            "product_id": guidelines.get("product_id", ""),
-            "criteria_results": criteria_results,
-            "reasoning": " ".join(reasoning_parts),
-        }
+            result = json.loads(clean_text)
+
+            # Add carrier/product metadata
+            result["carrier"] = guidelines.get("carrier_name", "")
+            result["product"] = guidelines.get("product_name", "")
+            result["carrier_id"] = guidelines.get("carrier_id", "")
+            result["product_id"] = guidelines.get("product_id", "")
+
+            return result
+
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.error("Failed to parse LLM suitability response: %s", exc)
+            return {
+                "decision": "pending_manual_review",
+                "error": f"Failed to parse suitability evaluation: {exc}",
+                "carrier": guidelines.get("carrier_name", ""),
+                "product": guidelines.get("product_name", ""),
+                "carrier_id": guidelines.get("carrier_id", ""),
+                "product_id": guidelines.get("product_id", ""),
+            }
+        except Exception as exc:
+            logger.error("LLM suitability evaluation failed: %s", exc)
+            return {
+                "decision": "pending_manual_review",
+                "error": f"Suitability evaluation failed: {exc}",
+                "carrier": guidelines.get("carrier_name", ""),
+                "product": guidelines.get("product_name", ""),
+                "carrier_id": guidelines.get("carrier_id", ""),
+                "product_id": guidelines.get("product_id", ""),
+            }
 
 
-def _check_criterion(
-    name: str,
-    criterion: dict[str, Any],
+def _build_submission_payload(
     client_data: dict[str, Any],
-) -> bool:
-    """Check if a client meets a single suitability criterion.
+    product_params: dict[str, Any],
+) -> dict[str, Any]:
+    """Map client_data fields to the submission payload structure expected by the decision prompt."""
 
-    Returns True if the criterion is met or if the relevant client data is missing
-    (we don't penalize for unknown data — the LLM will note the gap).
-    """
-    # Age check
-    if name == "age":
-        age = client_data.get("age")
-        if age is None:
-            return True  # Unknown — don't penalize
+    def _get(*keys: str) -> Any:
+        """Return first non-None value from client_data matching any of the given keys."""
+        for k in keys:
+            v = client_data.get(k)
+            if v is not None:
+                return v
+        return None
+
+    def _parse_num(val: Any) -> float | None:
+        if val is None:
+            return None
+        try:
+            return float(str(val).replace("$", "").replace(",", ""))
+        except (ValueError, TypeError):
+            return None
+
+    age = _get("age", "owner_age")
+    if age is not None:
         try:
             age = int(age)
         except (ValueError, TypeError):
-            return True
-        min_age = criterion.get("min", 0)
-        max_age = criterion.get("max", 999)
-        return min_age <= age <= max_age
+            age = None
 
-    # Numeric minimum checks (annual_income, net_worth)
-    if name in ("annual_income", "net_worth"):
-        value = client_data.get(name)
-        if value is None:
-            return True
-        try:
-            value = float(str(value).replace("$", "").replace(",", ""))
-        except (ValueError, TypeError):
-            return True
-        return value >= criterion.get("min", 0)
-
-    # Acceptable value checks (risk_tolerance, investment_objective, time_horizon, source_of_funds)
-    if "acceptable" in criterion:
-        value = client_data.get(name)
-        if value is None:
-            return True
-        return str(value).lower().strip() in [v.lower() for v in criterion["acceptable"]]
-
-    # Liquidity check
-    if name == "liquidity":
-        liquid = client_data.get("liquid_net_worth") or client_data.get("liquidity")
-        premium = client_data.get("premium_amount") or client_data.get("initial_premium")
-        if liquid is None or premium is None:
-            return True
-        try:
-            liquid = float(str(liquid).replace("$", "").replace(",", ""))
-            premium = float(str(premium).replace("$", "").replace(",", ""))
-        except (ValueError, TypeError):
-            return True
-        remaining = liquid - premium
-        return remaining >= criterion.get("min_liquid_after_purchase", 0)
-
-    # Existing annuities concentration check
-    if name == "existing_annuities":
-        # Would need total annuity value and net worth — skip if not available
-        return True
-
-    # Unknown criterion type — pass by default
-    return True
+    return {
+        "annuitant": {
+            "dateOfBirth": _get("owner_dob", "date_of_birth", "dob"),
+            "age": age,
+        },
+        "owner": {
+            "isSameAsAnnuitant": True,
+            "type": "individual",
+        },
+        "funding": {
+            "totalPremium": _parse_num(_get("total_premium", "premium_amount", "initial_premium")),
+            "sourceOfFunds": _get("source_of_funds", "funding_source"),
+        },
+        "applicationSignatures": {
+            "signedAtState": _get("signed_at_state", "state", "owner_state"),
+        },
+        "suitabilityProfile": {
+            "annualHouseholdIncome": _parse_num(_get(
+                "annual_household_income", "annual_income", "income"
+            )),
+            "annualHouseholdExpenses": _parse_num(_get(
+                "annual_household_expenses", "annual_expenses"
+            )),
+            "totalNetWorth": _parse_num(_get("total_net_worth", "net_worth")),
+            "liquidNetWorth": _parse_num(_get(
+                "liquid_net_worth", "liquid_assets"
+            )),
+            "hasEmergencyFunds": _get("has_emergency_funds"),
+            "expectedHoldYears": _parse_num(_get(
+                "expected_hold_years", "time_horizon", "holding_period"
+            )),
+            "nursingHomeStatus": _get("nursing_home_status"),
+            "riskTolerance": _get("risk_tolerance"),
+            "investmentObjective": _get("investment_objective"),
+            "existingAnnuityValue": _parse_num(_get("existing_annuity_value")),
+        },
+        "replacement": {
+            "isReplacement": _get("is_replacement"),
+            "replacementPenaltyPct": _parse_num(_get("replacement_penalty_pct")),
+            "replacedCarrier": _get("replaced_carrier"),
+            "replacedIssueDate": _get("replaced_issue_date"),
+        },
+    }

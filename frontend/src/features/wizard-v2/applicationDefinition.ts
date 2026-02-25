@@ -159,9 +159,10 @@ function normalizeQuestion(question: RawQuestion): QuestionDefinition {
       : undefined,
     allocationConfig: question.allocationConfig
       ? {
-          totalRequired: question.allocationConfig.totalRequired,
-          minPerFund: question.allocationConfig.minPerFund,
-          maxPerFund: question.allocationConfig.maxPerFund,
+          totalRequired: question.allocationConfig.totalRequired ?? 100,
+          minPerFund: question.allocationConfig.minPerFund ?? 0,
+          maxPerFund: question.allocationConfig.maxPerFund ?? 100,
+          allowPartialAllocation: false,
           funds: question.allocationConfig.funds?.map((fund) => ({
             id: fund.id,
             name: fund.name,
