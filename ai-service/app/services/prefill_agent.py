@@ -5,7 +5,8 @@ from __future__ import annotations
 import base64
 import json
 import logging
-from typing import Any
+import time
+from typing import Any, AsyncGenerator
 
 from app.services.datasources.redtail_client import RedtailClient
 from app.services.datasources.redtail_crm import RedtailCRM
@@ -425,4 +426,171 @@ async def run_prefill_agent(
         "sources_used": [],
         "fields_found": 0,
         "summary": "Pre-fill agent was unable to gather data within the allowed iterations.",
+    }
+
+
+# ── Streaming agent loop ────────────────────────────────────────────────────
+
+TOOL_DESCRIPTIONS: dict[str, str] = {
+    "lookup_crm_client": "Looking up client in Redtail CRM",
+    "lookup_crm_notes": "Analyzing CRM notes and meeting transcripts",
+    "lookup_prior_policies": "Retrieving prior policy and suitability data",
+    "lookup_annual_statements": "Fetching annual statement from document store",
+    "extract_document_fields": "Extracting fields from document",
+    "get_advisor_preferences": "Loading advisor preference profile",
+    "get_carrier_suitability": "Evaluating carrier suitability score",
+    "report_prefill_results": "Compiling final results",
+}
+
+
+async def run_prefill_agent_stream(
+    client_id: str | None = None,
+    document_base64: str | None = None,
+    document_media_type: str | None = None,
+    advisor_id: str | None = None,
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Run the pre-fill agent, yielding SSE events at each step."""
+    agent_start = time.time()
+    llm = LLMService()
+
+    yield {
+        "type": "agent_start",
+        "message": "Starting AI agent...",
+        "timestamp": time.time(),
+    }
+
+    # Build initial user message (same as run_prefill_agent)
+    content_blocks: list[dict[str, Any]] = []
+    instruction_parts = ["Please gather all available pre-fill data."]
+    if client_id:
+        instruction_parts.append(f"Client ID: {client_id}")
+    if advisor_id:
+        instruction_parts.append(f"Advisor ID: {advisor_id}")
+    if document_base64:
+        instruction_parts.append("A document has been uploaded — please extract any relevant fields from it.")
+        content_blocks.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": document_media_type or "image/png",
+                "data": document_base64,
+            },
+        })
+    content_blocks.append({"type": "text", "text": " ".join(instruction_parts)})
+
+    messages: list[dict[str, Any]] = [{"role": "user", "content": content_blocks}]
+
+    max_iterations = 10
+    for i in range(max_iterations):
+        logger.info("Prefill stream iteration %d/%d", i + 1, max_iterations)
+
+        response = llm.chat(
+            system_prompt=SYSTEM_PROMPT,
+            messages=messages,
+            tools=PREFILL_TOOLS,
+            force_tool=True,
+        )
+
+        tool_calls = LLMService.extract_tool_calls(response)
+        if not tool_calls:
+            break
+
+        messages.append({"role": "assistant", "content": response.content})
+
+        tool_results: list[dict[str, Any]] = []
+        terminal_result = None
+
+        for call in tool_calls:
+            tool_name = call["name"]
+            yield {
+                "type": "tool_start",
+                "name": tool_name,
+                "description": TOOL_DESCRIPTIONS.get(tool_name, tool_name),
+                "iteration": i + 1,
+                "timestamp": time.time(),
+            }
+
+            tool_start = time.time()
+            result = await _execute_tool(tool_name, call["input"])
+            duration_ms = int((time.time() - tool_start) * 1000)
+
+            # Extract fields for the event
+            fields_extracted: dict[str, str] = {}
+            if tool_name == "extract_document_fields":
+                fields_extracted = call["input"].get("extracted_fields", {})
+            elif tool_name == "report_prefill_results":
+                fields_extracted = call["input"].get("known_data", {})
+            elif tool_name == "lookup_crm_client":
+                # Parse the JSON result to show extracted CRM fields
+                try:
+                    parsed = json.loads(result) if isinstance(result, str) else {}
+                    fields_extracted = {k: str(v) for k, v in parsed.items() if v and k != "error"}
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            elif tool_name == "get_carrier_suitability":
+                try:
+                    parsed = json.loads(result) if isinstance(result, str) else {}
+                    if "overall_score" in parsed:
+                        fields_extracted["suitability_score"] = str(parsed["overall_score"])
+                    if "rating" in parsed:
+                        fields_extracted["suitability_rating"] = str(parsed["rating"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            elif tool_name == "get_advisor_preferences":
+                try:
+                    parsed = json.loads(result) if isinstance(result, str) else {}
+                    if "advisor_name" in parsed:
+                        fields_extracted["advisor_name"] = str(parsed["advisor_name"])
+                    if "philosophy" in parsed:
+                        fields_extracted["advisor_philosophy"] = str(parsed["philosophy"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            yield {
+                "type": "tool_result",
+                "name": tool_name,
+                "fields_extracted": fields_extracted,
+                "duration_ms": duration_ms,
+                "iteration": i + 1,
+                "timestamp": time.time(),
+            }
+
+            if isinstance(result, list):
+                content = result
+            else:
+                content = result
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": call["id"],
+                "content": content,
+            })
+
+            if tool_name == "report_prefill_results":
+                terminal_result = call["input"]
+
+        messages.append({"role": "user", "content": tool_results})
+
+        if terminal_result:
+            total_duration_ms = int((time.time() - agent_start) * 1000)
+            yield {
+                "type": "agent_complete",
+                "known_data": terminal_result.get("known_data", {}),
+                "sources_used": terminal_result.get("sources_used", []),
+                "fields_found": terminal_result.get("fields_found", 0),
+                "summary": terminal_result.get("summary", ""),
+                "total_duration_ms": total_duration_ms,
+                "timestamp": time.time(),
+            }
+            return
+
+    # Fallback
+    total_duration_ms = int((time.time() - agent_start) * 1000)
+    yield {
+        "type": "agent_complete",
+        "known_data": {},
+        "sources_used": [],
+        "fields_found": 0,
+        "summary": "Pre-fill agent was unable to gather data within the allowed iterations.",
+        "total_duration_ms": total_duration_ms,
+        "timestamp": time.time(),
     }

@@ -1,16 +1,18 @@
-"""Pre-fill agent endpoints: client list, CRM prefill, and document prefill."""
+"""Pre-fill agent endpoints: client list, CRM prefill, document prefill, and SSE stream."""
 
 from __future__ import annotations
 
 import base64
+import json
 import logging
 from typing import Any
 
 from fastapi import APIRouter, File, Form, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.services.datasources.redtail_crm import RedtailCRM
-from app.services.prefill_agent import run_prefill_agent
+from app.services.prefill_agent import run_prefill_agent, run_prefill_agent_stream
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["prefill"])
@@ -50,6 +52,30 @@ async def run_prefill(req: PrefillRequest):
     logger.info("Prefill requested for client_id=%s, advisor_id=%s", req.client_id, advisor_id)
     result = await run_prefill_agent(client_id=req.client_id, advisor_id=advisor_id)
     return PrefillResponse(**result)
+
+
+@router.post("/prefill/stream")
+async def run_prefill_stream(req: PrefillRequest):
+    """Run the pre-fill agent with real-time SSE streaming of tool calls."""
+    advisor_id = req.advisor_id or "advisor_001"
+    logger.info("Prefill stream requested for client_id=%s, advisor_id=%s", req.client_id, advisor_id)
+
+    async def event_generator():
+        async for event in run_prefill_agent_stream(
+            client_id=req.client_id,
+            advisor_id=advisor_id,
+        ):
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/prefill/document", response_model=PrefillResponse)
