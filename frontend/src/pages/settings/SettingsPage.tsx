@@ -18,7 +18,7 @@ function SettingsPage() {
           scrollButtons="auto"
         >
           <Tab label="Carriers & Vendors" />
-          <Tab label="Products & Applications" />
+          <Tab label="App Builder" />
           <Tab label="AI Agent Guidelilnes" />
         </Tabs>
       </Box>
