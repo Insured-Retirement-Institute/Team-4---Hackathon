@@ -79,15 +79,17 @@ async function updateApplicationCarrierData(id, carrierData) {
       TableName: TABLE_NAME,
       Key: { id },
       UpdateExpression:
-        'SET #submissionId = :sid, #policyNumber = :pn, #updatedAt = :now',
+        'SET #submissionId = :sid, #policyNumber = :pn, #status = :status, #updatedAt = :now',
       ExpressionAttributeNames: {
         '#submissionId': 'submissionId',
         '#policyNumber': 'policyNumber',
+        '#status': 'status',
         '#updatedAt': 'updatedAt',
       },
       ExpressionAttributeValues: {
         ':sid': carrierData.submissionId,
         ':pn': carrierData.policyNumber,
+        ':status': 'carrier_accepted',
         ':now': new Date().toISOString(),
       },
       ConditionExpression: 'attribute_exists(id)',

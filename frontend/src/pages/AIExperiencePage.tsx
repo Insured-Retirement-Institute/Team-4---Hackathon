@@ -17,7 +17,10 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ChatIcon from '@mui/icons-material/Chat';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -34,6 +37,7 @@ import { useApplication } from '../context/ApplicationContext';
 import { openWidget } from '../hooks/useWidgetSync';
 import { createSession } from '../services/aiService';
 import { getProducts, getApplication, type Product } from '../services/apiService';
+import ChatPanel from '../components/ChatPanel';
 import VoicePanel from '../components/VoicePanel';
 import RetellCallPanel from '../components/RetellCallPanel';
 import type { ApplicationDefinition } from '../types/application';
@@ -255,8 +259,12 @@ export default function AIExperiencePage() {
   const sseStartedRef = useRef(false);
   const elapsed = useElapsed(stage === 'voice_active');
 
+  // Interaction mode: voice or chat
+  const [interactionMode, setInteractionMode] = useState<'voice' | 'chat'>('voice');
+
   // Voice session
   const [voiceSessionId, setVoiceSessionId] = useState<string | null>(null);
+  const [chatGreeting, setChatGreeting] = useState<string>('');
 
   // Results state
   const [finalResult, setFinalResult] = useState<StreamEvent | null>(null);
@@ -360,12 +368,13 @@ export default function AIExperiencePage() {
     setDefinition(null);
     sseStartedRef.current = false;
 
-    // Create a voice session
+    // Create a session (used for both voice and chat)
     try {
       const session = await createSession(productId);
       setVoiceSessionId(session.session_id);
+      setChatGreeting(session.greeting || '');
     } catch (err) {
-      console.error('Failed to create voice session:', err);
+      console.error('Failed to create session:', err);
     }
 
     // Transition to voice_active
@@ -404,6 +413,8 @@ export default function AIExperiencePage() {
     setMatchedFields([]);
     setDefinition(null);
     setVoiceSessionId(null);
+    setChatGreeting('');
+    setInteractionMode('voice');
     sseStartedRef.current = false;
   }, []);
 
@@ -470,17 +481,29 @@ export default function AIExperiencePage() {
               </Grid>
 
               <Box sx={{ textAlign: 'center', mt: 5 }}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  color="secondary"
-                  disableElevation
-                  startIcon={<MicIcon />}
-                  onClick={handleStartVoice}
-                  sx={{ fontWeight: 700, px: 6, py: 2, fontSize: '1.2rem', borderRadius: 3 }}
-                >
-                  Start Voice Session
-                </Button>
+                <Stack direction="row" spacing={2} justifyContent="center">
+                  <Button
+                    variant="contained"
+                    size="large"
+                    color="secondary"
+                    disableElevation
+                    startIcon={<MicIcon />}
+                    onClick={() => { setInteractionMode('voice'); handleStartVoice(); }}
+                    sx={{ fontWeight: 700, px: 5, py: 2, fontSize: '1.1rem', borderRadius: 3 }}
+                  >
+                    Start with Voice
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    color="secondary"
+                    startIcon={<ChatIcon />}
+                    onClick={() => { setInteractionMode('chat'); handleStartVoice(); }}
+                    sx={{ fontWeight: 700, px: 5, py: 2, fontSize: '1.1rem', borderRadius: 3 }}
+                  >
+                    Start with Chat
+                  </Button>
+                </Stack>
                 <Typography variant="body2" color="text.secondary" mt={2}>
                   Tell the AI which client you'd like to discuss today
                 </Typography>
@@ -491,11 +514,24 @@ export default function AIExperiencePage() {
           {/* ── VOICE ACTIVE STAGE ──────────────────────────────────────── */}
           {stage === 'voice_active' && (
             <Box>
-              {/* Voice Panel — always visible */}
-              <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', height: 300 }}>
+              {/* Mode toggle */}
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <ToggleButtonGroup
+                  value={interactionMode}
+                  exclusive
+                  onChange={(_, v) => { if (v) setInteractionMode(v); }}
+                  size="small"
+                >
+                  <ToggleButton value="voice"><MicIcon sx={{ mr: 0.5, fontSize: 18 }} /> Voice</ToggleButton>
+                  <ToggleButton value="chat"><ChatIcon sx={{ mr: 0.5, fontSize: 18 }} /> Chat</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+
+              {/* Voice or Chat Panel */}
+              <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', height: interactionMode === 'chat' ? 400 : 300 }}>
                 <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="subtitle2" fontWeight={700}>
-                    Voice Session — {advisorLabel}
+                    {interactionMode === 'voice' ? 'Voice' : 'Chat'} Session — {advisorLabel}
                   </Typography>
                   {!selectedClient && (
                     <Typography variant="caption" color="warning.main">
@@ -503,7 +539,11 @@ export default function AIExperiencePage() {
                     </Typography>
                   )}
                 </Box>
-                <VoicePanel sessionId={voiceSessionId} />
+                {interactionMode === 'voice' ? (
+                  <VoicePanel sessionId={voiceSessionId} />
+                ) : (
+                  <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} />
+                )}
               </Paper>
 
               {/* Client selector — shown until client is picked */}
@@ -591,13 +631,28 @@ export default function AIExperiencePage() {
           {/* ── GAP REVIEW STAGE ────────────────────────────────────────── */}
           {stage === 'gap_review' && finalResult && (
             <Box>
-              {/* Compact voice panel */}
+              {/* Compact voice/chat panel */}
               {voiceSessionId && (
-                <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', height: 160 }}>
-                  <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="subtitle2" fontWeight={700}>Voice Session (active)</Typography>
+                <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', height: interactionMode === 'chat' ? 300 : 160 }}>
+                  <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {interactionMode === 'voice' ? 'Voice' : 'Chat'} Session (active)
+                    </Typography>
+                    <ToggleButtonGroup
+                      value={interactionMode}
+                      exclusive
+                      onChange={(_, v) => { if (v) setInteractionMode(v); }}
+                      size="small"
+                    >
+                      <ToggleButton value="voice" sx={{ py: 0.25, px: 1 }}><MicIcon sx={{ fontSize: 16 }} /></ToggleButton>
+                      <ToggleButton value="chat" sx={{ py: 0.25, px: 1 }}><ChatIcon sx={{ fontSize: 16 }} /></ToggleButton>
+                    </ToggleButtonGroup>
                   </Box>
-                  <VoicePanel sessionId={voiceSessionId} compact />
+                  {interactionMode === 'voice' ? (
+                    <VoicePanel sessionId={voiceSessionId} compact />
+                  ) : (
+                    <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} />
+                  )}
                 </Paper>
               )}
 

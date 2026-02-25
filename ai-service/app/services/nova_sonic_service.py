@@ -34,9 +34,13 @@ class NovaSonicStreamManager:
 
     async def start_session(self) -> None:
         """Initialize the Bedrock client and open the bidirectional stream."""
-        # Set AWS env vars for the SDK's EnvironmentCredentialsResolver
-        os.environ["AWS_ACCESS_KEY_ID"] = settings.aws_access_key_id
-        os.environ["AWS_SECRET_ACCESS_KEY"] = settings.aws_secret_access_key
+        # Set AWS env vars for the SDK's EnvironmentCredentialsResolver.
+        # Only set if non-empty — in App Runner the instance role provides creds,
+        # and setting empty values would override role-based resolution.
+        if settings.aws_access_key_id:
+            os.environ["AWS_ACCESS_KEY_ID"] = settings.aws_access_key_id
+        if settings.aws_secret_access_key:
+            os.environ["AWS_SECRET_ACCESS_KEY"] = settings.aws_secret_access_key
         if settings.aws_session_token:
             os.environ["AWS_SESSION_TOKEN"] = settings.aws_session_token
         os.environ["AWS_REGION"] = settings.aws_region

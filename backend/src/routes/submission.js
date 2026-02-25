@@ -33,7 +33,7 @@ router.post('/:applicationId/submit', async (req, res) => {
       });
     }
 
-    if (application.status === 'submitted') {
+    if (application.status === 'submitted' || application.status === 'carrier_accepted') {
       return res.status(409).json({
         code: 'APPLICATION_ALREADY_SUBMITTED',
         message: 'This application has already been submitted.',
