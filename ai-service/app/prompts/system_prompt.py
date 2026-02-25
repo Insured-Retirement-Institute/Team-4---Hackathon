@@ -136,3 +136,18 @@ def _tool_instructions(state: ConversationState) -> str:
     lines.append("- NEVER fabricate or assume values. Only extract what the user explicitly states.")
 
     return "\n".join(lines)
+
+
+def build_voice_system_prompt(state: ConversationState) -> str:
+    """Build a voice-optimized system prompt wrapping the standard prompt."""
+    voice_prefix = (
+        "You are speaking with the user via voice in a real-time conversation. "
+        "Follow these voice-specific guidelines:\n"
+        "- Keep responses to 1-3 sentences. Be concise.\n"
+        "- Read numbers digit by digit (e.g., SSN: 1-2-3-4-5-6-7-8-9, phone: 5-5-5-1-2-3-4).\n"
+        "- Spell out abbreviations (e.g., say 'Social Security Number' not 'SSN').\n"
+        "- No bullet points, no markdown formatting, no special characters.\n"
+        "- Use natural spoken language with simple sentence structure.\n"
+        "- Confirm one piece of information at a time when possible.\n\n"
+    )
+    return voice_prefix + build_system_prompt(state)

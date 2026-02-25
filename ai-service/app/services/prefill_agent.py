@@ -7,7 +7,8 @@ import json
 import logging
 from typing import Any
 
-from app.services.datasources.mock_redtail import MockRedtailCRM
+from app.services.datasources.redtail_client import RedtailClient
+from app.services.datasources.redtail_crm import RedtailCRM
 from app.services.datasources.mock_policy import MockPolicySystem
 from app.services.datasources.s3_statements import S3StatementStore
 from app.services.datasources.s3_advisor_prefs import S3AdvisorPrefsStore
@@ -30,7 +31,27 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "client_id": {
                     "type": "string",
-                    "description": "The CRM client identifier (e.g. 'client_001').",
+                    "description": "The CRM client identifier (e.g. '5' or '11').",
+                },
+            },
+            "required": ["client_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lookup_crm_notes",
+        "description": (
+            "Look up a client's notes and activity records from the CRM (Redtail). "
+            "Notes often contain meeting transcripts with rich financial data: income, "
+            "net worth, risk tolerance, investment goals, family information, and beneficiary "
+            "details. Analyze the notes text and extract any relevant suitability/financial data."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "description": "The CRM client identifier (e.g. '5' or '11').",
                 },
             },
             "required": ["client_id"],
@@ -67,7 +88,7 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "client_id": {
                     "type": "string",
-                    "description": "The client identifier (e.g. 'client_001').",
+                    "description": "The client identifier (e.g. '5' or '11').",
                 },
             },
             "required": ["client_id"],
@@ -187,33 +208,42 @@ before the application begins. This saves the advisor time by pre-populating fie
 
 Available data sources:
 - CRM (Redtail): Client personal info — name, DOB, SSN, gender, contact, address
-- Prior Policies: Suitability data — income, net worth, risk tolerance, investment details
+- CRM Notes: Meeting transcripts and activity notes — often contain income, net worth, \
+risk tolerance, investment goals, family info, and beneficiary details
+- Prior Policies: Suitability data — income, net worth, risk tolerance, investment details \
+(fallback if CRM notes lack financial data)
 - Annual Statements (S3 Document Store): Contract values, interest rates, balances, beneficiary info
 - Advisor Preferences: Advisor's investment philosophy, preferred carriers, allocation strategy
 - Carrier Suitability: Carrier-specific suitability guidelines with weighted scoring
 
 Workflow:
 1. If a client_id is provided, call lookup_crm_client to get their CRM profile
-2. Then call lookup_prior_policies to get their suitability/financial data
-3. Then call lookup_annual_statements to retrieve the latest annual statement PDF
-4. If a PDF is returned, analyze it and call extract_document_fields with the extracted values
-5. If a document is attached by the user, also call extract_document_fields for it
-6. If an advisor_id is provided, call get_advisor_preferences to understand the advisor's approach
-7. Call get_carrier_suitability for the most relevant carrier(s) based on advisor preferences \
+2. Then call lookup_crm_notes to retrieve meeting transcripts and activity notes. \
+Carefully analyze the note text to extract financial data: income, net worth, risk tolerance, \
+investment goals, existing policies, family members, beneficiaries, etc.
+3. If the CRM notes did NOT contain sufficient financial/suitability data, call \
+lookup_prior_policies as a fallback to get suitability data
+4. Then call lookup_annual_statements to retrieve the latest annual statement PDF
+5. If a PDF is returned, analyze it and call extract_document_fields with the extracted values
+6. If a document is attached by the user, also call extract_document_fields for it
+7. If an advisor_id is provided, call get_advisor_preferences to understand the advisor's approach
+8. Call get_carrier_suitability for the most relevant carrier(s) based on advisor preferences \
 and client profile. Pass gathered client data (age, annual_income, net_worth, risk_tolerance, \
 investment_objective, time_horizon, source_of_funds, liquid_net_worth) to get a suitability score.
-8. Once all sources are exhausted, call report_prefill_results with the combined data. \
+9. Once all sources are exhausted, call report_prefill_results with the combined data. \
 Include suitability_score, suitability_rating, advisor_name, advisor_philosophy, and \
 recommended_allocation_strategy in the known_data if available.
 
+Combine data from structured CRM fields AND notes-extracted data. When notes contain financial \
+data that the structured CRM record lacks (e.g., income, net worth), include those values. \
 Always gather from ALL available sources before reporting results. \
-Combine data from multiple sources — CRM fields and policy fields together. \
 Never fabricate data. Only report what the sources actually return."""
 
 
 # ── Data source executors ───────────────────────────────────────────────────
 
-_crm = MockRedtailCRM()
+_redtail_client = RedtailClient()
+_crm = RedtailCRM(client=_redtail_client)
 _policy = MockPolicySystem()
 _statements = S3StatementStore()
 _advisor_prefs = S3AdvisorPrefsStore()
@@ -227,6 +257,16 @@ async def _execute_tool(name: str, input_data: dict[str, Any]) -> str | list[dic
         if not result:
             return json.dumps({"error": "Client not found in CRM."})
         return json.dumps(result)
+
+    elif name == "lookup_crm_notes":
+        client_id = input_data.get("client_id", "")
+        try:
+            notes = await _crm.get_notes(int(client_id))
+        except (ValueError, TypeError):
+            return json.dumps({"error": f"Invalid client_id: {client_id}"})
+        if not notes:
+            return json.dumps({"notes": [], "message": "No notes found for this client."})
+        return json.dumps({"notes": notes, "count": len(notes)})
 
     elif name == "lookup_prior_policies":
         result = await _policy.query(input_data)

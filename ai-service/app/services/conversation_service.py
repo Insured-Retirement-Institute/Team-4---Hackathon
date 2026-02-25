@@ -130,7 +130,7 @@ async def handle_message(
     tool_calls = llm.extract_tool_calls(response)
 
     if tool_calls:
-        tool_results = _process_tool_calls(tool_calls, state)
+        tool_results = process_tool_calls(tool_calls, state)
         updated_fields = tool_results.get("updated_fields", [])
 
         # Follow-up LLM call with tool results for natural language response
@@ -152,7 +152,7 @@ async def handle_message(
         reply_text = llm.extract_text(response)
 
     # Phase transitions
-    _maybe_advance_phase(state)
+    maybe_advance_phase(state)
 
     state.messages.append(Message(
         role=Role.ASSISTANT,
@@ -247,7 +247,7 @@ def _build_llm_messages(state: ConversationState) -> list[dict[str, Any]]:
     return msgs
 
 
-def _process_tool_calls(
+def process_tool_calls(
     tool_calls: list[dict[str, Any]],
     state: ConversationState,
 ) -> dict[str, Any]:
@@ -318,7 +318,7 @@ def _process_tool_calls(
     return results
 
 
-def _maybe_advance_phase(state: ConversationState) -> None:
+def maybe_advance_phase(state: ConversationState) -> None:
     """Check conditions and advance the session phase if appropriate."""
     if state.phase == SessionPhase.SPOT_CHECK:
         # Move to collecting once no unconfirmed fields remain
