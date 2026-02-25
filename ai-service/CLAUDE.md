@@ -73,7 +73,7 @@ All routes under `/api/v1/`:
 | POST | `/sessions/{id}/submit` | Submit completed application |
 | GET | `/demo/midland-schema` | Fetch adapted product schema |
 | GET | `/prefill/clients` | List CRM clients for dropdown selection |
-| POST | `/prefill` | Run pre-fill agent for a CRM client (`{client_id}` in body) |
+| POST | `/prefill` | Run pre-fill agent for a CRM client (`{client_id, advisor_id?}` in body) |
 | POST | `/prefill/document` | Run pre-fill agent with uploaded document (multipart form: `file` + optional `client_id`) |
 | GET | `/health` | Health check |
 
@@ -84,14 +84,20 @@ All routes under `/api/v1/`:
 **Agent tools** (Anthropic tool_use format):
 - `lookup_crm_client` — Queries `MockRedtailCRM` for client profile (name, DOB, SSN, contact, address)
 - `lookup_prior_policies` — Queries `MockPolicySystem` for suitability data (income, net worth, risk tolerance)
-- `extract_document_fields` — LLM extracts fields from uploaded document via vision
+- `lookup_annual_statements` — Fetches latest annual statement PDF from S3 (`S3StatementStore`)
+- `extract_document_fields` — LLM extracts fields from uploaded/retrieved document via vision
+- `get_advisor_preferences` — Fetches advisor profile from S3 (`S3AdvisorPrefsStore`): philosophy, preferred carriers, allocation strategy, suitability thresholds
+- `get_carrier_suitability` — Fetches carrier guidelines from S3 (`S3SuitabilityStore`), runs weighted scoring engine against client data. Returns score, rating, and per-criterion breakdown
 - `report_prefill_results` — Terminal tool, returns combined `{known_data, sources_used, fields_found, summary}`
 
-**Agent loop:** `run_prefill_agent(client_id, document_base64, document_media_type)` — up to 5 iterations with `force_tool=True`. Terminates when `report_prefill_results` is called. Uses same `LLMService.chat()` and `extract_tool_calls()` as the conversation flow.
+**Agent loop:** `run_prefill_agent(client_id, document_base64, document_media_type, advisor_id)` — up to 10 iterations with `force_tool=True`. Terminates when `report_prefill_results` is called. Uses same `LLMService.chat()` and `extract_tool_calls()` as the conversation flow.
 
 **Data sources** (`app/services/datasources/`):
 - `MockRedtailCRM` — 4 mock clients with ~18 CRM fields each. `list_clients()` for dropdown, `query({client_id})` for profile data. Designed for clean swap to live Redtail API.
 - `MockPolicySystem` — 10 suitability/financial fields per client (income, net worth, risk tolerance, investment details).
+- `S3StatementStore` — Fetches annual statement PDFs from S3 bucket (`statements/{client_id}/`).
+- `S3AdvisorPrefsStore` — Fetches advisor preference profiles from S3 (`advisors/{advisor_id}/profile.json`). 3 mock advisors: conservative (advisor_001), balanced (advisor_002), accumulation-focused (advisor_003).
+- `S3SuitabilityStore` — Fetches carrier suitability guidelines from S3 (`suitability/{carrier_id}/guidelines.json`) and runs `evaluate_suitability()` weighted scoring. 3 carriers: midland-national, aspida, equitrust.
 - `DataSource` base class — `async query(params) -> dict` and `available_fields() -> list[str]`.
 
 **Response format:** `{known_data: dict, sources_used: list[str], fields_found: int, summary: str}`
@@ -119,6 +125,7 @@ All routes under `/api/v1/`:
 | `AWS_ACCESS_KEY_ID` | — | Required, explicit |
 | `AWS_SECRET_ACCESS_KEY` | — | Required, explicit |
 | `AWS_SESSION_TOKEN` | — | Required, explicit |
+| `S3_STATEMENTS_BUCKET` | `iri-hackathon-statements` | S3 bucket for statements, advisor profiles, and suitability guidelines |
 | `HOST` | `0.0.0.0` | |
 | `PORT` | `8000` | Use 8001 locally to avoid conflicts |
 
@@ -134,8 +141,11 @@ All routes under `/api/v1/`:
 | `app/services/prefill_agent.py` | LLM-orchestrated pre-fill agent: tool defs, agent loop, source execution |
 | `app/services/datasources/mock_redtail.py` | Mock CRM: 4 clients, ~18 fields each, `list_clients()` for dropdown |
 | `app/services/datasources/mock_policy.py` | Mock prior policy/suitability data: 10 fields per client |
+| `app/services/datasources/s3_statements.py` | S3 annual statement PDF fetcher |
+| `app/services/datasources/s3_advisor_prefs.py` | S3 advisor preference profile fetcher |
+| `app/services/datasources/s3_suitability.py` | S3 carrier suitability guidelines + weighted scoring engine |
 | `app/services/datasources/base.py` | Abstract `DataSource` interface |
-| `app/routes/prefill.py` | Pre-fill endpoints: client list, CRM prefill, document prefill |
+| `app/routes/prefill.py` | Pre-fill endpoints: client list, CRM prefill (with optional advisor_id), document prefill |
 | `app/models/conversation.py` | Enums, TrackedField, ConversationState, condition evaluator |
 | `app/prompts/system_prompt.py` | Phase-aware system prompt builder |
 | `app/config.py` | Pydantic settings |

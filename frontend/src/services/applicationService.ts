@@ -17,6 +17,8 @@ export interface Product {
   effectiveDate: string;
   createdAt: string;
   updatedAt: string;
+  productType?: string;
+  distributors?: string[];
   pages: ApplicationDefinition['pages'];
 }
 
@@ -31,10 +33,10 @@ export async function getProducts(): Promise<Product[]> {
   return res.json();
 }
 
-// ── GET /application/:productId ───────────────────────────────────────────────
+// ── GET /products/:productId ──────────────────────────────────────────────────
 
 export async function getApplication(productId: string, locale = 'en-US'): Promise<ApplicationDefinition> {
-  const res = await fetch(`${BASE}/application/${encodeURIComponent(productId)}?locale=${locale}`);
+  const res = await fetch(`${BASE}/products/${encodeURIComponent(productId)}?locale=${locale}`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Failed to fetch application: ${res.status} ${text}`);

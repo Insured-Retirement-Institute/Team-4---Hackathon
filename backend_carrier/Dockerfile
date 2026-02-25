@@ -2,10 +2,16 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
 COPY package.json ./
 RUN npm install --production
 
-COPY . ./
+COPY index.js ./index.js 
+COPY lib/pdfHelper.js ./lib/pdfHelper.js
+COPY api/ ./api/
+COPY forms/ ./forms/
+COPY maps/ ./maps/
 
 ENV PORT=8080
 EXPOSE 8080
