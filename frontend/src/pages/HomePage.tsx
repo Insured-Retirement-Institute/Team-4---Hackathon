@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { openWidget } from '../hooks/useWidgetSync';
 import { listSaves } from '../services/applicationStorageService';
@@ -17,135 +17,164 @@ import Typography from '@mui/material/Typography';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import MicIcon from '@mui/icons-material/Mic';
 import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
 import catAnimation from '../animations/cat.json';
 
-const FEATURES = [
+const FEATURES: {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  accent: string;
+  status: 'built' | 'coming';
+  cta?: { label: string; route?: string; action?: () => void };
+}[] = [
   {
-    icon: null,
-    lottieSrc: 'https://lottie.host/2031cbaa-6e1f-4357-9dc6-6cacf301e30f/plKHGxzrh0.lottie',
-    label: 'Universal Application API',
-    story: 'US-01',
+    icon: <img src="/builder.svg" alt="" style={{ width: 60, height: 60 }} />,
+    label: 'Application Builder',
     description:
-      'A single normalized schema that decouples the input experience from carrier-specific form logic. Any frontend, any carrier — no rebuilding.',
+      'Drag, drop, and configure. Build application templates with custom sections and questions, set field visibility rules, and control which distributors have access to each product — all without touching code.',
+    accent: '#7C3AED',
     status: 'built',
+    cta: { label: 'Open Builder', route: '/settings' },
   },
   {
-    icon: <FormatListBulletedIcon sx={{ fontSize: 32 }} />,
-    lottieSrc: 'https://assets-v2.lottiefiles.com/a/595b144a-117d-11ee-a0f0-97aecee50a7d/C3UVv2Ic4A.lottie',
-    label: 'Guided Wizard',
-    story: 'US-02',
+    icon: <img src="/wizard.svg" alt="" style={{ width: 60, height: 60 }} />,
+    label: 'E-App Wizard',
     description:
-      'A step-by-step, data-driven application wizard with conditional logic, progress tracking, and pre-fill support. Embeddable anywhere.',
+      'A clean, guided application experience advisors actually want to use. Step-by-step navigation, real-time validation, conditional logic, and one-click submission — all driven by your configured templates.',
+    accent: '#0EA5E9',
     status: 'built',
+    cta: { label: 'Start Application', route: '/wizard-v2' },
   },
   {
-    icon: <SmartToyIcon sx={{ fontSize: 32 }} />,
-    lottieSrc: 'https://assets-v2.lottiefiles.com/a/5ed25642-1162-11ee-9380-b73830df334d/fjn76aFTNA.lottie',
-    label: 'AI Chat Interface',
-    story: 'US-03',
+    icon: <img src="/crm.svg" alt="" style={{ width: 60, height: 60 }} />,
+    label: 'E-App from CRM',
     description:
-      'Complete an entire annuity application through natural conversation. The AI guides, confirms, and clarifies — no forms, no friction.',
+      'Connect directly to Redtail, Salesforce, and other major CRMs. An AI agent pulls client data, cross-references meeting notes and prior policies, and pre-populates fields in seconds — no copy-paste required.',
+    accent: '#059669',
     status: 'built',
+    cta: { label: 'Pre-fill from CRM', route: '/prefill' },
   },
   {
-    icon: <MicIcon sx={{ fontSize: 32 }} />,
-    label: 'Voice Input',
-    story: 'US-04',
+    icon: <img src="/chat.svg" alt="" style={{ width: 60, height: 60 }} />,
+    label: 'AI Chat',
     description:
-      'Speak your answers — live or via uploaded call recording. AI transcribes, maps to schema fields, and flags low-confidence extractions.',
-    status: 'coming',
+      'Skip the form altogether. Advisors have a natural conversation with an AI assistant that asks the right questions, captures responses, and fills the application in real time — bidirectionally synced with the wizard.',
+    accent: '#D97706',
+    status: 'built',
+    cta: { label: 'Open Chat', action: () => openWidget() },
   },
   {
-    icon: <UploadFileIcon sx={{ fontSize: 32 }} />,
-    lottieSrc: 'https://assets-v2.lottiefiles.com/a/c578e9fe-1150-11ee-9553-7fec71359065/LcWAzn4bBN.lottie',
-    label: 'Contract Auto-Population',
-    story: 'US-05',
+    icon: <img src="/history.svg" alt="" style={{ width: 60, height: 60 }} />,
+    label: 'Application History',
     description:
-      "Upload a prior carrier's PDF contract. AI extracts key fields and maps them to the new application — replacing manual re-entry.",
+      "Every application in one place. Pick up where you left off on in-progress apps, review and resubmit completed ones, or audit the full submission history — all accessible from a single dashboard.",
+    accent: '#64748B',
     status: 'built',
+    cta: { label: 'View Applications', route: '/applications' },
   },
   {
-    icon: <PrecisionManufacturingIcon sx={{ fontSize: 32 }} />,
-    lottieSrc: 'https://assets-v2.lottiefiles.com/a/5da190a8-1162-11ee-bf36-a71093638445/q87zC1TA7z.lottie',
-    label: 'Agentic Orchestration',
-    story: 'US-08',
+    icon: <img src="/agentic.svg" alt="" style={{ width: 60, height: 60 }} />,
+    label: 'Agentic AI',
     description:
-      'Initiate 8 applications in the time it takes to start 1. An AI agent pulls from CRM, call transcripts, and public records — surfacing only gaps.',
+      'The full-power experience. Have a live voice-to-voice conversation with an AI that listens, understands, and fills your application. Upload checks, statements, or prior contracts and watch the agent extract and map every field automatically.',
+    accent: '#DB2777',
     status: 'built',
+    cta: { label: 'Try Voice AI', route: '/ai-experience' },
   },
 ];
 
 const HOW_IT_WORKS = [
   {
     step: '01',
-    title: 'Load the Application Schema',
-    body: 'The backend API returns a normalized question set for the carrier, state, and distribution channel. One schema, any frontend.',
+    title: 'Build Your Template',
+    body: 'Use the Application Builder to define sections, questions, and visibility rules. Assign products to specific distributors — no code, no carrier calls, no waiting.',
   },
   {
     step: '02',
-    title: 'Complete via Wizard or AI Chat',
-    body: 'Advisors choose their path: a structured step-by-step wizard or a natural language conversation with the AI assistant.',
+    title: 'Collect Data Your Way',
+    body: "Advisors pick their path: step-by-step wizard, AI chat, voice conversation, or a CRM sync that pre-fills everything they've already captured. All inputs flow into the same normalized schema.",
   },
   {
     step: '03',
-    title: 'Validate & Submit',
-    body: 'The engine enforces all carrier rules, flags NIGO issues before submission, and produces a structured payload ready for the carrier API or PDF fill.',
+    title: 'Validate, Submit & Track',
+    body: 'The engine enforces carrier rules in real time, catches NIGO issues before they reach the carrier, and keeps a full audit trail in Application History — from first draft to final submission.',
   },
 ];
 
-function FeatureCard({ feature }: { feature: (typeof FEATURES)[0] }) {
-  const [hovered, setHovered] = useState(false);
+function FeatureCard({ feature, navigate }: { feature: (typeof FEATURES)[0]; navigate: ReturnType<typeof useNavigate> }) {
   const built = feature.status === 'built';
+
+  const handleCta = () => {
+    if (feature.cta?.action) feature.cta.action();
+    else if (feature.cta?.route) navigate(feature.cta.route);
+  };
 
   return (
     <Card
       elevation={0}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       sx={{
         height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
         border: '1px solid',
-        borderColor: built ? 'primary.light' : 'divider',
-        opacity: built ? 1 : 0.6,
+        borderColor: 'divider',
+        overflow: 'hidden',
         transition: 'box-shadow 0.2s, transform 0.2s',
-        '&:hover': built ? { boxShadow: 4, transform: 'translateY(-2px)' } : {},
+        '&:hover': built ? { boxShadow: 6, transform: 'translateY(-3px)' } : {},
       }}
     >
-      <CardContent sx={{ p: 3 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
-          <Box sx={{ color: built ? 'primary.main' : 'text.disabled' }}>
-            {feature.lottieSrc ? (
-              <DotLottieReact
-                key={hovered ? 'play' : 'stop'}
-                src={feature.lottieSrc}
-                loop
-                autoplay={hovered}
-                style={{ width: 32, height: 32 }}
-              />
-            ) : feature.icon}
-          </Box>
-          <Stack direction="row" spacing={0.75}>
-            <Chip label={feature.story} size="small" sx={{ fontSize: 10, height: 20, bgcolor: 'grey.100' }} />
-            {built ? (
-              <Chip
-                icon={<CheckCircleIcon sx={{ fontSize: '12px !important' }} />}
-                label="Built"
-                size="small"
-                color="secondary"
-                sx={{ fontSize: 10, height: 20 }}
-              />
-            ) : (
-              <Chip label="Coming Soon" size="small" sx={{ fontSize: 10, height: 20, bgcolor: 'grey.200' }} />
-            )}
-          </Stack>
+      {/* Colored graphic band */}
+      <Box
+        sx={{
+          height: 88,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: `linear-gradient(135deg, ${feature.accent}22 0%, ${feature.accent}44 100%)`,
+          borderBottom: `3px solid ${feature.accent}`,
+          color: feature.accent,
+        }}
+      >
+        {feature.icon}
+      </Box>
+
+      <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
+          <Typography variant="subtitle1" fontWeight={700}>{feature.label}</Typography>
+          {built ? (
+            <Chip
+              icon={<CheckCircleIcon sx={{ fontSize: '12px !important' }} />}
+              label="Built"
+              size="small"
+              color="secondary"
+              sx={{ fontSize: 10, height: 20 }}
+            />
+          ) : (
+            <Chip label="Coming Soon" size="small" sx={{ fontSize: 10, height: 20, bgcolor: 'grey.200' }} />
+          )}
         </Stack>
-        <Typography variant="subtitle1" fontWeight={700} mb={0.75}>{feature.label}</Typography>
-        <Typography variant="body2" color="text.secondary" lineHeight={1.6}>{feature.description}</Typography>
+        <Typography variant="body2" color="text.secondary" lineHeight={1.7} sx={{ flexGrow: 1 }}>
+          {feature.description}
+        </Typography>
+        {feature.cta && (
+          <Button
+            variant="outlined"
+            size="small"
+            endIcon={<ArrowForwardIcon />}
+            onClick={handleCta}
+            sx={{
+              mt: 2.5,
+              alignSelf: 'flex-start',
+              borderColor: feature.accent,
+              color: feature.accent,
+              '&:hover': { borderColor: feature.accent, bgcolor: `${feature.accent}11` },
+            }}
+          >
+            {feature.cta.label}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -333,75 +362,25 @@ export default function HomePage() {
             What today takes 4 hours of data entry should take 4 minutes of conversation.
             We built the tech to make that real.
           </Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-            <Button
-              variant="contained"
-              size="large"
-              endIcon={<ArrowForwardIcon />}
-              onClick={() => openWidget()}
-              color="secondary"
-              disableElevation
-              sx={{
-                fontWeight: 700,
-                px: 4,
-              }}
-            >
-              Try AI Assistant
-            </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => navigate('/wizard-v2')}
-              color="secondary"
-              sx={{
-                borderColor: 'secondary.main',
-                fontWeight: 600,
-                px: 4,
-                '&:hover': {
-                  borderColor: 'secondary.main',
-                  bgcolor: 'rgba(25,118,210,0.08)',
-                },
-              }}
-            >
-              Open Wizard
-            </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              endIcon={<PrecisionManufacturingIcon />}
-              onClick={() => navigate('/prefill')}
-              color="secondary"
-              sx={{
-                borderColor: 'secondary.main',
-                fontWeight: 600,
-                px: 4,
-                '&:hover': {
-                  borderColor: 'secondary.main',
-                  bgcolor: 'rgba(25,118,210,0.08)',
-                },
-              }}
-            >
-              Pre-Fill from CRM
-            </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              endIcon={<AutoAwesomeIcon />}
-              onClick={() => navigate('/ai-experience')}
-              color="secondary"
-              sx={{
-                borderColor: 'secondary.main',
-                fontWeight: 600,
-                px: 4,
-                '&:hover': {
-                  borderColor: 'secondary.main',
-                  bgcolor: 'rgba(25,118,210,0.08)',
-                },
-              }}
-            >
-              AI Experience
-            </Button>
-          </Stack>
+          <Button
+            variant="contained"
+            size="large"
+            endIcon={<ArrowForwardIcon sx={{ transform: 'rotate(90deg)' }} />}
+            onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+            disableElevation
+            sx={{
+              mt: 2,
+              fontWeight: 800,
+              px: 5,
+              py: 1.5,
+              fontSize: '1rem',
+              bgcolor: 'white',
+              color: 'grey.900',
+              '&:hover': { bgcolor: 'grey.100' },
+            }}
+          >
+            Get Started
+          </Button>
         </Container>
       </Box>
 
@@ -420,22 +399,22 @@ export default function HomePage() {
       </Box>
 
       {/* ── Features ─────────────────────────────────────────────────────── */}
-      <Box sx={{ py: { xs: 8, md: 12 }, px: 3, bgcolor: 'background.default' }}>
+      <Box id="features" sx={{ py: { xs: 8, md: 12 }, px: 3, bgcolor: 'background.default' }}>
         <Container maxWidth="lg">
           <Typography variant="overline" color="primary" fontWeight={700} display="block" mb={1}>
             What We Built
           </Typography>
           <Typography variant="h4" fontWeight={700} mb={1}>
-            End-to-end application modernization
+            Every piece of the application lifecycle — covered.
           </Typography>
-          <Typography variant="body1" color="text.secondary" mb={6} maxWidth={520}>
-            Three user stories delivered at the hackathon, with a clear roadmap for what comes next.
+          <Typography variant="body1" color="text.secondary" mb={6} maxWidth={560}>
+            From building and distributing application templates to collecting data via wizard, CRM sync, AI chat, or voice — all six features are live and demo-ready.
           </Typography>
 
           <Grid container spacing={3}>
             {FEATURES.map((f) => (
               <Grid key={f.label} size={{ xs: 12, sm: 6, md: 4 }}>
-                <FeatureCard feature={f} />
+                <FeatureCard feature={f} navigate={navigate} />
               </Grid>
             ))}
           </Grid>
@@ -453,6 +432,7 @@ export default function HomePage() {
           <Typography variant="h4" fontWeight={700} mb={6}>
             One schema. Any input. Any carrier.
           </Typography>
+
 
           <Grid container spacing={4}>
             {HOW_IT_WORKS.map((step) => (
@@ -494,8 +474,8 @@ export default function HomePage() {
             See it in action
           </Typography>
           <Typography variant="body1" color="text.secondary" mb={4}>
-            Start with the AI assistant for a conversational demo, or jump straight into the wizard
-            to see the data-driven application engine.
+            Start a conversation with the AI assistant, walk through the guided wizard, or kick off
+            a CRM pre-fill to see the full data pipeline end-to-end.
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
             <Button
@@ -512,7 +492,7 @@ export default function HomePage() {
             <Button
               variant="outlined"
               size="large"
-              endIcon={<FormatListBulletedIcon />}
+              endIcon={<ArrowForwardIcon />}
               onClick={() => navigate('/wizard-v2')}
               color="secondary"
               sx={{
