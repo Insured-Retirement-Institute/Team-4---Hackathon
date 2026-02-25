@@ -8,12 +8,16 @@ import type { PageDefinition } from './applicationDefinition';
 interface WizardSidebarProps {
   pages: PageDefinition[];
   currentStep: number;
+  productName: string;
+  carrier: string;
   isPageComplete: (index: number) => boolean;
   onIntroClick: () => void;
   onPageClick: (index: number) => void;
 }
 
-function WizardSidebar({ pages, currentStep, isPageComplete, onIntroClick, onPageClick }: WizardSidebarProps) {
+const NAV_ITEM_SX = { fontSize: 13 };
+
+function WizardSidebar({ pages, currentStep, productName, carrier, isPageComplete, onIntroClick, onPageClick }: WizardSidebarProps) {
   const reviewStepIndex = pages.length;
   const isIntroActive = currentStep === -1;
   const isIntroComplete = currentStep > -1;
@@ -21,58 +25,65 @@ function WizardSidebar({ pages, currentStep, isPageComplete, onIntroClick, onPag
   return (
     <Box
       sx={{
-        width: 280,
+        width: 260,
+        height: '100%',
         flexShrink: 0,
         display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
         bgcolor: 'primary.dark',
         color: 'primary.contrastText',
-        p: 3,
+        p: 2.5,
+        overflowY: 'auto',
       }}
     >
       <Typography variant="h6" component="h2" fontWeight="bold" color="inherit">
-        Evergreen eApp
+        {carrier}
       </Typography>
       <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mt: 1 }}>
-        Secure Growth Plus wizard
+        {productName}
       </Typography>
 
-      <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.2)' }} />
+      <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.2)' }} />
 
-      <Stack spacing={1.25} sx={{ flex: 1 }}>
+      {/* Scrollable nav items */}
+      <Stack spacing={0.5} sx={{ mx: -0.5, px: 0.5 }}>
+        {/* Intro step */}
         <Box
           onClick={onIntroClick}
           sx={{
-            borderRadius: 2,
-            p: 1.25,
+            borderRadius: 1.5,
+            p: 0.75,
             bgcolor: isIntroActive ? 'rgba(255,255,255,0.15)' : 'transparent',
             cursor: 'pointer',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
           }}
         >
           <Stack direction="row" spacing={1} alignItems="center">
             {isIntroComplete ? (
-              <CheckCircleIcon sx={{ fontSize: 18, color: 'success.light' }} />
+              <CheckCircleIcon sx={{ fontSize: 16, color: 'secondary.light', flexShrink: 0 }} />
             ) : (
               <Box
                 sx={{
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   borderRadius: '50%',
                   border: '2px solid',
-                  borderColor: isIntroActive ? 'success.light' : 'rgba(255,255,255,0.6)',
+                  borderColor: isIntroActive ? 'secondary.light' : 'rgba(255,255,255,0.6)',
+                  flexShrink: 0,
                 }}
               />
             )}
             <Typography
               variant="body2"
-              fontWeight={isIntroActive ? 'bold' : 'medium'}
-              sx={{ color: isIntroActive || isIntroComplete ? 'common.white' : 'rgba(255,255,255,0.8)' }}
+              fontWeight={isIntroActive ? 700 : 400}
+              sx={{ ...NAV_ITEM_SX, color: isIntroActive || isIntroComplete ? 'common.white' : 'rgba(255,255,255,0.8)' }}
             >
-              Fixed Annuity Application
+              {carrier}
             </Typography>
           </Stack>
         </Box>
 
+        {/* Page steps */}
         {pages.map((page, index) => {
           const isActive = currentStep === index;
           const isComplete = isPageComplete(index);
@@ -82,30 +93,32 @@ function WizardSidebar({ pages, currentStep, isPageComplete, onIntroClick, onPag
               key={page.id}
               onClick={() => onPageClick(index)}
               sx={{
-                borderRadius: 2,
-                p: 1.25,
+                borderRadius: 1.5,
+                p: 0.75,
                 bgcolor: isActive ? 'rgba(255,255,255,0.15)' : 'transparent',
                 cursor: 'pointer',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
               }}
             >
               <Stack direction="row" spacing={1} alignItems="center">
                 {isComplete ? (
-                  <CheckCircleIcon sx={{ fontSize: 18, color: 'success.light' }} />
+                  <CheckCircleIcon sx={{ fontSize: 16, color: 'secondary.light', flexShrink: 0 }} />
                 ) : (
                   <Box
                     sx={{
-                      width: 18,
-                      height: 18,
+                      width: 16,
+                      height: 16,
                       borderRadius: '50%',
                       border: '2px solid',
-                      borderColor: isActive ? 'success.light' : 'rgba(255,255,255,0.6)',
+                      borderColor: isActive ? 'secondary.light' : 'rgba(255,255,255,0.6)',
+                      flexShrink: 0,
                     }}
                   />
                 )}
                 <Typography
                   variant="body2"
-                  fontWeight={isActive ? 'bold' : 'medium'}
-                  sx={{ color: isActive || isComplete ? 'common.white' : 'rgba(255,255,255,0.8)' }}
+                  fontWeight={isActive ? 700 : 400}
+                  sx={{ ...NAV_ITEM_SX, color: isActive || isComplete ? 'common.white' : 'rgba(255,255,255,0.8)' }}
                 >
                   {page.title}
                 </Typography>
@@ -114,32 +127,35 @@ function WizardSidebar({ pages, currentStep, isPageComplete, onIntroClick, onPag
           );
         })}
 
+        {/* Review & Submit */}
         <Box
           sx={{
-            borderRadius: 2,
-            p: 1.25,
+            borderRadius: 1.5,
+            p: 0.75,
             bgcolor: currentStep === reviewStepIndex ? 'rgba(255,255,255,0.15)' : 'transparent',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
           }}
         >
           <Stack direction="row" spacing={1} alignItems="center">
             {currentStep > reviewStepIndex ? (
-              <CheckCircleIcon sx={{ fontSize: 18, color: 'success.light' }} />
+              <CheckCircleIcon sx={{ fontSize: 16, color: 'secondary.light', flexShrink: 0 }} />
             ) : (
               <Box
                 sx={{
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   borderRadius: '50%',
                   border: '2px solid',
-                  borderColor:
-                    currentStep === reviewStepIndex ? 'success.light' : 'rgba(255,255,255,0.6)',
+                  borderColor: currentStep === reviewStepIndex ? 'secondary.light' : 'rgba(255,255,255,0.6)',
+                  flexShrink: 0,
                 }}
               />
             )}
             <Typography
               variant="body2"
-              fontWeight={currentStep === reviewStepIndex ? 'bold' : 'medium'}
+              fontWeight={currentStep === reviewStepIndex ? 700 : 400}
               sx={{
+                ...NAV_ITEM_SX,
                 color:
                   currentStep === reviewStepIndex || currentStep > reviewStepIndex
                     ? 'common.white'
@@ -152,8 +168,8 @@ function WizardSidebar({ pages, currentStep, isPageComplete, onIntroClick, onPag
         </Box>
       </Stack>
 
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)' }}>
-        Green themed workflow for advisor-assisted submission
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', mt: 2 }}>
+        Advisor-assisted submission workflow
       </Typography>
     </Box>
   );

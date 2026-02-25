@@ -21,8 +21,8 @@ import { useApplication } from '../context/ApplicationContext';
 import { openWidget } from '../hooks/useWidgetSync';
 import { createSession } from '../services/aiService';
 import {
-  Client,
-  PrefillResult,
+  type Client,
+  type PrefillResult,
   fetchClients,
   runPrefill,
   runPrefillWithDocument,

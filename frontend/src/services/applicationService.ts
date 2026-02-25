@@ -9,6 +9,7 @@ const BASE = 'https://y5s8xyzi3v.us-east-1.awsapprunner.com';
 export interface Product {
   id: string;
   productId: string;
+  productName: string;
   carrier: string;
   description: string;
   version: string;

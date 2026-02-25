@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b \"c:\\\\Users\\\\harryn\\\\source\\\\repos\\\\Team-4---Hackathon\")",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\harryn\\\\source\\\\repos\\\\Team-4---Hackathon\")",
+      "Bash(Select-Object Name)"
+    ]
+  }
+}
