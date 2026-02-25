@@ -181,7 +181,7 @@ async function populatePDFWithMapping(pdfBuffer, submission, mapping) {
     }
   });
   
-  form.flatten();
+  // Do not flatten the form so the output PDF remains fillable
   return await pdfDoc.save();
 }
 
