@@ -21,6 +21,26 @@ const CLIENT_PHONE = '+17042076820';
 const camelToSnake = (s: string) => s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 
+// Aliases mapping CRM field names → product question IDs where automatic
+// camelCase/snake_case conversion doesn't produce the right name.
+const FIELD_ALIASES: Record<string, string[]> = {
+  owner_street_address: ['ownerResidentialAddress'],
+  owner_address_street: ['ownerResidentialAddress'],
+  owner_phone: ['ownerHomePhone', 'ownerDaytimePhone'],
+  owner_ssn: ['ownerTaxId'],
+  owner_ssn_tin: ['ownerTaxId'],
+  owner_middle_initial: ['ownerMiddleName'],
+  owner_date_of_birth: ['ownerDob'],
+  owner_same_as_annuitant: ['isOwnerSameAsAnnuitant'],
+  annuitant_street_address: ['annuitantResidentialAddress'],
+  annuitant_phone: ['annuitantHomePhone', 'annuitantDaytimePhone'],
+  annuitant_ssn: ['annuitantTaxId'],
+  annuitant_middle_initial: ['annuitantMiddleName'],
+  annuitant_us_citizen: ['annuitantCitizenship'],
+  owner_citizenship_status: ['ownerCitizenship'],
+  signed_at_state: ['signedState'],
+};
+
 export default function AIExperiencePage() {
   const navigate = useNavigate();
   const { mergeFields } = useApplication();
@@ -38,12 +58,20 @@ export default function AIExperiencePage() {
   // Compute matched fields when gathered data or definition changes
   const computeMatchedFields = useCallback(
     (fields: Map<string, { value: string; source: string }>, def: ApplicationDefinition) => {
-      // Build lookup with both camelCase and snake_case
+      // Build lookup with camelCase, snake_case, AND explicit aliases
       const lookup: Record<string, { value: string; source: string }> = {};
       for (const [k, v] of fields) {
         lookup[k] = v;
         lookup[snakeToCamel(k)] = v;
         lookup[camelToSnake(k)] = v;
+        // Apply field name aliases
+        const aliases = FIELD_ALIASES[k] ?? FIELD_ALIASES[camelToSnake(k)];
+        if (aliases) {
+          for (const alias of aliases) {
+            lookup[alias] = v;
+            lookup[camelToSnake(alias)] = v;
+          }
+        }
       }
 
       const allQuestions = def.pages.flatMap((p) =>
@@ -103,8 +131,18 @@ export default function AIExperiencePage() {
   // Handle tool calls from chat
   const handleToolCalls = useCallback(
     (tools: ToolCallInfo[]) => {
+      console.log('[AIExperience] handleToolCalls received:', tools.map((t) => ({
+        name: t.name,
+        hasResultData: !!t.result_data,
+        resultDataKeys: t.result_data ? Object.keys(t.result_data).length : 0,
+        sourceLabel: t.source_label,
+      })));
+
       for (const tool of tools) {
-        if (!tool.result_data || !tool.source_label) continue;
+        if (!tool.result_data || !tool.source_label) {
+          console.log(`[AIExperience] Skipping ${tool.name}: result_data=${!!tool.result_data}, source_label=${tool.source_label}`);
+          continue;
+        }
 
         const data = tool.result_data;
         const source = tool.source_label;
@@ -133,6 +171,7 @@ export default function AIExperiencePage() {
           // The call panel handles field extraction
         } else {
           // General case: merge all key-value pairs
+          console.log(`[AIExperience] Merging ${Object.keys(data).length} fields from ${tool.name} (${source}):`, Object.keys(data));
           mergeFieldsFromToolData(data as Record<string, unknown>, source);
         }
       }
@@ -181,10 +220,17 @@ export default function AIExperiencePage() {
   // Launch wizard
   const handleLaunchWizard = useCallback(() => {
     if (!selectedProductId) return;
-    // Normalize fields to camelCase for wizard
+    // Normalize fields to camelCase for wizard, including aliases
     const normalized: Record<string, string> = {};
     for (const [k, entry] of gatheredFields) {
       normalized[snakeToCamel(k)] = entry.value;
+      // Also set aliased names so wizard fields get populated
+      const aliases = FIELD_ALIASES[k] ?? FIELD_ALIASES[camelToSnake(k)];
+      if (aliases) {
+        for (const alias of aliases) {
+          normalized[alias] = entry.value;
+        }
+      }
     }
     mergeFields(normalized);
     navigate(`/wizard-v2/${encodeURIComponent(selectedProductId)}`);

@@ -238,8 +238,19 @@ async def handle_message(
                     parsed = json.loads(raw)
                     if isinstance(parsed, dict) and "error" not in parsed:
                         info["result_data"] = parsed
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                        logger.info(
+                            "Tool %s: surfacing %d fields as result_data",
+                            tc["name"],
+                            len(parsed),
+                        )
+                    else:
+                        logger.warning("Tool %s: parsed result has error or is not dict", tc["name"])
+                except (json.JSONDecodeError, TypeError) as exc:
+                    logger.warning("Tool %s: failed to parse result_data: %s", tc["name"], exc)
+            elif raw:
+                logger.debug("Tool %s: raw result exists but not an advisor tool string", tc["name"])
+            else:
+                logger.warning("Tool %s: no raw result found in tool_results (id=%s)", tc["name"], tc["id"])
             tool_calls_info.append(info)
 
     # Phase transitions
