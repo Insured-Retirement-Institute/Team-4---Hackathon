@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -36,6 +37,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
+// Enable CORS for all routes (allow all origins)
+app.use(cors());
+app.options('*', cors());
 
 // Mount endpoint routes
 app.use(healthRouter);
