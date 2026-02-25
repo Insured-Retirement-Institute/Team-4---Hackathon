@@ -131,9 +131,9 @@ export default function ProductSelectionPage() {
           {!loading && (
             <Grid container spacing={2}>
               {products.map((product) => {
-                const isSelected = selected?.id === product.id;
+                const isSelected = selected?.productId === product.productId;
                 return (
-                  <Grid key={product.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Grid key={product.productId} size={{ xs: 12, sm: 6, md: 4 }}>
                     <Card
                       elevation={0}
                       sx={{
