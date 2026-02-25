@@ -115,6 +115,13 @@ Set `VITE_AI_SERVICE_URL=http://localhost:8001` to connect the frontend to local
 - Open the returned `signingUrl` in a new tab/window
 - The DocuSign return page (`/docusign/return`) is currently a placeholder
 
+### Local DocuSign test (Wizard V2)
+
+1. Start the backend on port 3001 and the frontend on port 5173 (`npm run dev`).
+2. In the Wizard V2 **Review & Submit** step, click **Sign with DocuSign**.
+3. Complete signing in the new tab that opens.
+4. Verify the redirect to `/docusign/return`.
+
 ## Quick Start
 
 ```bash
