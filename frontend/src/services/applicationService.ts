@@ -44,7 +44,7 @@ export async function getApplication(productId: string, locale = 'en-US'): Promi
   return res.json();
 }
 
-// ── POST /application/:applicationId/validate ─────────────────────────────────
+// ── POST /applications/:applicationId/validate ────────────────────────────────
 
 export interface ValidationRequest {
   productId: string;
@@ -78,7 +78,7 @@ export async function validateApplication(
   const params = new URLSearchParams({ scope });
   if (scope === 'page' && pageId) params.set('pageId', pageId);
 
-  const res = await fetch(`${BASE}/application/${encodeURIComponent(applicationId)}/validate?${params}`, {
+  const res = await fetch(`${BASE}/applications/${encodeURIComponent(applicationId)}/validate?${params}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -92,7 +92,7 @@ export async function validateApplication(
   return res.json();
 }
 
-// ── POST /application/:applicationId/submit ───────────────────────────────────
+// ── POST /applications/:applicationId/submit ──────────────────────────────────
 
 export type SubmissionSource = 'web' | 'mobile' | 'ai_agent' | 'phone';
 
@@ -122,7 +122,7 @@ export async function submitApplication(
   applicationId: string,
   body: SubmissionRequest,
 ): Promise<SubmissionResponse> {
-  const res = await fetch(`${BASE}/application/${encodeURIComponent(applicationId)}/submit`, {
+  const res = await fetch(`${BASE}/applications/${encodeURIComponent(applicationId)}/submit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

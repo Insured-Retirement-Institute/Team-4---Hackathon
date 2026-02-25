@@ -88,7 +88,7 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 
 **Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client`, `lookup_prior_policies`, `lookup_annual_statements`, `extract_document_fields`, `get_advisor_preferences`, `get_carrier_suitability` tools → returns `known_data` (including suitability score/rating and advisor recommendations) → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
 
-**Application persistence flow:** Frontend `ProductSelectionPage` fetches `GET /products` → user picks product → `POST /applications` creates DynamoDB record → wizard saves progress to localStorage via `applicationStorageService` → on submit, `POST /application/:applicationId/submit` runs 5-step pipeline (validate → transform → business rules → persist to Submissions table → mark submitted). Resume via `/wizard-v2/:productId?resume=<id>`.
+**Application persistence flow:** Frontend `ProductSelectionPage` fetches `GET /products` → user picks product → `POST /applications` creates DynamoDB record → wizard saves progress to localStorage via `applicationStorageService` → on submit, `POST /applications/:applicationId/submit` runs 5-step pipeline (validate → transform → business rules → persist to Submissions table → mark submitted). Resume via `/wizard-v2/:productId?resume=<id>`.
 
 **State hub:** `ApplicationContext.tsx` holds `collectedFields`, `sessionId`, `phase`, and step progress shared across wizard and chat.
 

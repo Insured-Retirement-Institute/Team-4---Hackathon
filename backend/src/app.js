@@ -28,9 +28,9 @@ const productRoutes = require('./routes/products');
 const applicationsRoutes = require('./routes/applications');
 const distributorRoutes = require('./routes/distributors');
 
-app.use('/application', docusignRoutes);
-app.use('/application', validationRoutes);
-app.use('/application', submissionRoutes);
+app.use('/applications', docusignRoutes);
+app.use('/applications', validationRoutes);
+app.use('/applications', submissionRoutes);
 app.use('/products', productRoutes);
 app.use('/applications', applicationsRoutes);
 app.use('/distributors', distributorRoutes);
