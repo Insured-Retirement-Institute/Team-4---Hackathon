@@ -76,8 +76,12 @@ All routes under `/api/v1/`:
 | GET | `/demo/midland-schema` | Fetch adapted product schema |
 | GET | `/prefill/clients` | List CRM clients for dropdown selection |
 | POST | `/prefill` | Run pre-fill agent for a CRM client (`{client_id, advisor_id?}` in body) |
+| POST | `/prefill/stream` | SSE streaming pre-fill agent — same as `/prefill` but returns `text/event-stream` with real-time tool call events |
 | POST | `/prefill/document` | Run pre-fill agent with uploaded document (multipart form: `file` + optional `client_id`) |
 | WS | `/sessions/{id}/voice` | Real-time voice conversation via Nova Sonic (WebSocket) |
+| POST | `/retell/calls` | Initiate Retell outbound call (`{to_number, missing_fields, client_name, advisor_name}`) |
+| GET | `/retell/calls/{id}` | Poll call status (checks webhook cache, falls back to Retell API) |
+| POST | `/retell/webhook` | Retell webhook handler (`call_started`, `call_ended`, `call_analyzed` events) |
 | GET | `/health` | Health check |
 
 ## Nova Sonic Voice Integration
@@ -98,7 +102,7 @@ All routes under `/api/v1/`:
 
 **Config:** `NOVA_SONIC_MODEL` (default `amazon.nova-sonic-v1:0`), `NOVA_SONIC_VOICE` (default `tiffany`, options: matthew, tiffany, amy, lupe, carlos). Reuses existing AWS credentials.
 
-**Frontend integration (not yet built):** Browser needs `getUserMedia()` for mic (16kHz PCM mono), `AudioContext` for playback (24kHz). `field_update` messages fire the same `iri:field_updated` CustomEvents as text chat for wizard sync.
+**Frontend integration:** `useVoiceConnection` hook handles `getUserMedia()` for mic (16kHz PCM mono), `AudioContext` for playback (24kHz), WebSocket messaging. `VoicePanel` component renders mic button with pulse animation and scrolling transcript. `field_update` messages fire `iri:field_updated` CustomEvents for wizard sync.
 
 ## Pre-Fill Agent
 
@@ -115,6 +119,8 @@ All routes under `/api/v1/`:
 - `report_prefill_results` — Terminal tool, returns combined `{known_data, sources_used, fields_found, summary}`
 
 **Agent loop:** `run_prefill_agent(client_id, document_base64, document_media_type, advisor_id)` — up to 10 iterations with `force_tool=True`. Terminates when `report_prefill_results` is called. Uses same `LLMService.chat()` and `extract_tool_calls()` as the conversation flow.
+
+**Streaming agent loop:** `run_prefill_agent_stream(...)` — async generator wrapping the same agent loop. Yields SSE event dicts at each step: `agent_start` (beginning), `tool_start` (before each tool execution, with display name/description), `tool_result` (after each tool, with `fields_extracted`, `duration_ms`), `agent_complete` (final results with `known_data`, `sources_used`, `total_duration_ms`). Used by `POST /prefill/stream` via `StreamingResponse`. `TOOL_DESCRIPTIONS` dict maps tool names to human-readable descriptions for the frontend log UI.
 
 **Data sources** (`app/services/datasources/`):
 - `RedtailClient` — Async HTTP client for Redtail CRM API. Two-step auth (Basic → UserKey with 1hr cache), 401 retry, typed methods for contacts/addresses/phones/emails/notes/family.
@@ -167,6 +173,9 @@ All routes under `/api/v1/`:
 | `NOVA_SONIC_MODEL` | `amazon.nova-sonic-v1:0` | Nova Sonic model ID for voice |
 | `NOVA_SONIC_VOICE` | `tiffany` | Voice ID (matthew, tiffany, amy, lupe, carlos) |
 | `PORT` | `8000` | Use 8001 locally to avoid conflicts |
+| `RETELL_API_KEY` | — | Retell AI API key. Falls back to SSM Parameter Store if missing. |
+| `RETELL_AGENT_ID` | — | Retell agent ID (from `setup_retell.py`) |
+| `RETELL_PHONE_NUMBER` | — | Retell outbound phone number (from `setup_retell.py`) |
 
 ## Key Files
 
@@ -180,7 +189,7 @@ All routes under `/api/v1/`:
 | `app/services/tool_adapter.py` | Anthropic → Nova Sonic tool format converter (`input_schema` → `toolSpec.inputSchema.json`) |
 | `app/routes/voice.py` | WebSocket `/sessions/{id}/voice` — two async tasks for bidirectional audio + tool events |
 | `app/services/schema_adapter.py` | eApp JSON → internal question format |
-| `app/services/prefill_agent.py` | LLM-orchestrated pre-fill agent: tool defs, agent loop, source execution |
+| `app/services/prefill_agent.py` | LLM-orchestrated pre-fill agent: tool defs, agent loop, SSE streaming generator, source execution |
 | `app/services/datasources/redtail_client.py` | Async HTTP client for Redtail CRM API: two-step auth, UserKey caching, typed API methods |
 | `app/services/datasources/redtail_crm.py` | Live Redtail CRM DataSource: `list_clients()`, `query()` with field mapping, `get_notes()` with HTML stripping |
 | `app/services/datasources/mock_redtail.py` | Legacy mock CRM (4 hardcoded clients, kept for reference) |
@@ -189,7 +198,10 @@ All routes under `/api/v1/`:
 | `app/services/datasources/s3_advisor_prefs.py` | S3 advisor preference profile fetcher |
 | `app/services/datasources/s3_suitability.py` | S3 carrier suitability guidelines + weighted scoring engine |
 | `app/services/datasources/base.py` | Abstract `DataSource` interface |
-| `app/routes/prefill.py` | Pre-fill endpoints: client list, CRM prefill (with optional advisor_id), document prefill |
+| `app/routes/prefill.py` | Pre-fill endpoints: client list, CRM prefill (with optional advisor_id), SSE streaming prefill, document prefill |
 | `app/models/conversation.py` | Enums, TrackedField, ConversationState, condition evaluator |
 | `app/prompts/system_prompt.py` | Phase-aware system prompt builder |
-| `app/config.py` | Pydantic settings |
+| `app/services/retell_service.py` | Retell AI API wrapper: `create_outbound_call()`, `get_call()` via httpx |
+| `app/routes/retell.py` | Retell endpoints: initiate call, poll status, webhook handler. In-memory `_call_results` cache |
+| `scripts/setup_retell.py` | One-time Retell setup: create LLM config, agent, buy phone number |
+| `app/config.py` | Pydantic settings (includes Retell + Redtail + AWS + Nova Sonic) |

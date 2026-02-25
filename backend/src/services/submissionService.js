@@ -3,6 +3,7 @@ const {
   GetCommand,
   PutCommand,
   QueryCommand,
+  UpdateCommand,
 } = require('@aws-sdk/lib-dynamodb');
 const { docClient } = require('../config/dynamodb');
 
@@ -47,8 +48,37 @@ async function getSubmissionsByApplicationId(applicationId) {
   return result.Items || [];
 }
 
+async function updateSubmissionCarrierResponse(id, carrierResponse) {
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { id },
+      UpdateExpression:
+        'SET #status = :status, #carrierSubmissionId = :csid, #policyNumber = :pn, #carrierReceivedAt = :cra, #updatedAt = :now',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+        '#carrierSubmissionId': 'carrierSubmissionId',
+        '#policyNumber': 'policyNumber',
+        '#carrierReceivedAt': 'carrierReceivedAt',
+        '#updatedAt': 'updatedAt',
+      },
+      ExpressionAttributeValues: {
+        ':status': 'carrier_accepted',
+        ':csid': carrierResponse.submissionId,
+        ':pn': carrierResponse.policyNumber,
+        ':cra': carrierResponse.received || new Date().toISOString(),
+        ':now': new Date().toISOString(),
+      },
+      ConditionExpression: 'attribute_exists(id)',
+      ReturnValues: 'ALL_NEW',
+    })
+  );
+  return result.Attributes;
+}
+
 module.exports = {
   createSubmission,
   getSubmissionById,
   getSubmissionsByApplicationId,
+  updateSubmissionCarrierResponse,
 };

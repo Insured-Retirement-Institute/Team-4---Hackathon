@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const {
+  ScanCommand,
   GetCommand,
   PutCommand,
   UpdateCommand,
@@ -72,9 +73,40 @@ async function updateApplicationStatus(id, status) {
   return result.Attributes;
 }
 
+async function updateApplicationCarrierData(id, carrierData) {
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { id },
+      UpdateExpression:
+        'SET #submissionId = :sid, #policyNumber = :pn, #updatedAt = :now',
+      ExpressionAttributeNames: {
+        '#submissionId': 'submissionId',
+        '#policyNumber': 'policyNumber',
+        '#updatedAt': 'updatedAt',
+      },
+      ExpressionAttributeValues: {
+        ':sid': carrierData.submissionId,
+        ':pn': carrierData.policyNumber,
+        ':now': new Date().toISOString(),
+      },
+      ConditionExpression: 'attribute_exists(id)',
+      ReturnValues: 'ALL_NEW',
+    })
+  );
+  return result.Attributes;
+}
+
+async function getAllApplications() {
+  const result = await docClient.send(new ScanCommand({ TableName: TABLE_NAME }));
+  return result.Items || [];
+}
+
 module.exports = {
+  getAllApplications,
   createApplication,
   getApplicationById,
   updateApplicationAnswers,
   updateApplicationStatus,
+  updateApplicationCarrierData,
 };

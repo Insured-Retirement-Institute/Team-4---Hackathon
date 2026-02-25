@@ -622,6 +622,26 @@ paths:
   # ── Applications ─────────────────────────────────────────
 
   /applications:
+    get:
+      tags:
+        - Applications
+      summary: List all applications
+      operationId: listApplications
+      responses:
+        '200':
+          description: Array of all application records.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApplicationInstance'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
         - Applications
@@ -2615,6 +2635,12 @@ components:
           enum:
             - in_progress
             - submitted
+        submissionId:
+          type: string
+          description: Carrier submission ID, set after successful submission.
+        policyNumber:
+          type: string
+          description: Carrier policy number, set after successful submission.
         createdAt:
           type: string
         updatedAt:

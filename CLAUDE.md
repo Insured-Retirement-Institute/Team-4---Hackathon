@@ -26,6 +26,7 @@ Each service has its own `CLAUDE.md` with service-specific details.
 
 - `/` — Landing page with feature overview, recent applications, CTAs to wizard, AI chat, and CRM pre-fill
 - `/prefill` — Pre-fill page: select CRM client or upload document → AI agent gathers data → start session
+- `/ai-experience` — Voice-first AI Experience: select advisor + client + product → voice session (Nova Sonic) + SSE data gathering → gap review with field matching → Retell AI outbound call to client for missing fields → launch application
 - `/wizard-v2` — Product selection → dynamic form wizard (data-driven from product JSON)
 - `/wizard-v2/:productId` — Wizard for a specific product (supports `?resume=<id>` for saved applications)
 - `/applications` — Application history: list saved/submitted applications, resume or delete
@@ -90,6 +91,10 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 
 **Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client` (live Redtail API), `lookup_crm_notes` (meeting transcripts — LLM extracts financial data), `lookup_prior_policies` (fallback), `lookup_annual_statements`, `extract_document_fields`, `get_advisor_preferences`, `get_carrier_suitability` tools → returns `known_data` (including suitability score/rating and advisor recommendations) → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
 
+**AI Experience flow (voice-first, 5 stages):** Frontend `/ai-experience` page → select advisor profile + CRM client + product → **setup** stage. "Start with Voice" creates a session + opens Nova Sonic WebSocket AND starts SSE prefill stream simultaneously → **voice_active** stage shows VoicePanel (mic + transcript) + agent log + field accumulator. On `agent_complete` → **gap_review** stage shows summary bar + field matching table (filled vs missing). "Call Client to Fill Gaps" initiates Retell AI outbound call → **client_call** stage shows RetellCallPanel (status, timer, live transcript, extracted fields) + field matching table updating live. On call completion, extracted fields merge into `known_data` → **results** stage with final summary, field matching, and actions: "Start Application" (creates session + opens widget), "Open in Wizard" (navigates to wizard), "Call Client Again" (if fields still missing), "Run Again" (reset).
+
+**Retell AI outbound call flow:** Frontend `POST /api/v1/retell/calls` with `{to_number, missing_fields, client_name, advisor_name}` → AI service calls Retell API to initiate outbound call with dynamic variables (missing fields prompt, names) → Retell agent (voice: 11labs-Adrian) calls client, collects missing field values conversationally → frontend polls `GET /api/v1/retell/calls/{id}` every 3s for status + live transcript → on call completion, Retell post-call analysis extracts `collected_fields` as JSON → webhook `POST /api/v1/retell/webhook` caches results → frontend merges extracted fields into gathered data.
+
 **Application persistence flow:** Frontend `ProductSelectionPage` fetches `GET /products` → user picks product → `POST /applications` creates DynamoDB record → wizard saves progress to localStorage via `applicationStorageService` → on submit, `POST /applications/:applicationId/submit` runs 5-step pipeline (validate → transform → business rules → persist to Submissions table → mark submitted). Resume via `/wizard-v2/:productId?resume=<id>`.
 
 **State hub:** `ApplicationContext.tsx` holds `collectedFields`, `sessionId`, `phase`, and step progress shared across wizard and chat.
@@ -102,6 +107,7 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 - AWS credentials must be explicitly passed to `AnthropicBedrock()` — system creds resolve to a different account
 - Product IDs: Midland National `midland-fixed-annuity-001`, Aspida `aspida-myga-001`, EquiTrust `certainty-select`
 - S3 bucket `iri-hackathon-statements` stores annual statements (`statements/`), advisor profiles (`advisors/`), and carrier suitability guidelines (`suitability/`)
+- Retell AI: Agent ID `agent_a4375e256ad8942382840b4c22`, Phone `+19802528898`, LLM ID `llm_04f164a3d7d67767ba9dc84798e2`. Creds in SSM or `ai-service/.env`.
 
 ## AWS Resources
 

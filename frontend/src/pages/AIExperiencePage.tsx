@@ -21,9 +21,10 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import MicIcon from '@mui/icons-material/Mic';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
+import PhoneIcon from '@mui/icons-material/Phone';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PolicyIcon from '@mui/icons-material/Policy';
 import ReplayIcon from '@mui/icons-material/Replay';
 import SummarizeIcon from '@mui/icons-material/Summarize';
@@ -33,6 +34,8 @@ import { useApplication } from '../context/ApplicationContext';
 import { openWidget } from '../hooks/useWidgetSync';
 import { createSession } from '../services/aiService';
 import { getProducts, getApplication, type Product } from '../services/apiService';
+import VoicePanel from '../components/VoicePanel';
+import RetellCallPanel from '../components/RetellCallPanel';
 import type { ApplicationDefinition } from '../types/application';
 import {
   type Client,
@@ -43,7 +46,7 @@ import {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Stage = 'setup' | 'running' | 'results';
+type Stage = 'setup' | 'voice_active' | 'gap_review' | 'client_call' | 'results';
 
 interface ToolLogEntry {
   name: string;
@@ -81,6 +84,8 @@ const ADVISORS = [
   { id: 'advisor_002', label: 'Michael Rodriguez — Balanced' },
   { id: 'advisor_003', label: 'Jennifer Park — Accumulation' },
 ];
+
+const CLIENT_PHONE = '+17042076820';
 
 // ── Elapsed timer hook ───────────────────────────────────────────────────────
 
@@ -143,6 +148,90 @@ function ToolLogItem({ entry, now }: { entry: ToolLogEntry; now: number }) {
   );
 }
 
+// ── Field matching table ─────────────────────────────────────────────────────
+
+function FieldMatchingTable({ matchedFields, products, productId }: {
+  matchedFields: MatchedField[];
+  products: Product[];
+  productId: string;
+}) {
+  const filledCount = matchedFields.filter((f) => f.filled).length;
+  const totalCount = matchedFields.length;
+  const filledPct = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
+
+  const fieldsByPage: Record<string, MatchedField[]> = {};
+  for (const f of matchedFields) {
+    (fieldsByPage[f.pageTitle] ??= []).push(f);
+  }
+
+  if (matchedFields.length === 0) return null;
+
+  return (
+    <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+        <Typography variant="subtitle1" fontWeight={700}>
+          Field Matching — {products.find((p) => p.productId === productId)?.productName ?? productId}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {filledCount} of {totalCount} fields pre-filled ({filledPct}%)
+        </Typography>
+      </Stack>
+      <LinearProgress
+        variant="determinate"
+        value={filledPct}
+        color="secondary"
+        sx={{ height: 8, borderRadius: 4, mb: 3 }}
+      />
+
+      {Object.entries(fieldsByPage).map(([pageTitle, fields]) => {
+        const pageFilled = fields.filter((f) => f.filled).length;
+        return (
+          <Box key={pageTitle} sx={{ mb: 3 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+              <Typography variant="subtitle2" fontWeight={700}>{pageTitle}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {pageFilled}/{fields.length}
+              </Typography>
+            </Stack>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+              {fields.map((f) => (
+                <Box
+                  key={f.id}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    px: 1.5,
+                    py: 0.75,
+                    borderRadius: 1,
+                    bgcolor: f.filled ? 'rgba(102,187,106,0.06)' : 'rgba(255,152,0,0.04)',
+                    border: '1px solid',
+                    borderColor: f.filled ? 'rgba(102,187,106,0.2)' : 'rgba(255,152,0,0.15)',
+                  }}
+                >
+                  {f.filled ? (
+                    <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main', flexShrink: 0 }} />
+                  ) : (
+                    <ErrorOutlineIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
+                  )}
+                  <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary' }}>{f.label}</Typography>
+                  {f.filled ? (
+                    <Typography variant="caption" fontWeight={600} sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {f.value}
+                    </Typography>
+                  ) : (
+                    <Typography variant="caption" sx={{ color: 'warning.main', fontStyle: 'italic' }}>Missing</Typography>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        );
+      })}
+    </Paper>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function AIExperiencePage() {
@@ -156,14 +245,18 @@ export default function AIExperiencePage() {
   const [advisorId, setAdvisorId] = useState('advisor_001');
   const [productId, setProductId] = useState('midland-fixed-annuity-001');
 
-  // Running state
+  // Stage state
   const [stage, setStage] = useState<Stage>('setup');
   const [toolLog, setToolLog] = useState<ToolLogEntry[]>([]);
   const [gatheredFields, setGatheredFields] = useState<Record<string, string>>({});
   const [now, setNow] = useState(Date.now());
   const logEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const elapsed = useElapsed(stage === 'running');
+  const sseStartedRef = useRef(false);
+  const elapsed = useElapsed(stage === 'voice_active');
+
+  // Voice session
+  const [voiceSessionId, setVoiceSessionId] = useState<string | null>(null);
 
   // Results state
   const [finalResult, setFinalResult] = useState<StreamEvent | null>(null);
@@ -179,7 +272,7 @@ export default function AIExperiencePage() {
 
   // Tick timer for running tool entries
   useEffect(() => {
-    if (stage !== 'running') return;
+    if (stage !== 'voice_active') return;
     const interval = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(interval);
   }, [stage]);
@@ -189,24 +282,30 @@ export default function AIExperiencePage() {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [toolLog]);
 
-  // Load product definition when results arrive
+  // Compute matched fields whenever we have results + definition
+  const computeMatchedFields = useCallback((knownData: Record<string, string>, def: ApplicationDefinition) => {
+    const allQuestions = def.pages.flatMap((p) =>
+      p.questions.map((q) => ({ ...q, pageTitle: p.title })),
+    );
+    const matched = allQuestions.map((q) => ({
+      id: q.id,
+      label: q.label,
+      pageTitle: q.pageTitle,
+      value: knownData[q.id] ?? null,
+      filled: q.id in knownData,
+    }));
+    setMatchedFields(matched);
+  }, []);
+
+  // Load product definition on gap_review or results
   useEffect(() => {
-    if (stage !== 'results' || !finalResult?.known_data) return;
+    if (stage !== 'gap_review' && stage !== 'results') return;
+    if (!finalResult?.known_data) return;
     getApplication(productId).then((def) => {
       setDefinition(def);
-      const allQuestions = def.pages.flatMap((p) =>
-        p.questions.map((q) => ({ ...q, pageTitle: p.title })),
-      );
-      const matched = allQuestions.map((q) => ({
-        id: q.id,
-        label: q.label,
-        pageTitle: q.pageTitle,
-        value: finalResult.known_data![q.id] ?? null,
-        filled: q.id in finalResult.known_data!,
-      }));
-      setMatchedFields(matched);
+      computeMatchedFields(finalResult.known_data as Record<string, string>, def);
     }).catch(console.error);
-  }, [stage, finalResult, productId]);
+  }, [stage, finalResult, productId, computeMatchedFields]);
 
   const handleEvent = useCallback((event: StreamEvent) => {
     if (event.type === 'tool_start') {
@@ -234,20 +333,50 @@ export default function AIExperiencePage() {
       }
     } else if (event.type === 'agent_complete') {
       setFinalResult(event);
-      setStage('results');
+      setStage('gap_review');
     }
   }, []);
 
-  const handleRun = useCallback(() => {
-    if (!selectedClient) return;
-    setStage('running');
+  // Start SSE prefill when client is selected during voice_active stage
+  const startSSEIfReady = useCallback((client: Client) => {
+    if (sseStartedRef.current) return;
+    sseStartedRef.current = true;
+    abortRef.current = runPrefillStream(client.client_id, advisorId, handleEvent);
+  }, [advisorId, handleEvent]);
+
+  // When client selection changes during voice_active, kick off SSE
+  useEffect(() => {
+    if (stage === 'voice_active' && selectedClient && !sseStartedRef.current) {
+      startSSEIfReady(selectedClient);
+    }
+  }, [stage, selectedClient, startSSEIfReady]);
+
+  const handleStartVoice = useCallback(async () => {
+    // Reset state
     setToolLog([]);
     setGatheredFields({});
     setFinalResult(null);
     setMatchedFields([]);
     setDefinition(null);
-    abortRef.current = runPrefillStream(selectedClient.client_id, advisorId, handleEvent);
-  }, [selectedClient, advisorId, handleEvent]);
+    sseStartedRef.current = false;
+
+    // Create a voice session
+    try {
+      const session = await createSession(productId);
+      setVoiceSessionId(session.session_id);
+    } catch (err) {
+      console.error('Failed to create voice session:', err);
+    }
+
+    // Transition to voice_active
+    setStage('voice_active');
+
+    // If client already selected, start SSE immediately
+    if (selectedClient) {
+      sseStartedRef.current = true;
+      abortRef.current = runPrefillStream(selectedClient.client_id, advisorId, handleEvent);
+    }
+  }, [selectedClient, advisorId, productId, handleEvent]);
 
   const handleStartApplication = useCallback(async () => {
     if (!finalResult?.known_data) return;
@@ -274,17 +403,32 @@ export default function AIExperiencePage() {
     setFinalResult(null);
     setMatchedFields([]);
     setDefinition(null);
+    setVoiceSessionId(null);
+    sseStartedRef.current = false;
   }, []);
 
-  const filledCount = matchedFields.filter((f) => f.filled).length;
-  const totalCount = matchedFields.length;
-  const filledPct = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
+  const handleCallFieldsExtracted = useCallback((fields: Record<string, string>) => {
+    setGatheredFields((prev) => ({ ...prev, ...fields }));
+    setFinalResult((prev) => {
+      if (!prev?.known_data) return prev;
+      return {
+        ...prev,
+        known_data: { ...prev.known_data, ...fields },
+        fields_found: (prev.fields_found ?? 0) + Object.keys(fields).length,
+      };
+    });
+  }, []);
 
-  // Group matched fields by page
-  const fieldsByPage: Record<string, MatchedField[]> = {};
-  for (const f of matchedFields) {
-    (fieldsByPage[f.pageTitle] ??= []).push(f);
-  }
+  const handleCallComplete = useCallback(() => {
+    if (finalResult?.known_data && definition) {
+      const merged = { ...finalResult.known_data, ...gatheredFields };
+      computeMatchedFields(merged, definition);
+    }
+    setStage('results');
+  }, [finalResult, definition, gatheredFields, computeMatchedFields]);
+
+  const missingFields = matchedFields.filter((f) => !f.filled).map((f) => ({ id: f.id, label: f.label }));
+  const advisorLabel = ADVISORS.find((a) => a.id === advisorId)?.label ?? advisorId;
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -296,7 +440,7 @@ export default function AIExperiencePage() {
             <Typography variant="h5" fontWeight={700}>AI Experience</Typography>
           </Stack>
           <Typography variant="body2" sx={{ color: 'grey.400' }}>
-            Watch an AI agent gather client data from CRM, meeting notes, annual statements, and more — then see how it maps to the application.
+            Voice-first advisor experience: pick your advisor, start talking, and watch the AI gather client data in real-time.
           </Typography>
         </Container>
       </Box>
@@ -307,46 +451,16 @@ export default function AIExperiencePage() {
           {/* ── SETUP STAGE ─────────────────────────────────────────────── */}
           {stage === 'setup' && (
             <Box>
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
+              <Grid container spacing={3} justifyContent="center">
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography variant="overline" color="primary" fontWeight={700}>Advisor Profile</Typography>
+                      <Typography variant="overline" color="primary" fontWeight={700}>Who are you today?</Typography>
                       <FormControl fullWidth sx={{ mt: 1.5 }}>
                         <InputLabel>Advisor</InputLabel>
                         <Select value={advisorId} label="Advisor" onChange={(e) => setAdvisorId(e.target.value)}>
                           {ADVISORS.map((a) => (
                             <MenuItem key={a.id} value={a.id}>{a.label}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="overline" color="primary" fontWeight={700}>CRM Client</Typography>
-                      <Autocomplete
-                        sx={{ mt: 1.5 }}
-                        options={clients}
-                        getOptionLabel={(o) => o.display_name}
-                        value={selectedClient}
-                        onChange={(_, v) => setSelectedClient(v)}
-                        renderInput={(params) => <TextField {...params} label="Select client" />}
-                      />
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="overline" color="primary" fontWeight={700}>Product</Typography>
-                      <FormControl fullWidth sx={{ mt: 1.5 }}>
-                        <InputLabel>Product</InputLabel>
-                        <Select value={productId} label="Product" onChange={(e) => setProductId(e.target.value)}>
-                          {products.map((p) => (
-                            <MenuItem key={p.productId} value={p.productId}>{p.productName}</MenuItem>
                           ))}
                         </Select>
                       </FormControl>
@@ -361,80 +475,132 @@ export default function AIExperiencePage() {
                   size="large"
                   color="secondary"
                   disableElevation
-                  startIcon={<PlayArrowIcon />}
-                  disabled={!selectedClient}
-                  onClick={handleRun}
-                  sx={{ fontWeight: 700, px: 6, py: 1.5, fontSize: '1.1rem' }}
+                  startIcon={<MicIcon />}
+                  onClick={handleStartVoice}
+                  sx={{ fontWeight: 700, px: 6, py: 2, fontSize: '1.2rem', borderRadius: 3 }}
                 >
-                  Run AI Agent
+                  Start Voice Session
                 </Button>
-                {!selectedClient && (
-                  <Typography variant="caption" display="block" color="text.secondary" mt={1}>
-                    Select a CRM client to get started
-                  </Typography>
-                )}
+                <Typography variant="body2" color="text.secondary" mt={2}>
+                  Tell the AI which client you'd like to discuss today
+                </Typography>
               </Box>
             </Box>
           )}
 
-          {/* ── RUNNING STAGE ───────────────────────────────────────────── */}
-          {stage === 'running' && (
-            <Grid container spacing={3}>
-              {/* Left: Live Agent Log */}
-              <Grid size={{ xs: 12, md: 7 }}>
-                <Paper sx={{ bgcolor: 'grey.900', borderRadius: 2, overflow: 'hidden', height: 480, display: 'flex', flexDirection: 'column' }}>
-                  <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="subtitle2" sx={{ color: 'grey.300', fontFamily: 'monospace' }}>
-                      Agent Log
+          {/* ── VOICE ACTIVE STAGE ──────────────────────────────────────── */}
+          {stage === 'voice_active' && (
+            <Box>
+              {/* Voice Panel — always visible */}
+              <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', height: 300 }}>
+                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Voice Session — {advisorLabel}
+                  </Typography>
+                  {!selectedClient && (
+                    <Typography variant="caption" color="warning.main">
+                      Tell the AI which client, or select below
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'secondary.main', fontFamily: 'monospace', fontWeight: 700 }}>
-                      {(elapsed / 1000).toFixed(1)}s elapsed
-                    </Typography>
-                  </Box>
-                  <Box sx={{ flex: 1, overflowY: 'auto', py: 1 }}>
-                    {toolLog.map((entry, i) => (
-                      <ToolLogItem key={`${entry.name}-${i}`} entry={entry} now={now} />
-                    ))}
-                    <div ref={logEndRef} />
-                  </Box>
-                </Paper>
-              </Grid>
+                  )}
+                </Box>
+                <VoicePanel sessionId={voiceSessionId} />
+              </Paper>
 
-              {/* Right: Field Accumulator */}
-              <Grid size={{ xs: 12, md: 5 }}>
-                <Paper sx={{ bgcolor: 'grey.50', borderRadius: 2, height: 480, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="subtitle2" fontWeight={700}>Fields Gathered</Typography>
-                    <Chip label={Object.keys(gatheredFields).length} size="small" color="secondary" sx={{ fontWeight: 700 }} />
-                  </Box>
-                  <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
-                    {Object.keys(gatheredFields).length === 0 ? (
-                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
-                        Waiting for agent to extract fields...
-                      </Typography>
-                    ) : (
-                      <Stack spacing={0.75}>
-                        {Object.entries(gatheredFields).map(([k, v]) => (
-                          <Box key={k} sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
-                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', minWidth: 160, flexShrink: 0 }}>
-                              {k}
-                            </Typography>
-                            <Typography variant="body2" fontWeight={600} sx={{ wordBreak: 'break-word' }}>
-                              {String(v).slice(0, 60)}
-                            </Typography>
-                          </Box>
+              {/* Client selector — shown until client is picked */}
+              {!sseStartedRef.current && (
+                <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                    Or select a CRM client to start data gathering:
+                  </Typography>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Autocomplete
+                      sx={{ flex: 1, maxWidth: 400 }}
+                      options={clients}
+                      getOptionLabel={(o) => o.display_name}
+                      value={selectedClient}
+                      onChange={(_, v) => setSelectedClient(v)}
+                      renderInput={(params) => <TextField {...params} label="Select client" size="small" />}
+                    />
+                    <FormControl sx={{ minWidth: 200 }}>
+                      <InputLabel size="small">Product</InputLabel>
+                      <Select value={productId} label="Product" size="small" onChange={(e) => setProductId(e.target.value)}>
+                        {products.map((p) => (
+                          <MenuItem key={p.productId} value={p.productId}>{p.productName}</MenuItem>
                         ))}
-                      </Stack>
-                    )}
-                  </Box>
+                      </Select>
+                    </FormControl>
+                  </Stack>
                 </Paper>
-              </Grid>
-            </Grid>
+              )}
+
+              {/* Agent Log + Field Accumulator — shown once SSE is running */}
+              {sseStartedRef.current && (
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 7 }}>
+                    <Paper sx={{ bgcolor: 'grey.900', borderRadius: 2, overflow: 'hidden', height: 400, display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="subtitle2" sx={{ color: 'grey.300', fontFamily: 'monospace' }}>
+                          Agent Log — {selectedClient?.display_name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'secondary.main', fontFamily: 'monospace', fontWeight: 700 }}>
+                          {(elapsed / 1000).toFixed(1)}s elapsed
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, overflowY: 'auto', py: 1 }}>
+                        {toolLog.map((entry, i) => (
+                          <ToolLogItem key={`${entry.name}-${i}`} entry={entry} now={now} />
+                        ))}
+                        <div ref={logEndRef} />
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, md: 5 }}>
+                    <Paper sx={{ bgcolor: 'grey.50', borderRadius: 2, height: 400, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="subtitle2" fontWeight={700}>Fields Gathered</Typography>
+                        <Chip label={Object.keys(gatheredFields).length} size="small" color="secondary" sx={{ fontWeight: 700 }} />
+                      </Box>
+                      <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+                        {Object.keys(gatheredFields).length === 0 ? (
+                          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
+                            Waiting for agent to extract fields...
+                          </Typography>
+                        ) : (
+                          <Stack spacing={0.75}>
+                            {Object.entries(gatheredFields).map(([k, v]) => (
+                              <Box key={k} sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
+                                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', minWidth: 160, flexShrink: 0 }}>
+                                  {k}
+                                </Typography>
+                                <Typography variant="body2" fontWeight={600} sx={{ wordBreak: 'break-word' }}>
+                                  {String(v).slice(0, 60)}
+                                </Typography>
+                              </Box>
+                            ))}
+                          </Stack>
+                        )}
+                      </Box>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              )}
+            </Box>
           )}
 
-          {/* ── RESULTS STAGE ───────────────────────────────────────────── */}
-          {stage === 'results' && finalResult && (
+          {/* ── GAP REVIEW STAGE ────────────────────────────────────────── */}
+          {stage === 'gap_review' && finalResult && (
             <Box>
+              {/* Compact voice panel */}
+              {voiceSessionId && (
+                <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', height: 160 }}>
+                  <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="subtitle2" fontWeight={700}>Voice Session (active)</Typography>
+                  </Box>
+                  <VoicePanel sessionId={voiceSessionId} compact />
+                </Paper>
+              )}
+
               {/* Summary bar */}
               <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
                 <Grid container spacing={3} alignItems="center">
@@ -473,73 +639,123 @@ export default function AIExperiencePage() {
                 </Grid>
               </Paper>
 
-              {/* Field matching progress */}
-              {definition && matchedFields.length > 0 && (
-                <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-                    <Typography variant="subtitle1" fontWeight={700}>
-                      Field Matching — {products.find((p) => p.productId === productId)?.productName ?? productId}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {filledCount} of {totalCount} fields pre-filled ({filledPct}%)
-                    </Typography>
-                  </Stack>
-                  <LinearProgress
-                    variant="determinate"
-                    value={filledPct}
-                    color="secondary"
-                    sx={{ height: 8, borderRadius: 4, mb: 3 }}
-                  />
+              <FieldMatchingTable matchedFields={matchedFields} products={products} productId={productId} />
 
-                  {Object.entries(fieldsByPage).map(([pageTitle, fields]) => {
-                    const pageFilled = fields.filter((f) => f.filled).length;
-                    return (
-                      <Box key={pageTitle} sx={{ mb: 3 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                          <Typography variant="subtitle2" fontWeight={700}>{pageTitle}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {pageFilled}/{fields.length}
-                          </Typography>
-                        </Stack>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
-                          {fields.map((f) => (
-                            <Box
-                              key={f.id}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                px: 1.5,
-                                py: 0.75,
-                                borderRadius: 1,
-                                bgcolor: f.filled ? 'rgba(102,187,106,0.06)' : 'rgba(255,152,0,0.04)',
-                                border: '1px solid',
-                                borderColor: f.filled ? 'rgba(102,187,106,0.2)' : 'rgba(255,152,0,0.15)',
-                              }}
-                            >
-                              {f.filled ? (
-                                <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main', flexShrink: 0 }} />
-                              ) : (
-                                <ErrorOutlineIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
-                              )}
-                              <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary' }}>{f.label}</Typography>
-                              {f.filled ? (
-                                <Typography variant="caption" fontWeight={600} sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {f.value}
-                                </Typography>
-                              ) : (
-                                <Typography variant="caption" sx={{ color: 'warning.main', fontStyle: 'italic' }}>Missing</Typography>
-                              )}
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    );
-                  })}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+                {missingFields.length > 0 && (
+                  <Button
+                    variant="contained"
+                    size="large"
+                    color="success"
+                    disableElevation
+                    startIcon={<PhoneIcon />}
+                    onClick={() => setStage('client_call')}
+                    sx={{ fontWeight: 700, px: 4 }}
+                  >
+                    Call Client to Fill Gaps ({missingFields.length} fields)
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  size="large"
+                  color="secondary"
+                  disableElevation
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={handleStartApplication}
+                  disabled={startingSession}
+                  sx={{ fontWeight: 700, px: 4 }}
+                >
+                  {startingSession ? 'Starting...' : 'Start Application'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => navigate(`/wizard-v2/${encodeURIComponent(productId)}`)}
+                  sx={{ fontWeight: 600, px: 4 }}
+                >
+                  Open in Wizard
+                </Button>
+              </Stack>
+            </Box>
+          )}
+
+          {/* ── CLIENT CALL STAGE ───────────────────────────────────────── */}
+          {stage === 'client_call' && finalResult && (
+            <Box>
+              <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
+                <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Client Phone Call
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Calling {selectedClient?.display_name ?? 'client'} to collect missing information
+                  </Typography>
+                </Box>
+                <RetellCallPanel
+                  missingFields={missingFields}
+                  clientPhone={CLIENT_PHONE}
+                  clientName={selectedClient?.display_name ?? 'the client'}
+                  advisorName={advisorLabel.split(' — ')[0]}
+                  onFieldsExtracted={handleCallFieldsExtracted}
+                  onCallComplete={handleCallComplete}
+                />
+              </Paper>
+
+              <FieldMatchingTable matchedFields={matchedFields} products={products} productId={productId} />
+
+              {voiceSessionId && (
+                <Paper sx={{ borderRadius: 2, overflow: 'hidden', height: 120 }}>
+                  <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="caption" fontWeight={600} color="text.secondary">Voice (available)</Typography>
+                  </Box>
+                  <VoicePanel sessionId={voiceSessionId} compact />
                 </Paper>
               )}
+            </Box>
+          )}
 
-              {/* Actions */}
+          {/* ── RESULTS STAGE ───────────────────────────────────────────── */}
+          {stage === 'results' && finalResult && (
+            <Box>
+              <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                <Grid container spacing={3} alignItems="center">
+                  <Grid size={{ xs: 12, sm: 3 }}>
+                    <Typography variant="overline" color="text.secondary">Fields Found</Typography>
+                    <Typography variant="h4" fontWeight={800} color="secondary">{finalResult.fields_found}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 3 }}>
+                    <Typography variant="overline" color="text.secondary">Total Time</Typography>
+                    <Typography variant="h4" fontWeight={800}>
+                      {((finalResult.total_duration_ms ?? 0) / 1000).toFixed(1)}s
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 3 }}>
+                    <Typography variant="overline" color="text.secondary">Sources</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      {(finalResult.sources_used ?? []).map((s) => (
+                        <Chip key={s} label={s} size="small" variant="outlined" />
+                      ))}
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 3 }}>
+                    <Typography variant="overline" color="text.secondary">Suitability</Typography>
+                    <Typography variant="h5" fontWeight={700} color={
+                      finalResult.known_data?.suitability_rating === 'Excellent' ? 'success.main' :
+                      finalResult.known_data?.suitability_rating === 'Good' ? 'info.main' : 'text.primary'
+                    }>
+                      {finalResult.known_data?.suitability_rating ?? 'N/A'}
+                      {finalResult.known_data?.suitability_score && (
+                        <Typography component="span" variant="body2" color="text.secondary" ml={1}>
+                          ({finalResult.known_data.suitability_score})
+                        </Typography>
+                      )}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              <FieldMatchingTable matchedFields={matchedFields} products={products} productId={productId} />
+
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
                 <Button
                   variant="contained"
@@ -561,6 +777,18 @@ export default function AIExperiencePage() {
                 >
                   Open in Wizard
                 </Button>
+                {missingFields.length > 0 && (
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    color="success"
+                    startIcon={<PhoneIcon />}
+                    onClick={() => setStage('client_call')}
+                    sx={{ fontWeight: 600, px: 4 }}
+                  >
+                    Call Client Again
+                  </Button>
+                )}
                 <Button
                   variant="outlined"
                   size="large"

@@ -2,10 +2,26 @@ const express = require('express');
 const router = express.Router();
 const { getProduct } = require('../services/productStore');
 const {
+  getAllApplications,
   createApplication,
   getApplicationById,
   updateApplicationAnswers,
 } = require('../services/applicationService');
+
+// GET /applications
+router.get('/', async (req, res) => {
+  try {
+    const applications = await getAllApplications();
+    res.json(applications);
+  } catch (err) {
+    console.error('Error fetching applications:', err);
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred. Please try again.',
+      details: null
+    });
+  }
+});
 
 // POST /applications
 router.post('/', async (req, res) => {
