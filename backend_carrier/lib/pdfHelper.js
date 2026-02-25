@@ -243,7 +243,68 @@ function setFieldValue(field, value, dataType = 'text') {
         field.uncheck();
       }
     } else if (fieldType === 'PDFRadioGroup' || fieldType === 'PDFDropdown') {
-      field.select(String(value));
+      const rawVal = String(value).trim();
+
+      // Try to obtain the list of available options from the field
+      let options = [];
+      try {
+        if (typeof field.getOptions === 'function') {
+          options = field.getOptions() || [];
+        }
+      } catch (e) {}
+
+      // Fallback: try to read from acro field dictionary (/Opt)
+      if ((!options || options.length === 0) && field.acroField && field.acroField.dict) {
+        try {
+          const opt = field.acroField.dict.get('Opt');
+          if (opt && Array.isArray(opt)) {
+            options = opt.map(o => {
+              try {
+                if (Array.isArray(o)) {
+                  const maybe = o[1] || o[0];
+                  return String(maybe);
+                }
+                return String(o);
+              } catch (err) {
+                return String(o);
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
+      // Normalize and try to match by visible label or value (case-insensitive)
+      const normalized = str => (str === undefined || str === null) ? '' : String(str).trim().toLowerCase();
+      const target = normalized(rawVal);
+
+      let matched = null;
+      for (const opt of options) {
+        const candidate = normalized(opt);
+        if (candidate === target) {
+          matched = opt;
+          break;
+        }
+      }
+
+      // As a secondary match, try partial inclusion
+      if (!matched) {
+        for (const opt of options) {
+          const candidate = normalized(opt);
+          if (candidate && target && (candidate.includes(target) || target.includes(candidate))) {
+            matched = opt;
+            break;
+          }
+        }
+      }
+
+      // Only select if we found a matching option; otherwise leave the field unchanged
+      if (matched !== null) {
+        try {
+          field.select(String(matched));
+        } catch (err) {
+          console.warn(`Could not select matched option for field: ${err.message}`);
+        }
+      }
     }
   } catch (err) {
     console.warn(`Could not set field value: ${err.message}`);
