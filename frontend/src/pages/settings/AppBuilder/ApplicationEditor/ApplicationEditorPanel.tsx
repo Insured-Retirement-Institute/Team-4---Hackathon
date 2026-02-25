@@ -98,6 +98,111 @@ function createInitialBuilderForm(): BuilderForm {
   };
 }
 
+function titleFromId(value: string) {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function mapQuestionType(type: string): BuilderQuestion['type'] {
+  switch (type) {
+    case 'long_text':
+      return 'long_text';
+    case 'date':
+      return 'date';
+    case 'number':
+    case 'currency':
+      return 'number';
+    case 'radio':
+      return 'radio';
+    case 'select':
+    case 'multi_select':
+      return 'select';
+    case 'boolean':
+      return 'switch';
+    default:
+      return 'short_text';
+  }
+}
+
+function toOptionsInput(options: Array<{ value: string; label: string }> | undefined) {
+  if (!options?.length) return '';
+  return options.map((option) => `${option.value}|${option.label}`).join('\n');
+}
+
+function sectionIdFromQuestionId(questionId: string, fallbackIndex: number) {
+  if (questionId.includes('__')) {
+    const [prefix] = questionId.split('__');
+    if (prefix) return prefix;
+  }
+  return `section_${fallbackIndex + 1}`;
+}
+
+function createFormFromProduct(product: Product): BuilderForm {
+  const mappedPages: BuilderPage[] = (product.pages ?? []).map((page, pageIndex) => {
+    const sectionMap = new Map<string, BuilderSection>();
+    const sectionOrder: string[] = [];
+
+    (page.questions ?? []).forEach((question, questionIndex) => {
+      const sectionId = sectionIdFromQuestionId(question.id, 0);
+      if (!sectionMap.has(sectionId)) {
+        sectionMap.set(sectionId, {
+          uid: makeUid(),
+          id: sectionId,
+          title: titleFromId(sectionId),
+          description: '',
+          questions: [],
+        });
+        sectionOrder.push(sectionId);
+      }
+
+      const section = sectionMap.get(sectionId)!;
+      const localQuestionId = question.id.includes('__') ? question.id.split('__').slice(1).join('__') : question.id;
+      section.questions.push({
+        uid: makeUid(),
+        id: localQuestionId || `question_${questionIndex + 1}`,
+        type: mapQuestionType(question.type),
+        label: question.label ?? '',
+        hint: question.hint ?? '',
+        placeholder: question.placeholder ?? '',
+        required: Boolean(question.required),
+        optionsInput: toOptionsInput(question.options ?? undefined),
+      });
+    });
+
+    const mappedSections = sectionOrder.map((sectionId, sectionIndex) => {
+      const section = sectionMap.get(sectionId)!;
+      if (!section.questions.length) {
+        section.questions = [createEmptyQuestion(sectionIndex + 1)];
+      }
+      return section;
+    });
+
+    return {
+      uid: makeUid(),
+      id: page.id || `page_${pageIndex + 1}`,
+      title: page.title || `Page ${pageIndex + 1}`,
+      description: page.description ?? '',
+      pageType: 'standard',
+      sections: mappedSections.length ? mappedSections : [createEmptySection(1)],
+    };
+  });
+
+  return {
+    id: product.id || 'new-eapp',
+    version: product.version || '1.0.0',
+    carrier: product.carrier || '',
+    productName: product.productName || '',
+    productId: product.productId || '',
+    effectiveDate: product.effectiveDate || new Date().toISOString().slice(0, 10),
+    locale: product.locale || 'en-US',
+    description: product.description || '',
+    pages: mappedPages.length ? mappedPages : [createEmptyPage(1)],
+  };
+}
+
 type ApplicationEditorPanelProps = {
   selectedProduct: Product | null;
 };
@@ -349,12 +454,15 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
 
   useEffect(() => {
     if (!selectedProduct) return;
-    setForm((prev) => ({
-      ...prev,
-      carrier: selectedProduct.carrier || prev.carrier,
-      productName: selectedProduct.productName || prev.productName,
-      productId: selectedProduct.productId || prev.productId,
-    }));
+    const nextForm = createFormFromProduct(selectedProduct);
+    const firstPage = nextForm.pages[0] ?? null;
+    const firstSection = firstPage?.sections[0] ?? null;
+    const firstQuestion = firstSection?.questions[0] ?? null;
+
+    setForm(nextForm);
+    setActivePageUid(firstPage?.uid ?? '');
+    setActiveSectionUid(firstSection?.uid ?? '');
+    setActiveQuestionUid(firstQuestion?.uid ?? '');
   }, [selectedProduct]);
 
   useEffect(() => {
