@@ -18,20 +18,20 @@ function Layout() {
   // Bridge widget.js events (iri:field_updated, etc.) into ApplicationContext
   useWidgetSync();
 
-  // Hide the floating assistant widget on settings routes.
+  // Hide the floating assistant widget on App Builder routes.
   useEffect(() => {
-    const onSettingsRoute = location.pathname.startsWith('/settings');
+    const onAppBuilderRoute = location.pathname.startsWith('/app-builder');
     const applyWidgetVisibility = () => {
       const widgetHost = document.getElementById('iri-chat-widget');
       if (!widgetHost) return;
-      widgetHost.style.display = onSettingsRoute ? 'none' : '';
+      widgetHost.style.display = onAppBuilderRoute ? 'none' : '';
     };
 
     applyWidgetVisibility();
     const observer = new MutationObserver(() => applyWidgetVisibility());
     observer.observe(document.body, { childList: true, subtree: true });
 
-    if (onSettingsRoute) {
+    if (onAppBuilderRoute) {
       const instance = window.IRIChat?._instance as ({ _closePanel?: () => void } | undefined);
       instance?._closePanel?.();
     }
@@ -44,7 +44,7 @@ function Layout() {
     { label: 'AI Experience', path: '/ai-experience' },
     { label: 'Applications', path: '/applications' },
     { label: 'New Application', path: '/wizard-v2' },
-    { label: 'Settings', path: '/settings' },
+    { label: 'App Builder', path: '/app-builder' },
   ];
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
