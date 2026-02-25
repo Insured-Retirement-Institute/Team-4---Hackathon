@@ -1,8 +1,6 @@
 import type { DragEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import Alert from '@mui/material/Alert';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
@@ -206,12 +204,16 @@ function createFormFromProduct(product: Product): BuilderForm {
 
 type ApplicationEditorPanelProps = {
   selectedProduct: Product | null;
+  selectedDistributorIds: string[];
+  onRegisterSaveHandler: (handler: () => Promise<{ ok: boolean; message: string }>) => void;
 };
 
-function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps) {
+function ApplicationEditorPanel({
+  selectedProduct,
+  selectedDistributorIds,
+  onRegisterSaveHandler,
+}: ApplicationEditorPanelProps) {
   const [form, setForm] = useState<BuilderForm>(createInitialBuilderForm);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  const [saveMessage, setSaveMessage] = useState<string>('');
   const [activePageUid, setActivePageUid] = useState<string>(form.pages[0]?.uid ?? '');
   const [activeSectionUid, setActiveSectionUid] = useState<string>(form.pages[0]?.sections[0]?.uid ?? '');
   const [activeQuestionUid, setActiveQuestionUid] = useState<string>(
@@ -378,15 +380,10 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
     return type;
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!selectedProduct?.productId) {
-      setSaveStatus('error');
-      setSaveMessage('Select a product before saving.');
-      return;
+      return { ok: false, message: 'Select a product before saving.' };
     }
-
-    setSaveStatus('saving');
-    setSaveMessage('');
 
     const payload: Partial<Product> = {
       id: safeId(form.id) || 'new_eapp',
@@ -397,6 +394,7 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
       effectiveDate: form.effectiveDate,
       locale: form.locale.trim() || 'en-US',
       description: form.description.trim(),
+      distributors: selectedDistributorIds,
       pages: form.pages.map((page, pageIndex) => {
         let runningOrder = 0;
         const questions = page.sections.flatMap((section) =>
@@ -440,13 +438,16 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
 
     try {
       await updateProduct(selectedProduct.productId, payload);
-      setSaveStatus('success');
-      setSaveMessage('Application saved successfully.');
+      
+      return { ok: true, message: 'Application saved successfully.' };
     } catch (error) {
-      setSaveStatus('error');
-      setSaveMessage(error instanceof Error ? error.message : 'Failed to save application.');
+      return { ok: false, message: error instanceof Error ? error.message : 'Failed to save application.' };
     }
-  };
+  }, [form, selectedDistributorIds, selectedProduct]);
+
+  useEffect(() => {
+    onRegisterSaveHandler(handleSave);
+  }, [handleSave, onRegisterSaveHandler]);
 
   const activePage = form.pages.find((page) => page.uid === activePageUid) ?? form.pages[0] ?? null;
   const activeSection = activePage?.sections.find((section) => section.uid === activeSectionUid) ?? activePage?.sections[0] ?? null;
@@ -629,17 +630,7 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
             />
           </Stack>
         </Stack>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={saveStatus === 'saving'}
-          sx={{ bgcolor: palette.accent, '&:hover': { bgcolor: '#258ff0' } }}
-        >
-          {saveStatus === 'saving' ? 'Saving...' : 'Save Application'}
-        </Button>
       </Stack>
-      {saveStatus === 'success' && <Alert severity="success">{saveMessage}</Alert>}
-      {saveStatus === 'error' && <Alert severity="error">{saveMessage}</Alert>}
 
       <Box sx={{ p: 2, border: '1px solid', borderColor: palette.border, bgcolor: palette.canvas }}>
         <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} alignItems={{ xs: 'stretch', lg: 'center' }}>
