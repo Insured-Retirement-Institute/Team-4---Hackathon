@@ -35,7 +35,7 @@ export default function RetellCallPanel({
   onCallComplete,
 }: RetellCallPanelProps) {
   const [callStage, setCallStage] = useState<CallStage>('idle');
-  const [callId, setCallId] = useState<string | null>(null);
+  const [, setCallId] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
   const [transcript, setTranscript] = useState<string | null>(null);
   const [extractedFields, setExtractedFields] = useState<Record<string, string>>({});
