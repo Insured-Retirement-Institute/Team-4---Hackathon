@@ -57,94 +57,14 @@ tags:
     description: Manage product definitions (CRUD).
   - name: Applications
     description: Create and manage application instances.
+  - name: Distributors
+    description: Manage distributor entities (CRUD).
 
 # ─────────────────────────────────────────────────────────────
 # PATHS
 # ─────────────────────────────────────────────────────────────
 
 paths:
-
-  /application/{productId}:
-    get:
-      tags:
-        - Application Definition
-      summary: Get Application Definition
-      description: |
-        Returns the complete e-application definition for the specified product,
-        including all pages, questions, visibility conditions, and validation rules.
-
-        Frontend renderers use this response to build the form dynamically.
-        AI agents use `hint` fields to phrase questions conversationally and
-        `pageRepeat` / `visibility` structures to determine question flow.
-      operationId: getApplicationDefinition
-      parameters:
-        - name: productId
-          in: path
-          required: true
-          description: Unique identifier for the annuity product.
-          schema:
-            type: string
-          examples:
-            fixed_annuity:
-              summary: Midland National Fixed Annuity
-              value: midland-fixed-annuity-001
-        - name: locale
-          in: query
-          required: false
-          description: BCP 47 locale for label and option localization. Defaults to `en-US`.
-          schema:
-            type: string
-            default: en-US
-          examples:
-            english:
-              summary: US English
-              value: en-US
-      responses:
-        '200':
-          description: Application definition returned successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplicationDefinition'
-              examples:
-                fixed_annuity:
-                  summary: Midland National Fixed Annuity (abbreviated)
-                  value:
-                    id: midland-fixed-annuity-001
-                    version: 1.0.0
-                    carrier: Midland National Life Insurance Company
-                    productName: Fixed Annuity Application
-                    productId: midland-fixed-annuity-001
-                    effectiveDate: '2021-03-01'
-                    locale: en-US
-                    description: Application for a Midland National fixed annuity contract.
-                    pages: []
-        '404':
-          description: Product not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  summary: Unknown product ID
-                  value:
-                    code: PRODUCT_NOT_FOUND
-                    message: No application definition found for product ID 'xyz-999'.
-                    details: null
-        '500':
-          description: Internal server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                server_error:
-                  summary: Unexpected server failure
-                  value:
-                    code: INTERNAL_ERROR
-                    message: An unexpected error occurred. Please try again.
-                    details: null
 
   /application/{applicationId}/validate:
     post:
@@ -430,6 +350,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate productId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error.
           content:
@@ -437,14 +363,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /products/{id}:
+  /products/{productId}:
     get:
       tags:
         - Products
-      summary: Get a product by ID
+      summary: Get a product by productId
       operationId: getProduct
       parameters:
-        - name: id
+        - name: productId
           in: path
           required: true
           schema:
@@ -474,7 +400,7 @@ paths:
       summary: Update a product
       operationId: updateProduct
       parameters:
-        - name: id
+        - name: productId
           in: path
           required: true
           schema:
@@ -510,7 +436,7 @@ paths:
       summary: Delete a product
       operationId: deleteProduct
       parameters:
-        - name: id
+        - name: productId
           in: path
           required: true
           schema:
@@ -520,6 +446,168 @@ paths:
           description: Product deleted.
         '404':
           description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Distributors ────────────────────────────────────────────
+
+  /distributors:
+    get:
+      tags:
+        - Distributors
+      summary: List all distributors
+      operationId: listDistributors
+      responses:
+        '200':
+          description: Array of distributor objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Distributor'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Distributors
+      summary: Create a distributor
+      operationId: createDistributor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - distributorId
+                - name
+              properties:
+                distributorId:
+                  type: string
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Distributor created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Distributor'
+        '400':
+          description: Missing required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate distributorId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /distributors/{distributorId}:
+    get:
+      tags:
+        - Distributors
+      summary: Get a distributor by ID
+      operationId: getDistributor
+      parameters:
+        - name: distributorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Distributor object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Distributor'
+        '404':
+          description: Distributor not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Distributors
+      summary: Update a distributor
+      operationId: updateDistributor
+      parameters:
+        - name: distributorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Distributor updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Distributor'
+        '404':
+          description: Distributor not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Distributors
+      summary: Delete a distributor
+      operationId: deleteDistributor
+      parameters:
+        - name: distributorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Distributor deleted.
+        '404':
+          description: Distributor not found.
           content:
             application/json:
               schema:
@@ -744,6 +832,22 @@ components:
               This application is used to apply for a Midland National fixed annuity
               contract. Please have your Social Security number, funding account details,
               and beneficiary information available before beginning.
+        productType:
+          type: string
+          description: Type of product (e.g. fixed_annuity, variable_annuity, myga).
+        distributors:
+          type: array
+          description: Array of distributorId strings for distributors approved to sell this product.
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when this record was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when this record was last updated.
         pages:
           type: array
           description: Ordered list of pages comprising the application.
@@ -2459,18 +2563,43 @@ components:
     ProductSummary:
       type: object
       properties:
-        id:
-          type: string
         productId:
           type: string
         carrier:
           type: string
         productName:
           type: string
+        productType:
+          type: string
+        distributors:
+          type: array
+          items:
+            type: string
         createdAt:
           type: string
         updatedAt:
           type: string
+
+    Distributor:
+      type: object
+      required:
+        - distributorId
+        - name
+      properties:
+        distributorId:
+          type: string
+          description: Unique identifier for this distributor.
+        name:
+          type: string
+          description: Display name of the distributor.
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when this record was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when this record was last updated.
 
     ApplicationInstance:
       type: object
