@@ -15,7 +15,7 @@ import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { type Product, getProducts } from '../services/applicationService';
+import { type Product, getProducts } from '../services/apiService';
 import { listSaves } from '../services/applicationStorageService';
 
 export default function ProductSelectionPage() {
@@ -97,7 +97,7 @@ export default function ProductSelectionPage() {
               component="img"
               src="/undraw_selected-box_qnrz.svg"
               alt="Select a product"
-              sx={{ width: '100%', maxWidth: 420, mb: 3, opacity: 0.92 }}
+              sx={{ width: '100%', maxWidth: 360, mb: 3, opacity: 0.92 }}
             />
             <Chip label="New Application" color="secondary" size="small" sx={{ mb: 1, fontWeight: 600 }} />
             <Typography variant="h5" fontWeight={700} letterSpacing="-0.25px">

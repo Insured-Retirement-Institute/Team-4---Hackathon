@@ -22,7 +22,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ApplicationDefinition } from '../../types/application';
 import { useApplication } from '../../context/ApplicationContext';
-import { getApplication, submitApplication, validateApplication } from '../../services/applicationService';
+import { getApplication, submitApplication, validateApplication } from '../../services/apiService';
 import {
   loadApplicationData,
   markSubmitted,
