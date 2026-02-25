@@ -11,6 +11,8 @@ info:
 servers:
   - url: http://localhost:8080
     description: Development server
+  - url: https://iz2b4jzga7.us-east-1.awsapprunner.com
+    description: Production server (placeholder)
 
 paths:
   /health:
