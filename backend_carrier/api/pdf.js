@@ -39,11 +39,13 @@ router.get('/applications/:submissionId/pdf', async (req, res) => {
       });
     }
 
-    const applicationDefinitionId = submission.envelope.applicationDefinitionId;
+    //const applicationDefinitionId = submission.envelope.applicationDefinitionId;
+    let applicationDefinitionId = "midland-national-fixed-annuity-v1"; // TODO: hardcoded for testing
 
     // Build path to PDF template in /forms folder
     const formsDir = path.join(__dirname, '..', 'forms');
     const pdfPath = path.join(formsDir, `${applicationDefinitionId}.pdf`);
+    
 
     // Check if PDF template exists
     if (!fs.existsSync(pdfPath)) {
