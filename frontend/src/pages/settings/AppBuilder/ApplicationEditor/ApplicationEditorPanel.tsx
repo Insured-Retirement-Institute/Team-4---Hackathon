@@ -15,7 +15,6 @@ import type { QuestionType as ApiQuestionType } from '../../../../types/applicat
 import PagesColumn from './components/PagesColumn';
 import QuestionDetailsPanel from './components/QuestionDetailsPanel';
 import QuestionsColumn from './components/QuestionsColumn';
-import SectionsColumn from './components/SectionsColumn';
 import type { BuilderForm, BuilderPage, BuilderQuestion, BuilderSection, BuilderPalette, DragState } from './types';
 
 function safeId(input: string) {
@@ -215,7 +214,6 @@ function ApplicationEditorPanel({
 }: ApplicationEditorPanelProps) {
   const [form, setForm] = useState<BuilderForm>(createInitialBuilderForm);
   const [activePageUid, setActivePageUid] = useState<string>(form.pages[0]?.uid ?? '');
-  const [activeSectionUid, setActiveSectionUid] = useState<string>(form.pages[0]?.sections[0]?.uid ?? '');
   const [activeQuestionUid, setActiveQuestionUid] = useState<string>(
     form.pages[0]?.sections[0]?.questions[0]?.uid ?? '',
   );
@@ -298,13 +296,6 @@ function ApplicationEditorPanel({
     setForm((prev) => ({ ...prev, pages: reorderWithinList(prev.pages, draggedUid, targetUid) }));
   };
 
-  const moveSectionTo = (pageUid: string, draggedUid: string, targetUid: string) => {
-    updatePage(pageUid, (page) => ({
-      ...page,
-      sections: reorderWithinList(page.sections, draggedUid, targetUid),
-    }));
-  };
-
   const moveQuestionTo = (pageUid: string, sectionUid: string, draggedUid: string, targetUid: string) => {
     updateSection(pageUid, sectionUid, (section) => ({
       ...section,
@@ -320,20 +311,6 @@ function ApplicationEditorPanel({
   const onDropEnd = () => {
     setDragState(null);
     setDropTargetUid('');
-  };
-
-  const addSection = (pageUid: string) => {
-    const nextSection = createEmptySection((form.pages.find((page) => page.uid === pageUid)?.sections.length ?? 0) + 1);
-    updatePage(pageUid, (page) => ({ ...page, sections: [...page.sections, nextSection] }));
-    setActiveSectionUid(nextSection.uid);
-    setActiveQuestionUid(nextSection.questions[0]?.uid ?? '');
-  };
-
-  const removeSection = (pageUid: string, sectionUid: string) => {
-    updatePage(pageUid, (page) => ({
-      ...page,
-      sections: page.sections.filter((section) => section.uid !== sectionUid),
-    }));
   };
 
   const updateSection = (
@@ -385,63 +362,72 @@ function ApplicationEditorPanel({
       return { ok: false, message: 'Select a product before saving.' };
     }
 
-    const payload: Partial<Product> = {
-      id: safeId(form.id) || 'new_eapp',
-      version: form.version || '1.0.0',
-      carrier: form.carrier.trim(),
-      productName: form.productName.trim(),
+    const fallbackProductType = selectedProduct.productType?.trim();
+    const nowIso = new Date().toISOString();
+    const builtPages = form.pages.map((page, pageIndex) => {
+      let runningOrder = 0;
+      const questions = page.sections.flatMap((section) =>
+        section.questions.map((question) => {
+          runningOrder += 1;
+          const questionId = safeId(question.id) || `question_${runningOrder}`;
+          const options = question.type === 'radio' || question.type === 'select' ? parseOptions(question.optionsInput) : null;
+
+          return {
+            id: questionId,
+            type: toApiQuestionType(question.type),
+            label: question.label.trim() || questionId,
+            hint: question.hint.trim() || undefined,
+            placeholder: question.placeholder.trim() || null,
+            order: runningOrder,
+            required: question.required,
+            visibility: null,
+            options,
+            validation: question.required ? [{ type: 'required' as const }] : undefined,
+            groupConfig: undefined,
+            allocationConfig: undefined,
+          };
+        }),
+      );
+
+      return {
+        id: safeId(page.id) || `page_${pageIndex + 1}`,
+        title: page.title.trim() || `Page ${pageIndex + 1}`,
+        description: page.description.trim() || null,
+        order: pageIndex + 1,
+        pageType: page.pageType,
+        visibility: null,
+        pageRepeat: null,
+        questions,
+        groupValidations: [],
+      };
+    });
+
+    const payload: Product = {
+      ...selectedProduct,
+      id: safeId(form.id) ?? (selectedProduct.id || 'new_eapp'),
+      version: form.version || selectedProduct.version || '1.0.0',
+      carrier: form.carrier.trim() || selectedProduct.carrier,
+      productName: form.productName.trim() || selectedProduct.productName,
       productId: safeId(form.productId) || selectedProduct.productId,
-      effectiveDate: form.effectiveDate,
-      locale: form.locale.trim() || 'en-US',
-      description: form.description.trim(),
-      distributors: selectedDistributorIds,
-      pages: form.pages.map((page, pageIndex) => {
-        let runningOrder = 0;
-        const questions = page.sections.flatMap((section) =>
-          section.questions.map((question) => {
-            runningOrder += 1;
-            const sectionId = safeId(section.id) || 'section';
-            const rawQuestionId = safeId(question.id) || `question_${runningOrder}`;
-            const questionId = `${sectionId}__${rawQuestionId}`;
-            const options = question.type === 'radio' || question.type === 'select' ? parseOptions(question.optionsInput) : null;
-
-            return {
-              id: questionId,
-              type: toApiQuestionType(question.type),
-              label: question.label.trim() || questionId,
-              hint: question.hint.trim() || undefined,
-              placeholder: question.placeholder.trim() || null,
-              order: runningOrder,
-              required: question.required,
-              visibility: null,
-              options,
-              validation: question.required ? [{ type: 'required' as const }] : undefined,
-              groupConfig: undefined,
-              allocationConfig: undefined,
-            };
-          }),
-        );
-
-        return {
-          id: safeId(page.id) || `page_${pageIndex + 1}`,
-          title: page.title.trim() || `Page ${pageIndex + 1}`,
-          description: page.description.trim() || null,
-          order: pageIndex + 1,
-          pageType: page.pageType,
-          visibility: null,
-          pageRepeat: null,
-          questions,
-          groupValidations: [],
-        };
-      }),
+      effectiveDate: form.effectiveDate || selectedProduct.effectiveDate || nowIso.slice(0, 10),
+      locale: form.locale.trim() || selectedProduct.locale || 'en-US',
+      description: form.description.trim() || (selectedProduct.description?.trim() ?? ''),
+      distributors: selectedDistributorIds.length > 0 ? selectedDistributorIds : (selectedProduct.distributors ?? []),
+      pages: builtPages.length > 0 ? builtPages : (selectedProduct.pages ?? []),
+      createdAt: selectedProduct.createdAt || nowIso,
+      updatedAt: selectedProduct.updatedAt || nowIso,
     };
+
+    if (fallbackProductType) {
+      payload.productType = fallbackProductType;
+    }
 
     try {
       await updateProduct(selectedProduct.productId, payload);
-      
-      return { ok: true, message: 'Application saved successfully.' };
+
+      return { ok: true, message: 'Product saved successfully.' };
     } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : 'Failed to save application.' };
+      return { ok: false, message: error instanceof Error ? error.message : 'Failed to save product.' };
     }
   }, [form, selectedDistributorIds, selectedProduct]);
 
@@ -450,7 +436,7 @@ function ApplicationEditorPanel({
   }, [handleSave, onRegisterSaveHandler]);
 
   const activePage = form.pages.find((page) => page.uid === activePageUid) ?? form.pages[0] ?? null;
-  const activeSection = activePage?.sections.find((section) => section.uid === activeSectionUid) ?? activePage?.sections[0] ?? null;
+  const activeSection = activePage?.sections[0] ?? null;
   const activeQuestion =
     activeSection?.questions.find((question) => question.uid === activeQuestionUid) ?? activeSection?.questions[0] ?? null;
 
@@ -469,17 +455,12 @@ function ApplicationEditorPanel({
 
     setForm(nextForm);
     setActivePageUid(firstPage?.uid ?? '');
-    setActiveSectionUid(firstSection?.uid ?? '');
     setActiveQuestionUid(firstQuestion?.uid ?? '');
   }, [selectedProduct]);
 
   useEffect(() => {
     if (!activePage) return;
-    if (!activeSection) {
-      const fallback = activePage.sections[0];
-      if (fallback) setActiveSectionUid(fallback.uid);
-      return;
-    }
+    if (!activeSection) return;
     if (!activeQuestion) {
       const fallback = activeSection.questions[0];
       if (fallback) setActiveQuestionUid(fallback.uid);
@@ -496,19 +477,6 @@ function ApplicationEditorPanel({
     if (dragState?.kind !== 'page') return;
     event.preventDefault();
     movePageTo(dragState.uid, pageUid);
-    onDropEnd();
-  };
-
-  const handleSectionDragOver = (event: DragEvent, sectionUid: string) => {
-    if (dragState?.kind !== 'section' || dragState.pageUid !== activePage?.uid) return;
-    event.preventDefault();
-    setDropTargetUid(sectionUid);
-  };
-
-  const handleSectionDrop = (event: DragEvent, sectionUid: string) => {
-    if (dragState?.kind !== 'section' || dragState.pageUid !== activePage?.uid || !activePage) return;
-    event.preventDefault();
-    moveSectionTo(activePage.uid, dragState.uid, sectionUid);
     onDropEnd();
   };
 
@@ -669,22 +637,6 @@ function ApplicationEditorPanel({
 
           <Box sx={{ flex: 1, minHeight: 620, p: 2 }}>
             <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2}>
-              <SectionsColumn
-                activePage={activePage}
-                activeSectionUid={activeSection?.uid ?? null}
-                palette={palette}
-                dropTargetUid={dropTargetUid}
-                dragState={dragState}
-                canRemoveSection={Boolean(activePage && activeSection && (activePage.sections.length ?? 0) > 1)}
-                onSelectSection={setActiveSectionUid}
-                onSectionDragOver={handleSectionDragOver}
-                onSectionDrop={handleSectionDrop}
-                onDragEnd={onDropEnd}
-                onDragStart={onDragStart}
-                onAddSection={() => activePage && addSection(activePage.uid)}
-                onRemoveSection={() => activePage && activeSection && removeSection(activePage.uid, activeSection.uid)}
-              />
-
               <QuestionsColumn
                 activePage={activePage}
                 activeSection={activeSection}
@@ -715,11 +667,6 @@ function ApplicationEditorPanel({
                 detailFieldSx={detailFieldSx}
                 previewQuestion={previewQuestion}
                 onUpdatePageTitle={(value) => activePage && updatePage(activePage.uid, (current) => ({ ...current, title: value }))}
-                onUpdateSectionTitle={(value) =>
-                  activePage &&
-                  activeSection &&
-                  updateSection(activePage.uid, activeSection.uid, (current) => ({ ...current, title: value }))
-                }
                 onUpdateQuestionId={(value) =>
                   activePage &&
                   activeSection &&
