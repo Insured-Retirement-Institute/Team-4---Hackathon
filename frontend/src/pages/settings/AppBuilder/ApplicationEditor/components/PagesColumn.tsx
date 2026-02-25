@@ -2,11 +2,8 @@ import type { DragEvent } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { BuilderPage, BuilderPalette, DragState } from '../types';
@@ -23,7 +20,6 @@ type PagesColumnProps = {
   onPageDrop: (event: DragEvent, pageUid: string) => void;
   onDragEnd: () => void;
   onDragStart: (dragState: DragState) => void;
-  onMovePage: (pageUid: string, direction: 'up' | 'down') => void;
   onAddPage: () => void;
   onRemoveActivePage: () => void;
 };
@@ -40,7 +36,6 @@ function PagesColumn({
   onPageDrop,
   onDragEnd,
   onDragStart,
-  onMovePage,
   onAddPage,
   onRemoveActivePage,
 }: PagesColumnProps) {
@@ -83,30 +78,6 @@ function PagesColumn({
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>
                     {page.title.trim() || `Page ${pageIndex + 1}`}
                   </Typography>
-                </Stack>
-                <Stack direction="row" spacing={0.25}>
-                  <IconButton
-                    size="small"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onMovePage(page.uid, 'up');
-                    }}
-                    disabled={pageIndex === 0}
-                    sx={{ color: active ? '#ffffff' : palette.mutedText }}
-                  >
-                    <KeyboardArrowUpIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onMovePage(page.uid, 'down');
-                    }}
-                    disabled={pageIndex === pages.length - 1}
-                    sx={{ color: active ? '#ffffff' : palette.mutedText }}
-                  >
-                    <KeyboardArrowDownIcon fontSize="small" />
-                  </IconButton>
                 </Stack>
               </Stack>
             </Box>

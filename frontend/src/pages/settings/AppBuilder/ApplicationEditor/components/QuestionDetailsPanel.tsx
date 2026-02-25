@@ -99,7 +99,20 @@ function QuestionDetailsPanel({
               />
             )}
             <FormControlLabel
-              control={<Switch checked={activeQuestion.required} onChange={(_, checked) => onUpdateQuestionRequired(checked)} />}
+              control={
+                <Switch
+                  checked={activeQuestion.required}
+                  onChange={(_, checked) => onUpdateQuestionRequired(checked)}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: palette.accent,
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: palette.accent,
+                    },
+                  }}
+                />
+              }
               label="Required"
             />
             <Divider />

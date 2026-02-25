@@ -1,6 +1,5 @@
 import type { DragEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -209,7 +208,6 @@ type ApplicationEditorPanelProps = {
 
 function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps) {
   const [form, setForm] = useState<BuilderForm>(createInitialBuilderForm);
-  const [savedJson, setSavedJson] = useState<string>('');
   const [activePageUid, setActivePageUid] = useState<string>(form.pages[0]?.uid ?? '');
   const [activeSectionUid, setActiveSectionUid] = useState<string>(form.pages[0]?.sections[0]?.uid ?? '');
   const [activeQuestionUid, setActiveQuestionUid] = useState<string>(
@@ -277,22 +275,6 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
         ...prev,
         pages: nextPages,
       };
-    });
-  };
-
-  const movePage = (pageUid: string, direction: 'up' | 'down') => {
-    setForm((prev) => {
-      const currentIndex = prev.pages.findIndex((page) => page.uid === pageUid);
-      if (currentIndex < 0) return prev;
-
-      const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      if (targetIndex < 0 || targetIndex >= prev.pages.length) return prev;
-
-      const nextPages = [...prev.pages];
-      const [movedPage] = nextPages.splice(currentIndex, 1);
-      nextPages.splice(targetIndex, 0, movedPage);
-
-      return { ...prev, pages: nextPages };
     });
   };
 
@@ -438,7 +420,7 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
       }),
     };
 
-    setSavedJson(JSON.stringify(output, null, 2));
+    console.log('Generated App Builder JSON:', output);
   };
 
   const activePage = form.pages.find((page) => page.uid === activePageUid) ?? form.pages[0] ?? null;
@@ -600,6 +582,7 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
       color: palette.accent,
     },
   };
+  const metaFieldSx = detailFieldSx;
 
   return (
     <Stack spacing={2.5}>
@@ -628,15 +611,16 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
 
       <Box sx={{ p: 2, border: '1px solid', borderColor: palette.border, bgcolor: palette.canvas }}>
         <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} alignItems={{ xs: 'stretch', lg: 'center' }}>
-          <TextField size="small" label="Schema ID" value={form.id} onChange={(event) => handleMetaChange('id', event.target.value)} />
-          <TextField size="small" label="Carrier" value={form.carrier} onChange={(event) => handleMetaChange('carrier', event.target.value)} />
-          <TextField size="small" label="Product Name" value={form.productName} onChange={(event) => handleMetaChange('productName', event.target.value)} />
-          <TextField size="small" label="Product ID" value={form.productId} onChange={(event) => handleMetaChange('productId', event.target.value)} />
+          <TextField size="small" label="Schema ID" value={form.id} sx={metaFieldSx} onChange={(event) => handleMetaChange('id', event.target.value)} />
+          <TextField size="small" label="Carrier" value={form.carrier} sx={metaFieldSx} onChange={(event) => handleMetaChange('carrier', event.target.value)} />
+          <TextField size="small" label="Product Name" value={form.productName} sx={metaFieldSx} onChange={(event) => handleMetaChange('productName', event.target.value)} />
+          <TextField size="small" label="Product ID" value={form.productId} sx={metaFieldSx} onChange={(event) => handleMetaChange('productId', event.target.value)} />
           <TextField
             size="small"
             type="date"
             label="Effective Date"
             value={form.effectiveDate}
+            sx={metaFieldSx}
             onChange={(event) => handleMetaChange('effectiveDate', event.target.value)}
             slotProps={{ inputLabel: { shrink: true } }}
           />
@@ -657,7 +641,6 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
             onPageDrop={handlePageDrop}
             onDragEnd={onDropEnd}
             onDragStart={onDragStart}
-            onMovePage={movePage}
             onAddPage={addPage}
             onRemoveActivePage={() => activePage && removePage(activePage.uid)}
           />
@@ -784,12 +767,6 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
         </Stack>
       </Box>
 
-      {savedJson ? (
-        <Stack spacing={1}>
-          <Alert severity="success">Generated JSON</Alert>
-          <TextField fullWidth multiline minRows={14} value={savedJson} slotProps={{ input: { readOnly: true } }} />
-        </Stack>
-      ) : null}
     </Stack>
   );
 }
