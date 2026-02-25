@@ -10,9 +10,16 @@ import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import { type Distributor, getDistributors } from '../../../../services/apiService';
 
-function ApprovedDistributorsPanel() {
+type ApprovedDistributorsPanelProps = {
+  selectedDistributorIds: string[];
+  onToggleDistributor: (distributorId: string) => void;
+};
+
+function ApprovedDistributorsPanel({
+  selectedDistributorIds,
+  onToggleDistributor,
+}: ApprovedDistributorsPanelProps) {
   const [distributors, setDistributors] = useState<Distributor[]>([]);
-  const [selectedDistributorIds, setSelectedDistributorIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
@@ -25,14 +32,6 @@ function ApprovedDistributorsPanel() {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  const toggleDistributor = (distributorId: string) => {
-    setSelectedDistributorIds((prev) =>
-      prev.includes(distributorId)
-        ? prev.filter((id) => id !== distributorId)
-        : [...prev, distributorId],
-    );
-  };
 
   return (
     <Stack spacing={2}>
@@ -65,7 +64,7 @@ function ApprovedDistributorsPanel() {
                     bgcolor: selected ? 'rgba(58,157,247,0.08)' : '#fff',
                   }}
                 >
-                  <CardActionArea onClick={() => toggleDistributor(distributor.distributorId)}>
+                  <CardActionArea onClick={() => onToggleDistributor(distributor.distributorId)}>
                     <CardContent sx={{ py: 1.5 }}>
                       <Stack spacing={0.5}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -97,6 +96,7 @@ function ApprovedDistributorsPanel() {
           {selectedDistributorIds.length} distributor{selectedDistributorIds.length === 1 ? '' : 's'} selected
         </Typography>
       ) : null}
+
     </Stack>
   );
 }

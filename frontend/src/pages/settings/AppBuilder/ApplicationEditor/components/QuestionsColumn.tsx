@@ -2,7 +2,6 @@ import type { DragEvent } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
@@ -94,7 +93,6 @@ function QuestionsColumn({
                     {question.label.trim() || `Question ${questionIndex + 1}`}
                   </Typography>
                 </Stack>
-                <VisibilityOutlinedIcon fontSize="small" sx={{ color: active ? palette.accent : palette.mutedText }} />
               </Stack>
             </Box>
           );
