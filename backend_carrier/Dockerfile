@@ -8,11 +8,10 @@ COPY package.json ./
 RUN npm install --production
 
 COPY index.js ./index.js 
-COPY pdfHelper.js ./pdfHelper.js
+COPY lib/pdfHelper.js ./lib/pdfHelper.js
 COPY api/ ./api/
 COPY forms/ ./forms/
 COPY maps/ ./maps/
-COPY pdfs/ ./pdfs/
 
 ENV PORT=8080
 EXPOSE 8080

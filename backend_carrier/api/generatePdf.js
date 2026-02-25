@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { populatePDFWithMapping } = require('../pdfHelper');
+const { populatePDFWithMapping } = require('../lib/pdfHelper');
 const router = express.Router();
 
 /**

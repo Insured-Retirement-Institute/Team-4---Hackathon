@@ -20,10 +20,10 @@ const router = express.Router();
  *                   example: ok
  *                 message:
  *                   type: string
- *                   example: PDF Population API is running
+ *                   example: Carrier API is running
  */
 router.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'PDF Population API is running' });
+  res.json({ status: 'ok', message: 'Carrier API is running' });
 });
 
 module.exports = router;
