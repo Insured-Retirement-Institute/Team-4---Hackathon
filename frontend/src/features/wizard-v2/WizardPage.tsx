@@ -485,8 +485,6 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [docusignError, setDocusignError] = useState<string | null>(null);
   const [isDocusignLoading, setIsDocusignLoading] = useState(false);
-  const [docusignOpened, setDocusignOpened] = useState(false);
-  const [docusignEnvelopeId, setDocusignEnvelopeId] = useState<string | null>(null);
   const [signerDialogOpen, setSignerDialogOpen] = useState(false);
   const [signerName, setSignerName] = useState('');
   const [signerEmail, setSignerEmail] = useState('');
@@ -563,7 +561,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   );
 
   const shouldShowDocusignStatus = Boolean(
-    isDocusignLoading || docusignError || docusignOpened || docusignEnvelopeId,
+    isDocusignLoading || docusignError,
   );
 
   const handleNext = () => {
@@ -597,6 +595,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   const handleSubmit = async () => {
     setSubmissionError(null);
     setShowSubmissionBanner(false);
+    setDocusignError(null);
     setIsSubmitting(true);
 
     const submissionPayload = buildSubmissionPayload(values as AnswerMap, definition);
@@ -626,6 +625,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
       console.log('eapp_submission_payload', submissionPayload);
       markSubmitted(saveId);
       setShowSubmissionBanner(true);
+      handleDocusignClick();
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : 'Unable to reach the server. Please try again.');
       console.error('Submission request failed:', error);
@@ -634,85 +634,61 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
     }
   };
 
-const handleStartDocusign = async (
-  requestedName: string,
-  requestedEmail: string,
-  popup?: Window | null
-) => {
-  setDocusignError(null);
-  setDocusignOpened(false);
-  setDocusignEnvelopeId(null);
-  setIsDocusignLoading(true);
+  const handleStartDocusign = async (
+    requestedName: string,
+    requestedEmail: string,
+  ) => {
+    setDocusignError(null);
+    setIsDocusignLoading(true);
 
-  const applicationId = `app_${definition.id}`;
+    const applicationId = `app_${definition.id}`;
 
-  try {
-    const response = await fetch(`/application/${applicationId}/docusign/start`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        signerEmail: requestedEmail,
-        signerName: requestedName,
-      }),
-    });
+    try {
+      const response = await fetch(`/application/${applicationId}/docusign/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          signerEmail: requestedEmail,
+          signerName: requestedName,
+        }),
+      });
 
-    const result = (await response.json()) as DocusignStartResponse;
+      const result = (await response.json()) as DocusignStartResponse;
 
-    if (!response.ok) {
-      if (popup && !popup.closed) popup.close();
-      setDocusignError(result.error || result.message || 'DocuSign request failed. Please try again.');
+      if (!response.ok) {
+        setDocusignError(result.error || result.message || 'DocuSign request failed. Please try again.');
+        return;
+      }
+
+      if (!result.signingUrl) {
+        setDocusignError('DocuSign did not return a signing URL.');
+        return;
+      }
+
+      window.location.assign(result.signingUrl);
+    } catch (error) {
+      console.error('DocuSign request failed:', error);
+      setDocusignError('Unable to reach the DocuSign service. Please try again.');
+    } finally {
+      setIsDocusignLoading(false);
+    }
+  };
+
+  const handleDocusignClick = () => {
+    const defaults = getSignerDefaults(values as AnswerMap);
+
+    if (!defaults.signerName || !defaults.signerEmail) {
+      setSignerName(defaults.signerName);
+      setSignerEmail(defaults.signerEmail);
+      setSignerFieldErrors({});
+      setSignerDialogOpen(true);
       return;
     }
 
-    if (!result.signingUrl) {
-      if (popup && !popup.closed) popup.close();
-      setDocusignError('DocuSign did not return a signing URL.');
-      return;
-    }
-
-    setDocusignEnvelopeId(result.envelopeId ?? null);
-
-    // If we successfully opened a tab synchronously, navigate it now.
-    if (popup && !popup.closed) {
-      popup.location.href = result.signingUrl;
-    } else {
-      // Fallback: if popup was blocked, navigate current tab
-      window.location.href = result.signingUrl;
-    }
-
-    setDocusignOpened(true);
-  } catch (error) {
-    if (popup && !popup.closed) popup.close();
-    console.error('DocuSign request failed:', error);
-    setDocusignError('Unable to reach the DocuSign service. Please try again.');
-  } finally {
-    setIsDocusignLoading(false);
-  }
-};
-
-const handleDocusignClick = () => {
-  const defaults = getSignerDefaults(values as AnswerMap);
-
-  if (!defaults.signerName || !defaults.signerEmail) {
-    setSignerName(defaults.signerName);
-    setSignerEmail(defaults.signerEmail);
-    setSignerFieldErrors({});
-    setSignerDialogOpen(true);
-    return;
-  }
-
-  // Open the tab immediately (user gesture), then fill it after fetch returns.
-  const popup = window.open('', '_blank', 'noopener,noreferrer');
-
-  // Optional: if popup blocked, show a helpful message.
-  if (!popup) {
-    setDocusignError('Your browser blocked the DocuSign popup. Please allow popups and try again.');
-  }
-
-  handleStartDocusign(defaults.signerName, defaults.signerEmail, popup);
-};
+    handleStartDocusign(defaults.signerName, defaults.signerEmail);
+  };
 
   const handleSignerDialogClose = () => {
     if (!isDocusignLoading) {
@@ -863,23 +839,6 @@ const handleDocusignClick = () => {
                   </Alert>
                 )}
                 {docusignError && <Alert severity="error">{docusignError}</Alert>}
-                {docusignOpened && (
-                  <Alert severity="success">
-                    DocuSign opened in a new tab. After signing, return here to continue.
-                  </Alert>
-                )}
-                {docusignEnvelopeId && (
-                  <Typography variant="caption" color="text.secondary">
-                    Envelope ID: {docusignEnvelopeId}
-                  </Typography>
-                )}
-                {docusignOpened && (
-                  <Box>
-                    <Button variant="outlined" size="small" component="a" href="/docusign/return">
-                      Go to DocuSign return page
-                    </Button>
-                  </Box>
-                )}
               </Stack>
             )}
           </Box>
@@ -931,15 +890,6 @@ const handleDocusignClick = () => {
                 )}
                 {isReviewStep && (
                   <>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      onClick={handleDocusignClick}
-                      disabled={isDocusignLoading}
-                      startIcon={isDocusignLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
-                    >
-                      {isDocusignLoading ? 'Starting DocuSign...' : 'Sign with DocuSign'}
-                    </Button>
                     <Button
                       variant="contained"
                       color="secondary"
