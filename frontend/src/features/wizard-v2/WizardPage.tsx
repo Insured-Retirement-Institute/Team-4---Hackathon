@@ -138,7 +138,7 @@ function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefini
     envelope: {
       submissionId: typeof crypto !== 'undefined' ? crypto.randomUUID() : `sub_${Date.now()}`,
       applicationId: `app_${definition.id}`,
-      schemaVersion: '1.0.0',
+      schemaVersion: '1.1.0',
       submittedAt: new Date().toISOString(),
       applicationDefinitionId: definition.id,
       applicationDefinitionVersion: definition.version,
@@ -370,6 +370,15 @@ function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefini
       hasExistingInsurance: asBool(values.has_existing_insurance),
       isReplacement: asBool(values.is_replacement),
       replacedContracts: [],
+      willPayPenaltyToObtainFunds: asBool(values.is_replacement)
+        ? asBool(values.replacement_will_pay_penalty)
+        : null,
+      replacementPenaltyPct: asBool(values.replacement_will_pay_penalty)
+        ? asNumber(values.replacement_penalty_pct) || null
+        : null,
+      replacedProductHasLivingOrDeathBenefits: asBool(values.is_replacement)
+        ? asBool(values.replaced_product_has_living_benefits)
+        : null,
     },
     disclosures: [],
     applicationSignatures: {
@@ -389,7 +398,32 @@ function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefini
       isProducerAwareOfExistingInsurance: asBool(values.agent_replacement_existing),
       isProducerBelievesReplacement: asBool(values.agent_replacement_replacing),
       replacingCompanyName: asString(values.agent_replacement_company) || null,
+      hasConflictOfInterest: asBool(values.agent_conflict_of_interest),
+      agentCertQ3Passed: asBool(values.agent_cert_q3),
+      agentCertQ4Passed: asBool(values.agent_cert_q4),
+      agentCertQ5Passed: asBool(values.agent_cert_q5),
       producers: [],
+    },
+    suitabilityProfile: {
+      annualHouseholdIncome: asNumber(values.annual_household_income),
+      annualHouseholdExpenses: asNumber(values.annual_household_expenses),
+      totalNetWorth: asNumber(values.total_net_worth),
+      liquidNetWorth: asNumber(values.liquid_net_worth),
+      hasEmergencyFunds: asBool(values.has_emergency_funds),
+      expectedHoldYears: asNumber(values.expected_hold_years),
+      hasNursingHomeStay: asBool(values.has_nursing_home_stay),
+      nursingHomeCareType: asBool(values.has_nursing_home_stay)
+        ? (asString(values.nursing_home_care_type) as 'long_term_care' | 'rehab' | 'short_term') || null
+        : null,
+      nursingHomeCareMonths: asBool(values.has_nursing_home_stay)
+        ? asNumber(values.nursing_home_care_months) || null
+        : null,
+      incomeCoversLivingExpenses: asString(values.signed_at_state) === 'FL'
+        ? asBool(values.income_covers_living_expenses)
+        : null,
+      incomeSufficientForFutureExpenses: asString(values.signed_at_state) === 'FL'
+        ? asBool(values.income_sufficient_for_future_expenses)
+        : null,
     },
   };
 }

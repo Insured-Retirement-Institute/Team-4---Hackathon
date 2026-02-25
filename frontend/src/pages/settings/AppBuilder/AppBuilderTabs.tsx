@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
+import Button from '@mui/material/Button';
+import Snackbar from '@mui/material/Snackbar';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import ApprovedDistributorsPanel from './ApprovedDistributors/ApprovedDistributorsPanel';
 import ApplicationEditorPanel from './ApplicationEditor/ApplicationEditorPanel';
 import ProductSelectionPanel from './ProductSelection/ProductSelectionPanel';
@@ -13,6 +16,11 @@ const getProductKey = (product: Product | null) => product?.id || product?.produ
 function AppBuilderTabs() {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedDistributorIds, setSelectedDistributorIds] = useState<string[]>([]);
+  const [saveHandler, setSaveHandler] = useState<null | (() => Promise<{ ok: boolean; message: string }>)>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
+  const [toastOpen, setToastOpen] = useState(false);
   const hasSelectedProduct = Boolean(getProductKey(selectedProduct));
 
   useEffect(() => {
@@ -41,8 +49,40 @@ function AppBuilderTabs() {
 
   const handleInvalidSelection = () => {
     setSelectedProduct(null);
+    setSelectedDistributorIds([]);
+    setSaveStatus('idle');
+    setSaveMessage('');
     setActiveTab(0);
   };
+
+  const handleSaveApplication = async () => {
+    if (!saveHandler) {
+      setSaveStatus('error');
+      setSaveMessage('Open Application Editor first to initialize the save action.');
+      return;
+    }
+    setSaveStatus('saving');
+    setSaveMessage('');
+    const result = await saveHandler();
+    setSaveStatus(result.ok ? 'success' : 'error');
+    setSaveMessage(result.message);
+    setToastOpen(true);
+    if (result.ok) {
+      setSelectedProduct(null);
+      setSelectedDistributorIds([]);
+      setActiveTab(0);
+    }
+  };
+
+  const registerSaveHandler = (handler: () => Promise<{ ok: boolean; message: string }>) => {
+    setSaveHandler(() => handler);
+  };
+
+  useEffect(() => {
+    setSelectedDistributorIds([]);
+    setSaveStatus('idle');
+    setSaveMessage('');
+  }, [selectedProduct?.productId]);
 
   useEffect(() => {
     if (!hasSelectedProduct && activeTab === 1) {
@@ -50,50 +90,101 @@ function AppBuilderTabs() {
     }
   }, [activeTab, hasSelectedProduct]);
 
+  const steps = [
+    { label: 'Product Selection', disabled: false },
+    { label: 'Application Editor', disabled: !hasSelectedProduct },
+    { label: 'Approved Distributors', disabled: !hasSelectedProduct },
+  ];
+  const isFirstStep = activeTab === 0;
+  const isLastStep = activeTab === steps.length - 1;
+
+  const handleBack = () => {
+    if (isFirstStep) return;
+    setActiveTab((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNext = () => {
+    if (isLastStep) return;
+    if (activeTab === 0 && !hasSelectedProduct) return;
+    setActiveTab((prev) => Math.min(steps.length - 1, prev + 1));
+  };
+
+  const nextDisabled =
+    isLastStep ||
+    (activeTab === 0 && !hasSelectedProduct) ||
+    (activeTab === 1 && !hasSelectedProduct);
+  const updateDisabled = saveStatus === 'saving' || selectedDistributorIds.length === 0;
+
   return (
     <Box>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(_, nextTab: number) => setActiveTab(nextTab)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#3a9df7',
-            },
-          }}
-        >
-          <Tab
-            label="Product Selection"
-            sx={{
-              '&.Mui-selected': {
-                color: '#3a9df7',
-                fontWeight: 700,
-              },
-            }}
-          />
-          <Tab
-            label="Application Editor"
-            disabled={!hasSelectedProduct}
-            sx={{
-              '&.Mui-selected': {
-                color: '#3a9df7',
-                fontWeight: 700,
-              },
-            }}
-          />
-          <Tab
-            label="Approved Distributors"
-            sx={{
-              '&.Mui-selected': {
-                color: '#3a9df7',
-                fontWeight: 700,
-              },
-            }}
-          />
-        </Tabs>
+      <Box sx={{ mb: 2, overflowX: 'auto' }}>
+        <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 760, py: 1 }}>
+          {steps.map((step, index) => {
+            const active = activeTab === index;
+            const completedOrActive = index <= activeTab;
+            return (
+              <Stack key={step.label} direction="row" alignItems="center" spacing={1.25} sx={{ flex: 1 }}>
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    cursor: 'default',
+                    opacity: step.disabled ? 0.6 : 1,
+                    color: completedOrActive ? '#3a9df7' : '#8d929b',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: '50%',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: completedOrActive ? '#3a9df7' : '#b7bcc5',
+                      color: '#ffffff',
+                      fontSize: 13,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {index + 1}
+                  </Box>
+                  <Typography sx={{ fontWeight: active ? 700 : 600, color: completedOrActive ? '#3a9df7' : '#8d929b' }}>
+                    {step.label}
+                  </Typography>
+                </Box>
+                {index < steps.length - 1 ? (
+                  <Box sx={{ flex: 1, height: 1, minWidth: 40, bgcolor: activeTab > index ? '#3a9df7' : '#d2d6dd' }} />
+                ) : null}
+              </Stack>
+            );
+          })}
+        </Stack>
       </Box>
+
+      <Stack direction="row" spacing={1} justifyContent="space-between" sx={{ mb: 2 }}>
+        {isFirstStep ? <Box /> : (
+          <Button variant="outlined" onClick={handleBack}>
+            Back
+          </Button>
+        )}
+        {isLastStep ? (
+          <Button
+            variant="contained"
+            onClick={handleSaveApplication}
+            disabled={updateDisabled}
+            sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}
+          >
+            {saveStatus === 'saving' ? 'Updating...' : 'Update Product'}
+          </Button>
+        ) : (
+          <Button variant="contained" onClick={handleNext} disabled={nextDisabled} sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}>
+            Next
+          </Button>
+        )}
+      </Stack>
 
       {activeTab === 0 && (
         <ProductSelectionPanel
@@ -102,8 +193,43 @@ function AppBuilderTabs() {
           onInvalidSelection={handleInvalidSelection}
         />
       )}
-      {activeTab === 1 && <ApplicationEditorPanel selectedProduct={selectedProduct} />}
-      {activeTab === 2 && <ApprovedDistributorsPanel />}
+      {hasSelectedProduct ? (
+        <Box sx={{ display: activeTab === 1 ? 'block' : 'none' }}>
+          <ApplicationEditorPanel
+            selectedProduct={selectedProduct}
+            selectedDistributorIds={selectedDistributorIds}
+            onRegisterSaveHandler={registerSaveHandler}
+          />
+        </Box>
+      ) : null}
+      {activeTab === 2 && (
+        <ApprovedDistributorsPanel
+          selectedDistributorIds={selectedDistributorIds}
+          onToggleDistributor={(distributorId) =>
+            setSelectedDistributorIds((prev) =>
+              prev.includes(distributorId) ? prev.filter((id) => id !== distributorId) : [...prev, distributorId],
+            )
+          }
+        />
+      )}
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={4000}
+        onClose={(_, reason) => {
+          if (reason === 'clickaway') return;
+          setToastOpen(false);
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setToastOpen(false)}
+          severity={saveStatus === 'success' ? 'success' : 'error'}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {saveMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

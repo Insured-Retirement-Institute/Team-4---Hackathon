@@ -1,6 +1,6 @@
 # Annuity E-Application Submission Model
-**Version:** 1.0.0  
-**Status:** Draft  
+**Version:** 1.1.0
+**Status:** Draft
 **Owner:** FIG Platform Team
 
 ---
@@ -47,7 +47,8 @@ interface ApplicationSubmission {
   replacement:            ReplacementDetail
   disclosures:            DisclosureRecord[]
   applicationSignatures:  ApplicationSignatures
-  producerCertification:     ProducerCertification
+  producerCertification:  ProducerCertification
+  suitabilityProfile:     SuitabilityProfile
 }
 
 
@@ -434,6 +435,29 @@ interface ReplacementDetail {
 
   /** Populated when isReplacement is true. */
   replacedContracts: ReplacedContract[]
+
+  /**
+   * Will the client pay a surrender charge or other penalty on the existing
+   * contract in order to fund this new annuity?
+   * null when isReplacement is false.
+   * Drives Rule 13 penalty-vs-guaranteed-rate comparison.
+   */
+  willPayPenaltyToObtainFunds: boolean | null
+
+  /**
+   * The surrender/penalty charge percentage as a decimal (e.g., 3.5 for 3.50%).
+   * null when willPayPenaltyToObtainFunds is false or isReplacement is false.
+   * Hard denial when replacementPenaltyPct > product's guaranteed rate (Rule 13).
+   */
+  replacementPenaltyPct: number | null
+
+  /**
+   * Does the contract being replaced contain any living benefits (e.g., income
+   * riders, GLWBs) or enhanced death benefits that will be forfeited upon surrender?
+   * null when isReplacement is false.
+   * Informs the reviewer of additional value at risk from the replacement.
+   */
+  replacedProductHasLivingOrDeathBenefits: boolean | null
 }
 
 interface ReplacedContract {
@@ -538,6 +562,34 @@ interface ProducerCertification {
    */
   replacingCompanyName: string | null
 
+  /**
+   * Does the producer have any conflicts of interest regarding this transaction
+   * (e.g., personal financial stake in the outcome, family relationship with client)?
+   * true → hard denial (Rule 10).
+   */
+  hasConflictOfInterest: boolean
+
+  /**
+   * Agent certification question 3: Producer certifies they have fully explained
+   * all product features, limitations, and surrender charges to the client.
+   * false → hard denial (Rule 11).
+   */
+  agentCertQ3Passed: boolean
+
+  /**
+   * Agent certification question 4: Producer certifies that, based on their review
+   * of the client's financial profile, they believe this annuity is suitable.
+   * false → hard denial (Rule 11).
+   */
+  agentCertQ4Passed: boolean
+
+  /**
+   * Agent certification question 5: Producer certifies they considered alternative
+   * products before recommending this annuity to the client.
+   * false → hard denial (Rule 11).
+   */
+  agentCertQ5Passed: boolean
+
   /** All producers (writing agents) on this application. Commissions must sum to 100%. */
   producers: Producer[]
 }
@@ -564,6 +616,104 @@ interface Producer {
 
   signature:     SignatureRecord
   signatureDate: string   // YYYY-MM-DD
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// SUITABILITY PROFILE
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Captures the client's suitability questionnaire responses collected during
+ * the e-application flow. All fields are required for automated suitability
+ * evaluation. The carrier uses this data alongside annuitant age
+ * (annuitant.dateOfBirth), premium (funding.totalPremium), signing state
+ * (applicationSignatures.signedAtState), and owner type (owner) to evaluate
+ * all applicable suitability rules before issuing the contract.
+ */
+interface SuitabilityProfile {
+
+  // ── Financial Profile ─────────────────────────────────────────────
+
+  /** Client's total annual household income from all sources (USD). */
+  annualHouseholdIncome: number
+
+  /** Client's total annual household living expenses (USD). */
+  annualHouseholdExpenses: number
+
+  /**
+   * Client's total net worth — all assets minus all liabilities (USD).
+   * Used with funding.totalPremium to evaluate Rule 1 (premium-to-net-worth ratio).
+   * Threshold: premium may not exceed 60% of net worth for owners 70+,
+   * or 70% for owners under 70.
+   */
+  totalNetWorth: number
+
+  /**
+   * Client's liquid net worth — assets convertible to cash within 30 days
+   * without significant penalty or loss (USD).
+   * Must not exceed totalNetWorth; submission is rejected if liquidNetWorth > totalNetWorth (Rule 4).
+   * Used with annualHouseholdIncome and annualHouseholdExpenses to evaluate Rule 2.
+   */
+  liquidNetWorth: number
+
+  // ── Suitability Questions ─────────────────────────────────────────
+
+  /**
+   * Does the client have emergency funds for unexpected expenses that are
+   * separate from and unaffected by this annuity purchase?
+   * false → hard denial (Rule 6).
+   */
+  hasEmergencyFunds: boolean
+
+  /**
+   * How many years does the client intend to hold this annuity before
+   * needing access to the principal?
+   * Must be >= the product's withdrawal charge period.
+   * Less than the charge period → hard denial (Rules 5, 9).
+   */
+  expectedHoldYears: number
+
+  // ── Nursing Home / Long-Term Care ─────────────────────────────────
+
+  /**
+   * Has the client resided in a nursing home, long-term care facility,
+   * or rehabilitation facility in the past 24 months?
+   */
+  hasNursingHomeStay: boolean
+
+  /**
+   * The type of care received during the nursing home stay.
+   * null when hasNursingHomeStay is false.
+   * "long_term_care" or "rehab" with nursingHomeCareMonths > 12 → hard denial (Rule 8).
+   */
+  nursingHomeCareType: 'long_term_care' | 'rehab' | 'short_term' | null
+
+  /**
+   * Duration of the nursing home stay in months.
+   * null when hasNursingHomeStay is false.
+   */
+  nursingHomeCareMonths: number | null
+
+  // ── Florida-Specific Suitability Questions ────────────────────────
+  // Both fields are null when applicationSignatures.signedAtState !== "FL".
+
+  /**
+   * Does the client's current income cover all living expenses, including
+   * out-of-pocket medical costs?
+   * false → flagged for manual review (Rule 7 — Further Review).
+   * null when signing state is not FL.
+   */
+  incomeCoversLivingExpenses: boolean | null
+
+  /**
+   * Is the client's income sufficient to cover future changes in living
+   * and/or out-of-pocket medical expenses throughout the entire surrender
+   * charge period?
+   * false → hard denial (Rule 7 — Denied).
+   * null when signing state is not FL.
+   */
+  incomeSufficientForFutureExpenses: boolean | null
 }
 ```
 
@@ -949,6 +1099,10 @@ Before a payload is accepted for transmission to a carrier, the following constr
 | All required disclosure records present | Every disclosure with `required: true` in the application definition that was visible must have a corresponding entry in `disclosures[]`. |
 | Signature dates equal submission date | `ownerSignatureDate`, `producerCertification.producers[*].signatureDate`, and transfer signature dates must all equal the date portion of `envelope.submittedAt`. |
 | SSN encrypted | All `EncryptedValue` fields must have `isEncrypted: true`. Plaintext SSNs are rejected. |
+| Liquid net worth does not exceed total net worth | `suitabilityProfile.liquidNetWorth` must be ≤ `suitabilityProfile.totalNetWorth`. |
+| FL suitability fields present when signed in FL | When `applicationSignatures.signedAtState` is `"FL"`, both `suitabilityProfile.incomeCoversLivingExpenses` and `suitabilityProfile.incomeSufficientForFutureExpenses` must be non-null. |
+| Replacement penalty fields present when penalty applies | When `replacement.willPayPenaltyToObtainFunds` is `true`, `replacement.replacementPenaltyPct` must be non-null and between 0.01 and 100.00. |
+| Nursing home detail fields present when stay indicated | When `suitabilityProfile.hasNursingHomeStay` is `true`, both `nursingHomeCareType` and `nursingHomeCareMonths` must be non-null. |
 
 ---
 
@@ -960,3 +1114,10 @@ The `envelope.schemaVersion` field follows semver. Consumers should:
 - Reject payloads with a higher major version than they support
 
 Breaking changes (new required fields, type changes, renamed fields) increment the major version. Additive changes (new optional fields) increment the minor version.
+
+### Changelog
+
+| Version | Change |
+|---|---|
+| **1.1.0** | Added `suitabilityProfile` top-level object capturing client financial profile, suitability questionnaire answers, nursing home stay, and FL-specific income questions (Rules 1–9). Added `hasConflictOfInterest`, `agentCertQ3Passed`, `agentCertQ4Passed`, `agentCertQ5Passed` to `ProducerCertification` (Rules 10–11). Added `willPayPenaltyToObtainFunds`, `replacementPenaltyPct`, and `replacedProductHasLivingOrDeathBenefits` to `ReplacementDetail` (Rule 13). Added four corresponding payload validation rules. |
+| **1.0.0** | Initial release. |

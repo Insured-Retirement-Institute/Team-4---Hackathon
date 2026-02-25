@@ -13,10 +13,26 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { type Product, createApplication, getProducts } from '../services/apiService';
 import { listSaves } from '../services/applicationStorageService';
+
+const DEMO_STATES = ['All States', 'Arizona', 'California', 'Florida', 'Illinois', 'Indiana', 'Ohio', 'Texas', 'Virginia'];
+
+// Demo metadata assigned per product ID for filter purposes
+const PRODUCT_TYPE_MAP: Record<string, string> = {
+  'midland-fixed-annuity-001': 'Fixed Annuity',
+  'aspida-myga-001': 'MYGA',
+  'certainty-select': 'Fixed Indexed Annuity',
+};
+const PRODUCT_STATE_MAP: Record<string, string[]> = {
+  'midland-fixed-annuity-001': ['All States', 'Illinois', 'Texas', 'Florida', 'California'],
+  'aspida-myga-001': ['All States', 'Arizona', 'Ohio', 'Indiana', 'Virginia'],
+  'certainty-select': ['All States', 'Florida', 'Texas', 'Illinois', 'Ohio'],
+};
 
 export default function ProductSelectionPage() {
   const navigate = useNavigate();
@@ -25,6 +41,9 @@ export default function ProductSelectionPage() {
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Product | null>(null);
+  const [filterState, setFilterState] = useState('All States');
+  const [filterCarrier, setFilterCarrier] = useState('All Carriers');
+  const [filterType, setFilterType] = useState('All Types');
 
   const inProgressSaves = listSaves().filter((s) => s.status === 'in_progress');
 
@@ -115,6 +134,42 @@ export default function ProductSelectionPage() {
             </Typography>
           </Box>
 
+          {/* ── Filters ───────────────────────────────────────────────────── */}
+          <Stack justifyContent="center" direction={{ xs: 'column', sm: 'row' }} spacing={1.5} mb={2.5} alignItems="center">
+            <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ whiteSpace: 'nowrap', mr: 0.5 }}>
+              Filter by:
+            </Typography>
+            <Select
+              size="small"
+              value={filterState}
+              onChange={(e) => { setFilterState(e.target.value); setSelected(null); }}
+              sx={{ minWidth: 150, fontSize: 14 }}
+            >
+              {DEMO_STATES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            </Select>
+            <Select
+              size="small"
+              value={filterCarrier}
+              onChange={(e) => { setFilterCarrier(e.target.value); setSelected(null); }}
+              sx={{ minWidth: 220, fontSize: 14 }}
+            >
+              <MenuItem value="All Carriers">All Carriers</MenuItem>
+              {Array.from(new Set(products.map((p) => p.carrier))).map((c) => (
+                <MenuItem key={c} value={c}>{c}</MenuItem>
+              ))}
+            </Select>
+            <Select
+              size="small"
+              value={filterType}
+              onChange={(e) => { setFilterType(e.target.value); setSelected(null); }}
+              sx={{ minWidth: 180, fontSize: 14 }}
+            >
+              {['All Types', 'Fixed Annuity', 'Fixed Indexed Annuity', 'MYGA'].map((t) => (
+                <MenuItem key={t} value={t}>{t}</MenuItem>
+              ))}
+            </Select>
+          </Stack>
+
           {/* ── Skeleton grid ─────────────────────────────────────────────── */}
           {loading && (
             <Grid container spacing={2}>
@@ -140,7 +195,12 @@ export default function ProductSelectionPage() {
           {/* ── Product grid ──────────────────────────────────────────────── */}
           {!loading && (
             <Grid container spacing={2}>
-              {products.map((product) => {
+              {products.filter((p) => {
+                const carrierMatch = filterCarrier === 'All Carriers' || p.carrier === filterCarrier;
+                const stateMatch = filterState === 'All States' || (PRODUCT_STATE_MAP[p.productId] ?? ['All States']).includes(filterState);
+                const typeMatch = filterType === 'All Types' || (PRODUCT_TYPE_MAP[p.productId] ?? '') === filterType;
+                return carrierMatch && stateMatch && typeMatch;
+              }).map((product) => {
                 const isSelected = selected?.productId === product.productId;
                 return (
                   <Grid key={product.productId} size={{ xs: 12, sm: 6, md: 4 }}>
