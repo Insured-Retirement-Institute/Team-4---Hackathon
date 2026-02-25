@@ -94,7 +94,7 @@ router.put('/:id/answers', async (req, res) => {
       });
     }
 
-    if (application.status === 'submitted') {
+    if (application.status === 'submitted' || application.status === 'carrier_accepted') {
       return res.status(409).json({
         code: 'APPLICATION_ALREADY_SUBMITTED',
         message: 'Cannot update answers on a submitted application.',
