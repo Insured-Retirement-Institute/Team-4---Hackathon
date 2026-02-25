@@ -3,10 +3,9 @@ import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import AppBuilderTabs from './AppBuilder/AppBuilderTabs';
 
-function SettingsPage() {
+function AppBuilderPage() {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
@@ -32,24 +31,6 @@ function SettingsPage() {
               },
             }}
           />
-          <Tab
-            label="Carriers & Vendors"
-            sx={{
-              '&.Mui-selected': {
-                color: '#3a9df7',
-                fontWeight: 700,
-              },
-            }}
-          />
-          <Tab
-            label="AI Agent Guidelilnes"
-            sx={{
-              '&.Mui-selected': {
-                color: '#3a9df7',
-                fontWeight: 700,
-              },
-            }}
-          />
         </Tabs>
       </Box>
 
@@ -57,19 +38,9 @@ function SettingsPage() {
         {activeTab === 0 && (
           <AppBuilderTabs />
         )}
-        {activeTab === 1 && (
-          <Typography variant="body1" color="text.secondary">
-            Manage carrier and vendor configuration settings.
-          </Typography>
-        )}
-        {activeTab === 2 && (
-          <Typography variant="body1" color="text.secondary">
-            Define AI agent behavior, guardrails, and prompt guidelines.
-          </Typography>
-        )}
       </Box>
     </Stack>
   );
 }
 
-export default SettingsPage;
+export default AppBuilderPage;
