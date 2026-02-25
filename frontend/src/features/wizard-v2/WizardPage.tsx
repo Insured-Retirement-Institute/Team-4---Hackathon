@@ -567,11 +567,6 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   );
 
   const handleNext = () => {
-    if (!isReviewStep && currentPage && !validatePage(currentPage)) {
-      return;
-    }
-
-  const handleNext = () => {
     if (!isReviewStep && currentPage && !validatePage(currentPage)) return;
     if (currentStep < totalSteps - 1) {
       const next = currentStep + 1;
@@ -587,9 +582,6 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
       persistProgress(prev);
     }
   };
-
-  const handleSidebarPageClick = (pageIndex: number) => setCurrentStep(pageIndex + 1);
-  const handleSidebarIntroClick = () => setCurrentStep(0);
 
   // ── Exit ───────────────────────────────────────────────────────────────────
 
@@ -652,7 +644,7 @@ const handleStartDocusign = async (
   setDocusignEnvelopeId(null);
   setIsDocusignLoading(true);
 
-  const applicationId = `app_${APPLICATION_DEFINITION.id}`;
+  const applicationId = `app_${definition.id}`;
 
   try {
     const response = await fetch(`/application/${applicationId}/docusign/start`, {
