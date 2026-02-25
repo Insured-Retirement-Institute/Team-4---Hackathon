@@ -63,6 +63,15 @@ Key behaviors:
 - Submission metadata (`agentId`, `ipAddress`, `userAgent`, `submissionSource`) is nested under `req.body.metadata`
 - The active OpenAPI spec is `Assets/annuity-eapp-openapi-3.yaml` (3 public endpoints)
 
+## Server-Stamped Signature Dates
+
+The submission endpoint (`POST /application/:applicationId/submit`) overwrites `date_signed` and each `writing_agents[].agent_date_signed` with the server's current UTC date **before** validation runs. This is intentional:
+
+- **Why:** The `equals_today` validation rule compares against the server's UTC date. Users in US time zones submitting in the evening would have their local date rejected once UTC rolls past midnight (e.g. 11pm CST = next day UTC). This caused production submission failures.
+- **Behavior:** The frontend may still send these date fields for display/UX purposes, but the server ignores them and stamps its own. The persisted submission and canonical payload always reflect the server-authoritative date.
+- **Security:** Prevents clients from backdating or future-dating signature dates. The server is the single source of truth for when the application was signed.
+- **Scope:** Only affects the submit endpoint. The validate endpoint (`/validate`) does **not** stamp dates, so `equals_today` still runs against client-provided values during page-level validation for frontend UX feedback.
+
 ## Adding New Products
 
 Drop a JSON file into `Assets/` following the same schema as `midland-national-eapp.json`. The product store loads all `*.json` files on startup and indexes by `productId`.
