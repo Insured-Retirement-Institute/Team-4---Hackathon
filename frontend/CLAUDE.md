@@ -15,7 +15,7 @@
 
 ## ApplicationDefinition Shape
 Pages → Questions → `QuestionDefinition` (id, label, type, options, groupConfig, allocationConfig, …).
-All question types are handled in `WizardField.tsx`: `short_text`, `long_text`, `number`, `currency`, `date`, `boolean`, `select`, `radio`, `phone`, `email`, `ssn`, `signature`, `repeatable_group`, `allocation_table`.
+All question types are handled in `WizardField.tsx`: `short_text`, `long_text`, `number`, `currency`, `date`, `boolean`, `select`, `multi_select`, `radio`, `phone`, `email`, `ssn`, `signature`, `repeatable_group`, `allocation_table`.
 
 ---
 
@@ -42,10 +42,17 @@ npm run lint     # ESLint
 | `src/context/ApplicationContext.tsx` | Shared state: `collectedFields`, `sessionId`, `phase`, step progress |
 | `src/services/aiService.ts` | AI service client: `fetchSchema()`, `createSession()`, `sendMessage()` |
 | `src/services/prefillService.ts` | Pre-fill API client: `fetchClients()`, `runPrefill()`, `runPrefillWithDocument()` |
+| `src/services/applicationService.ts` | Backend API client: `getProducts()`, `getApplication()`, `validateApplication()`, `submitApplication()` (hardcoded base URL) |
+| `src/services/applicationStorageService.ts` | localStorage save/resume: `listSaves()`, `saveApplication()`, `loadApplicationData()`, `markSubmitted()`, `deleteApplication()` |
+| `src/types/application.ts` | Canonical types: `ApplicationDefinition`, `PageDefinition`, `QuestionDefinition`, `AnswerMap`, visibility/validation types |
 | `src/hooks/useWidgetSync.ts` | Bridges widget.js CustomEvents ↔ React context, exports `openWidget()` |
 | `src/pages/PrefillPage.tsx` | CRM client selector + doc upload → agent results → session start |
-| `src/features/wizard-v2/WizardPage.tsx` | Dynamic wizard with bidirectional field sync |
+| `src/pages/ApplicationHistoryPage.tsx` | Lists saved/submitted applications from localStorage with resume and delete |
+| `src/pages/DocusignReturnPage.tsx` | DocuSign redirect handler after embedded signing |
+| `src/features/wizard-v2/WizardPage.tsx` | Dynamic wizard with bidirectional field sync and save/resume |
 | `src/features/wizard-v2/formController.tsx` | Form state management, includes `bulkSetValues()` |
+| `src/features/wizard-v2/visibility.ts` | Frontend visibility evaluator: AND/OR conditions, ops: `eq`, `neq`, `in`, `contains`, `gt` |
+| `src/features/wizard-v2/applicationDefinition.ts` | Static bundled product definition normalizer (fallback when API unavailable) |
 | `public/widget.js` | Embeddable chat widget (self-contained IIFE) |
 
 ## Bidirectional Sync
@@ -75,10 +82,12 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 ## Wizard v2
 
 `src/features/wizard-v2/` — data-driven form wizard:
-- Schema fetched from backend `GET /application/midland-fixed-annuity-001`
+- Product selected on `/wizard-v2` (`ProductSelectionPage`) → navigates to `/wizard-v2/:productId`
+- Schema fetched from backend `GET /application/:productId`
 - `formController.tsx` manages form state with `bulkSetValues()` for external field injection
-- Visibility conditions evaluated per-question (same AND/OR/NOT logic as backend validation engine)
-- Supports repeating pages and repeatable groups
+- `visibility.ts` evaluates per-question visibility (AND/OR conditions, same logic as backend)
+- Supports repeating pages, repeatable groups, and `multi_select` fields
+- **Save/resume:** `applicationStorageService.ts` persists form state to localStorage; resume via `/wizard-v2/:productId?resume=<id>`
 
 ## Pre-Fill Page
 
@@ -94,6 +103,16 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 - `fetchClients()` — `GET /api/v1/prefill/clients`
 - `runPrefill(clientId)` — `POST /api/v1/prefill`
 - `runPrefillWithDocument(file, clientId?)` — `POST /api/v1/prefill/document` (multipart FormData)
+
+## Application History
+
+`src/pages/ApplicationHistoryPage.tsx` — lists all saved applications from localStorage:
+- Shows in-progress and submitted applications with carrier, product name, status, and relative timestamp
+- "Continue" button resumes in-progress applications at `/wizard-v2/:productId?resume=<id>`
+- Delete button removes from localStorage
+- Empty state links to `/wizard-v2` to start a new application
+
+**Storage keys:** `eapp_saves` (index of all saves) and `eapp_save_data_<id>` (per-application form values + current step).
 
 ## AI Chat
 
