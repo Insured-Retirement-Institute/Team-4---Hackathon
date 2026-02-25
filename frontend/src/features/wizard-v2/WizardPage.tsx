@@ -2,8 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CheckIcon from '@mui/icons-material/Check';
+import ErrorIcon from '@mui/icons-material/Error';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
+import SendIcon from '@mui/icons-material/Send';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -23,7 +28,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import type { ApplicationDefinition } from '../../types/application';
 import { useApplication } from '../../context/ApplicationContext';
-import { getApplication, submitApplication, validateApplication } from '../../services/applicationService';
+import { getApplication, getApplicationInstance, submitApplication, updateAnswers, validateApplication } from '../../services/apiService';
 import {
   loadApplicationData,
   markSubmitted,
@@ -408,6 +413,199 @@ function getSignerDefaults(values: AnswerMap) {
   };
 }
 
+// ── Submission Progress Dialog ─────────────────────────────────────────────
+
+type StepStatus = 'pending' | 'active' | 'success' | 'error' | 'warn';
+
+function StepIndicatorIcon({ status }: { status: StepStatus }) {
+  if (status === 'active') {
+    return <CircularProgress size={26} thickness={5} color="secondary" />;
+  }
+  if (status === 'success') {
+    return <CheckCircleIcon sx={{ fontSize: 26, color: 'success.main' }} />;
+  }
+  if (status === 'error') {
+    return <ErrorIcon sx={{ fontSize: 26, color: 'error.main' }} />;
+  }
+  if (status === 'warn') {
+    return <WarningAmberIcon sx={{ fontSize: 26, color: 'warning.main' }} />;
+  }
+  return (
+    <Box
+      sx={{
+        width: 26,
+        height: 26,
+        borderRadius: '50%',
+        border: '2px solid',
+        borderColor: 'action.disabled',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'action.disabled' }} />
+    </Box>
+  );
+}
+
+interface SubmissionProgressDialogProps {
+  open: boolean;
+  mode: 'validate' | 'submit';
+  phase: 'validating' | 'submitting' | 'done' | null;
+  failedAt: 'validating' | 'submitting' | null;
+  resultStatus: 'success' | 'error' | 'warn' | null;
+  resultMessage: string | null;
+  onClose: () => void;
+}
+
+function SubmissionProgressDialog({ open, mode, phase, failedAt, resultStatus, resultMessage, onClose }: SubmissionProgressDialogProps) {
+  const isDone = phase === 'done';
+  const isSubmitMode = mode === 'submit';
+
+  const validationStatus: StepStatus = (() => {
+    if (phase === 'validating') return 'active';
+    if (phase === 'submitting') return 'success';
+    if (phase === 'done') {
+      if (!isSubmitMode) return resultStatus === 'error' ? 'error' : resultStatus === 'warn' ? 'warn' : 'success';
+      // In submit mode, validation only failed if the error occurred while still in the validating phase
+      if (failedAt === 'validating') return resultStatus === 'error' ? 'error' : resultStatus === 'warn' ? 'warn' : 'success';
+      return 'success';
+    }
+    return 'pending';
+  })();
+
+  const submissionStatus: StepStatus = (() => {
+    if (!isSubmitMode) return 'pending';
+    if (phase === 'submitting') return 'active';
+    // Only mark submission as the failed step if we actually reached it
+    if (phase === 'done' && failedAt === 'submitting') return resultStatus ?? 'error';
+    if (phase === 'done' && failedAt !== 'validating') return resultStatus ?? 'error';
+    if (phase === 'done') return 'pending'; // error was in validation, never reached submission
+    return 'pending';
+  })();
+
+  const resultsStatus: StepStatus = isDone ? (resultStatus ?? 'success') : 'pending';
+
+  interface StepDef { id: string; label: string; status: StepStatus; sublabel: string; }
+
+  const steps: StepDef[] = [
+    {
+      id: 'validation',
+      label: 'Validation',
+      status: validationStatus,
+      sublabel:
+        validationStatus === 'active' ? 'Checking your answers and business rules...'
+        : validationStatus === 'success' ? 'All checks passed'
+        : validationStatus === 'warn' ? 'Validation passed with warnings'
+        : validationStatus === 'error' ? 'Validation issues found'
+        : 'Waiting...',
+    },
+    ...(isSubmitMode ? [{
+      id: 'submission',
+      label: 'Submission',
+      status: submissionStatus,
+      sublabel:
+        submissionStatus === 'active' ? 'Sending your application to the carrier...'
+        : submissionStatus === 'success' ? 'Application received by carrier'
+        : submissionStatus === 'error' ? 'Submission failed'
+        : submissionStatus === 'warn' ? 'Submitted with warnings'
+        : 'Waiting...',
+    }] : []),
+    {
+      id: 'results',
+      label: 'Results',
+      status: resultsStatus,
+      sublabel: isDone
+        ? (resultMessage ?? (resultStatus === 'success' ? 'Operation completed successfully.' : 'An error occurred.'))
+        : 'Waiting...',
+    },
+  ];
+
+  const accentColor =
+    !isDone ? 'secondary.main'
+    : resultStatus === 'success' ? 'success.main'
+    : resultStatus === 'warn' ? 'warning.main'
+    : 'error.main';
+
+  return (
+    <Dialog
+      open={open}
+      onClose={isDone ? onClose : undefined}
+      maxWidth="sm"
+      fullWidth
+      disableEscapeKeyDown={!isDone}
+      slotProps={{ paper: { sx: { borderRadius: 3, overflow: 'hidden' } } }}
+    >
+      <Box sx={{ height: 5, bgcolor: accentColor, transition: 'background-color 0.4s ease' }} />
+      <DialogTitle sx={{ pt: 3, pb: 1, px: 3 }}>
+        <Typography variant="h6" fontWeight="bold">
+          {mode === 'validate' ? 'Validating Application' : 'Submitting Application'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {isDone ? 'Processing complete.' : 'Please wait while we process your application...'}
+        </Typography>
+      </DialogTitle>
+
+      <DialogContent sx={{ px: 3, pt: 1, pb: isDone ? 0 : 3 }}>
+        <Stack spacing={0}>
+          {steps.map((step, idx) => (
+            <Box key={step.id}>
+              <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ py: 1.5 }}>
+                <Box sx={{ flexShrink: 0, mt: 0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26 }}>
+                  <StepIndicatorIcon status={step.status} />
+                </Box>
+                <Stack spacing={0.25} sx={{ flex: 1 }}>
+                  <Typography
+                    variant="body1"
+                    fontWeight={step.status === 'active' ? 700 : 600}
+                    color={
+                      step.status === 'pending' ? 'text.disabled'
+                      : step.status === 'error' ? 'error.main'
+                      : step.status === 'warn' ? 'warning.dark'
+                      : step.status === 'success' ? 'success.dark'
+                      : 'text.primary'
+                    }
+                  >
+                    {step.label}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color={
+                      step.status === 'pending' ? 'text.disabled'
+                      : step.status === 'error' ? 'error.main'
+                      : step.status === 'warn' ? 'warning.main'
+                      : 'text.secondary'
+                    }
+                    sx={{ whiteSpace: 'pre-wrap' }}
+                  >
+                    {step.sublabel}
+                  </Typography>
+                </Stack>
+              </Stack>
+              {idx < steps.length - 1 && (
+                <Box sx={{ ml: '12px', width: 2, height: 16, bgcolor: 'divider' }} />
+              )}
+            </Box>
+          ))}
+        </Stack>
+      </DialogContent>
+
+      {isDone && (
+        <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
+          <Button
+            onClick={onClose}
+            variant="contained"
+            color={resultStatus === 'error' ? 'error' : resultStatus === 'warn' ? 'warning' : 'secondary'}
+            size="small"
+          >
+            {resultStatus === 'success' ? 'Done' : 'Close'}
+          </Button>
+        </DialogActions>
+      )}
+    </Dialog>
+  );
+}
+
 function ReviewPanel() {
   const { pages, values } = useWizardV2Controller();
 
@@ -471,11 +669,11 @@ function ReviewPanel() {
 }
 
 interface WizardPageContentProps {
-  saveId: string;
+  applicationId: string;
   initialStep: number;
 }
 
-function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
+function WizardPageContent({ applicationId, initialStep }: WizardPageContentProps) {
   const navigate = useNavigate();
   const { definition, pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
   const { collectedFields, mergeFields } = useApplication();
@@ -491,6 +689,14 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   const [signerFieldErrors, setSignerFieldErrors] = useState<{ name?: string; email?: string }>({});
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [isRedirectingToDocusign, setIsRedirectingToDocusign] = useState(false);
+  const [subDialog, setSubDialog] = useState<{
+    open: boolean;
+    mode: 'validate' | 'submit';
+    phase: 'validating' | 'submitting' | 'done' | null;
+    failedAt: 'validating' | 'submitting' | null;
+    resultStatus: 'success' | 'error' | 'warn' | null;
+    resultMessage: string | null;
+  }>({ open: false, mode: 'submit', phase: null, failedAt: null, resultStatus: null, resultMessage: null });
   const lastAppliedRef = useRef<Record<string, string | boolean>>({});
   const isBusyWithDocusign = isDocusignLoading || isRedirectingToDocusign;
 
@@ -498,7 +704,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
 
   const persistProgress = (step: number, status: 'in_progress' | 'submitted' = 'in_progress') => {
     const entry = {
-      id: saveId,
+      id: applicationId,
       productId: definition.productId,
       productName: definition.productName,
       carrier: definition.carrier,
@@ -509,6 +715,8 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
     };
     const data: SavedApplicationData = { currentStep: step, values: values as Record<string, unknown> };
     saveApplication(entry, data);
+    // Sync answers to backend (fire-and-forget — don't block UI)
+    updateAnswers(applicationId, values).catch(() => undefined);
   };
 
   // ── AI field sync ──────────────────────────────────────────────────────────
@@ -592,6 +800,30 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
 
   const handleExitDiscard = () => navigate('/applications');
 
+  // ── Validate only ──────────────────────────────────────────────────────────
+
+  const minDelay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  const handleValidateOnly = async () => {
+    const requestPayload = {
+      productId: definition.productId,
+      answers: values as unknown as Record<string, string | number | boolean | null>,
+    };
+    setSubDialog({ open: true, mode: 'validate', phase: 'validating', failedAt: null, resultStatus: null, resultMessage: null });
+    try {
+      const [result] = await Promise.all([validateApplication(applicationId, requestPayload, 'full'), minDelay(1000)]);
+      if (!result.valid) {
+        const msg = result.errors?.[0]?.message ?? 'Validation failed. Please review your answers.';
+        setSubDialog(prev => ({ ...prev, phase: 'done', failedAt: 'validating', resultStatus: 'error', resultMessage: msg }));
+      } else {
+        setSubDialog(prev => ({ ...prev, phase: 'done', resultStatus: 'success', resultMessage: 'All validation checks passed. Your application is ready to submit.' }));
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Validation request failed. Please try again.';
+      setSubDialog(prev => ({ ...prev, phase: 'done', failedAt: 'validating', resultStatus: 'error', resultMessage: msg }));
+    }
+  };
+
   // ── Submit ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
@@ -601,35 +833,42 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
     setIsSubmitting(true);
 
     const submissionPayload = buildSubmissionPayload(values as AnswerMap, definition);
-    const applicationId = `app_${definition.id}`;
     const requestPayload = {
       productId: definition.productId,
       answers: values as unknown as Record<string, string | number | boolean | null>,
     };
 
+    setSubDialog({ open: true, mode: 'submit', phase: 'validating', failedAt: null, resultStatus: null, resultMessage: null });
+
     try {
-      const validateResult = await validateApplication(applicationId, requestPayload, 'full');
+      const [validateResult] = await Promise.all([validateApplication(applicationId, requestPayload, 'full'), minDelay(1000)]);
 
       if (!validateResult.valid) {
-        const firstValidationMessage = validateResult.errors?.[0]?.message;
-        setSubmissionError(firstValidationMessage || 'Validation failed. Please review your answers and try again.');
+        const msg = validateResult.errors?.[0]?.message ?? 'Validation failed. Please review your answers and try again.';
+        setSubDialog(prev => ({ ...prev, phase: 'done', failedAt: 'validating', resultStatus: 'error', resultMessage: msg }));
+        setSubmissionError(msg);
         return;
       }
 
-      await submitApplication(applicationId, {
+      setSubDialog(prev => ({ ...prev, phase: 'submitting' }));
+
+      await Promise.all([submitApplication(applicationId, {
         ...requestPayload,
         metadata: {
           submissionSource: 'web',
           userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         },
-      });
+      }), minDelay(1000)]);
 
       console.log('eapp_submission_payload', submissionPayload);
-      markSubmitted(saveId);
+      markSubmitted(applicationId);
       setShowSubmissionBanner(true);
       handleDocusignClick();
+      setSubDialog(prev => ({ ...prev, phase: 'done', resultStatus: 'success', resultMessage: 'Your application has been successfully submitted. You will receive a confirmation shortly.' }));
     } catch (error) {
-      setSubmissionError(error instanceof Error ? error.message : 'Unable to reach the server. Please try again.');
+      const msg = error instanceof Error ? error.message : 'Unable to reach the server. Please try again.';
+      setSubDialog(prev => ({ ...prev, phase: 'done', failedAt: prev.phase as 'validating' | 'submitting', resultStatus: 'error', resultMessage: msg }));
+      setSubmissionError(msg);
       console.error('Submission request failed:', error);
     } finally {
       setIsSubmitting(false);
@@ -902,15 +1141,28 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
                 )}
                 {isReviewStep && (
                   <>
+                    <>
                     <Button
-                      variant="contained"
+                      variant="outlined"
                       color="secondary"
                       size="small"
-                      onClick={handleSubmit}
-                      disabled={isSubmitting || isBusyWithDocusign || !isFormComplete}
+                      startIcon={<FactCheckIcon />}
+                      onClick={handleValidateOnly}
+                      disabled={isSubmitting}
                     >
-                      {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                      Validate
                     </Button>
+                    <Button
+                        variant="contained"
+                        color="secondary"
+                        size="small"
+                        startIcon={<SendIcon />}
+                      onClick={handleSubmit}
+                        disabled={isSubmitting || isBusyWithDocusign || !isFormComplete}
+                      >
+                        Submit Application
+                      </Button>
+                  </>
                   </>
                 )}
               </Stack>
@@ -918,6 +1170,28 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
           </Box>
         </Box>
       </Box>
+
+      {/* ── Submission progress dialog ────────────────────────────────── */}
+      <SubmissionProgressDialog
+        open={subDialog.open}
+        mode={subDialog.mode}
+        phase={subDialog.phase}
+        failedAt={subDialog.failedAt}
+        resultStatus={subDialog.resultStatus}
+        resultMessage={subDialog.resultMessage}
+        onClose={() => setSubDialog(prev => ({ ...prev, open: false }))}
+      />
+
+      {/* ── Submission progress dialog ────────────────────────────────── */}
+      <SubmissionProgressDialog
+        open={subDialog.open}
+        mode={subDialog.mode}
+        phase={subDialog.phase}
+        failedAt={subDialog.failedAt}
+        resultStatus={subDialog.resultStatus}
+        resultMessage={subDialog.resultMessage}
+        onClose={() => setSubDialog(prev => ({ ...prev, open: false }))}
+      />
 
       <Dialog
         open={signerDialogOpen}
@@ -990,31 +1264,44 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
 function WizardPageV2() {
   const { productId } = useParams<{ productId: string }>();
   const [searchParams] = useSearchParams();
-  const resumeId = searchParams.get('resume');
+  // ?app=<id> on new start (set by ProductSelectionPage after POST /applications)
+  // ?resume=<id> on resume (same backend application ID stored in localStorage)
+  const appId = searchParams.get('app') ?? searchParams.get('resume');
 
   const [definition, setDefinition] = useState<ApplicationDefinition | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Load saved resume data once at mount — no effect needed, localStorage is synchronous
-  const [initialValues] = useState<Record<string, unknown> | undefined>(() => {
-    if (!resumeId) return undefined;
-    return loadApplicationData(resumeId)?.values;
-  });
-  const [initialStep] = useState<number>(() => {
-    if (!resumeId) return 0;
-    return loadApplicationData(resumeId)?.currentStep ?? 0;
-  });
+  // Load saved data once at mount via stable useState initializers (localStorage is synchronous)
+  const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>(
+    () => (appId ? loadApplicationData(appId)?.values : undefined),
+  );
+  const [initialStep] = useState<number>(
+    () => (appId ? (loadApplicationData(appId)?.currentStep ?? 0) : 0),
+  );
+  // Track whether local data existed so the effect knows whether to fetch from backend
+  const [hasLocalData] = useState<boolean>(() => Boolean(appId && loadApplicationData(appId)));
 
-  // Each save has its own UUID — stable for the lifetime of this session
-  const [saveId] = useState<string>(() => resumeId ?? crypto.randomUUID());
+  // applicationId is the backend DynamoDB UUID — used as both the localStorage key and API param
+  const [applicationId] = useState<string>(() => appId ?? crypto.randomUUID());
 
   useEffect(() => {
     if (!productId) return;
 
-    getApplication(decodeURIComponent(productId))
-      .then(setDefinition)
-      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load application definition'));
-  }, [productId]);
+    const defFetch = getApplication(decodeURIComponent(productId));
+    // If resuming but localStorage was empty (cleared / different device), fall back to backend answers
+    const instFetch = appId && !hasLocalData
+      ? getApplicationInstance(appId).catch(() => null)
+      : Promise.resolve(null);
+
+    Promise.all([defFetch, instFetch])
+      .then(([def, inst]) => {
+        if (inst?.answers && Object.keys(inst.answers).length > 0) {
+          setInitialValues(inst.answers as Record<string, unknown>);
+        }
+        setDefinition(def);
+      })
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load application'));
+  }, [productId, appId, hasLocalData]);
 
   if (loadError) {
     return (
@@ -1034,7 +1321,7 @@ function WizardPageV2() {
 
   return (
     <WizardV2FormProvider definition={definition} initialValues={initialValues}>
-      <WizardPageContent saveId={saveId} initialStep={initialStep} />
+      <WizardPageContent applicationId={applicationId} initialStep={initialStep} />
     </WizardV2FormProvider>
   );
 }

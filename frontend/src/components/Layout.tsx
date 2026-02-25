@@ -29,6 +29,7 @@ function Layout() {
 
   const navItems = [
     { label: 'Home', path: '/' },
+    { label: 'AI Experience', path: '/ai-experience' },
     { label: 'Applications', path: '/applications', badge: inProgressCount },
     { label: 'New Application', path: '/wizard-v2', badge: fieldCount },
     { label: 'Settings', path: '/settings' },

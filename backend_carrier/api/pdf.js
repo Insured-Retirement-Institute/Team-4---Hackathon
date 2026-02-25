@@ -4,35 +4,7 @@ const path = require('path');
 const { populatePDFWithMapping } = require('../lib/pdfHelper');
 const router = express.Router();
 
-/**
- * @swagger
- * /generate-pdf/{submissionId}:
- *   post:
- *     summary: Generate a PDF from a saved application submission
- *     description: Loads the received application submission data using the submissionId, loads the corresponding PDF template, fills it with data, and returns the populated PDF binary stream
- *     parameters:
- *       - name: submissionId
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: The submission ID to load
- *     responses:
- *       200:
- *         description: PDF generated successfully
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
- *       400:
- *         description: Invalid request
- *       404:
- *         description: Submission file or PDF template file not found
- *       500:
- *         description: Failed to generate PDF
- */
-router.post('/generate-pdf/:submissionId', async (req, res) => {
+router.get('/applications/:submissionId/pdf', async (req, res) => {
   try {
     const submissionId = req.params.submissionId;
 

@@ -15,13 +15,15 @@ import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { type Product, getProducts } from '../services/applicationService';
+import { type Product, createApplication, getProducts } from '../services/apiService';
 import { listSaves } from '../services/applicationStorageService';
 
 export default function ProductSelectionPage() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Product | null>(null);
 
   const inProgressSaves = listSaves().filter((s) => s.status === 'in_progress');
@@ -36,9 +38,17 @@ export default function ProductSelectionPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!selected) return;
-    navigate(`/wizard-v2/${encodeURIComponent(selected.productId)}`);
+    setStarting(true);
+    setStartError(null);
+    try {
+      const instance = await createApplication(selected.productId);
+      navigate(`/wizard-v2/${encodeURIComponent(selected.productId)}?app=${instance.id}`);
+    } catch (err) {
+      setStartError(err instanceof Error ? err.message : 'Failed to start application. Please try again.');
+      setStarting(false);
+    }
   };
 
   return (
@@ -97,7 +107,7 @@ export default function ProductSelectionPage() {
               component="img"
               src="/undraw_selected-box_qnrz.svg"
               alt="Select a product"
-              sx={{ width: '100%', maxWidth: 420, mb: 3, opacity: 0.92 }}
+              sx={{ width: '100%', maxWidth: 360, mb: 3, opacity: 0.92 }}
             />
             <Chip label="New Application" color="secondary" size="small" sx={{ mb: 1, fontWeight: 600 }} />
             <Typography variant="h5" fontWeight={700} letterSpacing="-0.25px">
@@ -131,9 +141,9 @@ export default function ProductSelectionPage() {
           {!loading && (
             <Grid container spacing={2}>
               {products.map((product) => {
-                const isSelected = selected?.id === product.id;
+                const isSelected = selected?.productId === product.productId;
                 return (
-                  <Grid key={product.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Grid key={product.productId} size={{ xs: 12, sm: 6, md: 4 }}>
                     <Card
                       elevation={0}
                       sx={{
@@ -229,21 +239,28 @@ export default function ProductSelectionPage() {
           bgcolor: 'background.paper',
           borderTop: '1px solid',
           borderColor: 'divider',
-          p: { xs: 2},
+          p: { xs: 2 },
           boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
         }}
       >
-        <Box sx={{ maxWidth: 1000, mx: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-          <Button
-            variant="contained"
-            color="secondary"
-            size="small"
-            endIcon={<ArrowForwardIcon />}
-            disabled={!selected}
-            onClick={handleStart}
-          >
-            Start Application
-          </Button>
+        <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
+          {startError && (
+            <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setStartError(null)}>
+              {startError}
+            </Alert>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="contained"
+              color="secondary"
+              size="small"
+              endIcon={starting ? undefined : <ArrowForwardIcon />}
+              disabled={!selected || starting}
+              onClick={handleStart}
+            >
+              {starting ? 'Starting…' : 'Start Application'}
+            </Button>
+          </Box>
         </Box>
       </Box>
     </Box>

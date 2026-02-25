@@ -383,6 +383,24 @@ export default function HomePage() {
             >
               Pre-Fill from CRM
             </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              endIcon={<AutoAwesomeIcon />}
+              onClick={() => navigate('/ai-experience')}
+              color="secondary"
+              sx={{
+                borderColor: 'secondary.main',
+                fontWeight: 600,
+                px: 4,
+                '&:hover': {
+                  borderColor: 'secondary.main',
+                  bgcolor: 'rgba(25,118,210,0.08)',
+                },
+              }}
+            >
+              AI Experience
+            </Button>
           </Stack>
         </Container>
       </Box>
