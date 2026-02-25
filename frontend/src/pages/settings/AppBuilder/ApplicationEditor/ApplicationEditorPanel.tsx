@@ -362,71 +362,68 @@ function ApplicationEditorPanel({
       return { ok: false, message: 'Select a product before saving.' };
     }
 
-    const normalizedDescription = form.description.trim();
-    const fallbackDescription = selectedProduct.description?.trim();
     const fallbackProductType = selectedProduct.productType?.trim();
+    const nowIso = new Date().toISOString();
+    const builtPages = form.pages.map((page, pageIndex) => {
+      let runningOrder = 0;
+      const questions = page.sections.flatMap((section) =>
+        section.questions.map((question) => {
+          runningOrder += 1;
+          const questionId = safeId(question.id) || `question_${runningOrder}`;
+          const options = question.type === 'radio' || question.type === 'select' ? parseOptions(question.optionsInput) : null;
 
-    const payload: Partial<Product> = {
-      id: safeId(form.id) || 'new_eapp',
-      version: form.version || '1.0.0',
-      carrier: form.carrier.trim(),
-      productName: form.productName.trim(),
+          return {
+            id: questionId,
+            type: toApiQuestionType(question.type),
+            label: question.label.trim() || questionId,
+            hint: question.hint.trim() || undefined,
+            placeholder: question.placeholder.trim() || null,
+            order: runningOrder,
+            required: question.required,
+            visibility: null,
+            options,
+            validation: question.required ? [{ type: 'required' as const }] : undefined,
+            groupConfig: undefined,
+            allocationConfig: undefined,
+          };
+        }),
+      );
+
+      return {
+        id: safeId(page.id) || `page_${pageIndex + 1}`,
+        title: page.title.trim() || `Page ${pageIndex + 1}`,
+        description: page.description.trim() || null,
+        order: pageIndex + 1,
+        pageType: page.pageType,
+        visibility: null,
+        pageRepeat: null,
+        questions,
+        groupValidations: [],
+      };
+    });
+
+    const payload: Product = {
+      ...selectedProduct,
+      id: safeId(form.id) ?? (selectedProduct.id || 'new_eapp'),
+      version: form.version || selectedProduct.version || '1.0.0',
+      carrier: form.carrier.trim() || selectedProduct.carrier,
+      productName: form.productName.trim() || selectedProduct.productName,
       productId: safeId(form.productId) || selectedProduct.productId,
-      effectiveDate: form.effectiveDate,
-      locale: form.locale.trim() || 'en-US',
-      distributors: selectedDistributorIds,
-      pages: form.pages.map((page, pageIndex) => {
-        let runningOrder = 0;
-        const questions = page.sections.flatMap((section) =>
-          section.questions.map((question) => {
-            runningOrder += 1;
-            const sectionId = safeId(section.id) || 'section';
-            const rawQuestionId = safeId(question.id) || `question_${runningOrder}`;
-            const questionId = `${sectionId}__${rawQuestionId}`;
-            const options = question.type === 'radio' || question.type === 'select' ? parseOptions(question.optionsInput) : null;
-
-            return {
-              id: questionId,
-              type: toApiQuestionType(question.type),
-              label: question.label.trim() || questionId,
-              hint: question.hint.trim() || undefined,
-              placeholder: question.placeholder.trim() || null,
-              order: runningOrder,
-              required: question.required,
-              visibility: null,
-              options,
-              validation: question.required ? [{ type: 'required' as const }] : undefined,
-              groupConfig: undefined,
-              allocationConfig: undefined,
-            };
-          }),
-        );
-
-        return {
-          id: safeId(page.id) || `page_${pageIndex + 1}`,
-          title: page.title.trim() || `Page ${pageIndex + 1}`,
-          description: page.description.trim() || null,
-          order: pageIndex + 1,
-          pageType: page.pageType,
-          visibility: null,
-          pageRepeat: null,
-          questions,
-          groupValidations: [],
-        };
-      }),
+      effectiveDate: form.effectiveDate || selectedProduct.effectiveDate || nowIso.slice(0, 10),
+      locale: form.locale.trim() || selectedProduct.locale || 'en-US',
+      description: form.description.trim() || (selectedProduct.description?.trim() ?? ''),
+      distributors: selectedDistributorIds.length > 0 ? selectedDistributorIds : (selectedProduct.distributors ?? []),
+      pages: builtPages.length > 0 ? builtPages : (selectedProduct.pages ?? []),
+      createdAt: selectedProduct.createdAt || nowIso,
+      updatedAt: selectedProduct.updatedAt || nowIso,
     };
-
-    if (normalizedDescription) {
-      payload.description = normalizedDescription;
-    } else if (fallbackDescription) {
-      payload.description = fallbackDescription;
-    }
 
     if (fallbackProductType) {
       payload.productType = fallbackProductType;
     }
 
     try {
+      console.log('updating payload', payload)
       await updateProduct(selectedProduct.productId, payload);
 
       return { ok: true, message: 'Application saved successfully.' };

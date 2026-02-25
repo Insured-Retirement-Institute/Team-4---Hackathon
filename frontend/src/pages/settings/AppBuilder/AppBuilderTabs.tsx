@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ApprovedDistributorsPanel from './ApprovedDistributors/ApprovedDistributorsPanel';
@@ -19,8 +17,6 @@ function AppBuilderTabs() {
   const [selectedDistributorIds, setSelectedDistributorIds] = useState<string[]>([]);
   const [saveHandler, setSaveHandler] = useState<null | (() => Promise<{ ok: boolean; message: string }>)>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  const [saveMessage, setSaveMessage] = useState('');
-  const [toastOpen, setToastOpen] = useState(false);
   const hasSelectedProduct = Boolean(getProductKey(selectedProduct));
 
   useEffect(() => {
@@ -51,22 +47,17 @@ function AppBuilderTabs() {
     setSelectedProduct(null);
     setSelectedDistributorIds([]);
     setSaveStatus('idle');
-    setSaveMessage('');
     setActiveTab(0);
   };
 
   const handleSaveApplication = async () => {
     if (!saveHandler) {
       setSaveStatus('error');
-      setSaveMessage('Open Application Editor first to initialize the save action.');
       return;
     }
     setSaveStatus('saving');
-    setSaveMessage('');
     const result = await saveHandler();
     setSaveStatus(result.ok ? 'success' : 'error');
-    setSaveMessage(result.message);
-    setToastOpen(true);
     if (result.ok) {
       setSelectedProduct(null);
       setSelectedDistributorIds([]);
@@ -81,7 +72,6 @@ function AppBuilderTabs() {
   useEffect(() => {
     setSelectedDistributorIds([]);
     setSaveStatus('idle');
-    setSaveMessage('');
   }, [selectedProduct?.productId]);
 
   useEffect(() => {
@@ -212,24 +202,6 @@ function AppBuilderTabs() {
           }
         />
       )}
-      <Snackbar
-        open={toastOpen}
-        autoHideDuration={4000}
-        onClose={(_, reason) => {
-          if (reason === 'clickaway') return;
-          setToastOpen(false);
-        }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setToastOpen(false)}
-          severity={saveStatus === 'success' ? 'success' : 'error'}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {saveMessage}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }
