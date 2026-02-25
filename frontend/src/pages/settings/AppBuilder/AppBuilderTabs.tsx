@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import ApprovedDistributorsPanel from './ApprovedDistributors/ApprovedDistributorsPanel';
 import ApplicationEditorPanel from './ApplicationEditor/ApplicationEditorPanel';
 import ProductSelectionPanel from './ProductSelection/ProductSelectionPanel';
 import { type Product } from '../../../services/apiService';
@@ -82,6 +83,15 @@ function AppBuilderTabs() {
               },
             }}
           />
+          <Tab
+            label="Approved Distributors"
+            sx={{
+              '&.Mui-selected': {
+                color: '#3a9df7',
+                fontWeight: 700,
+              },
+            }}
+          />
         </Tabs>
       </Box>
 
@@ -93,6 +103,7 @@ function AppBuilderTabs() {
         />
       )}
       {activeTab === 1 && <ApplicationEditorPanel selectedProduct={selectedProduct} />}
+      {activeTab === 2 && <ApprovedDistributorsPanel />}
     </Box>
   );
 }

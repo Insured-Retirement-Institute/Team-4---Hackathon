@@ -1,5 +1,6 @@
 import type { DragEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -11,7 +12,8 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { type Product } from '../../../../services/apiService';
+import { type Product, updateProduct } from '../../../../services/apiService';
+import type { QuestionType as ApiQuestionType } from '../../../../types/application';
 import PagesColumn from './components/PagesColumn';
 import QuestionDetailsPanel from './components/QuestionDetailsPanel';
 import QuestionsColumn from './components/QuestionsColumn';
@@ -208,6 +210,8 @@ type ApplicationEditorPanelProps = {
 
 function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps) {
   const [form, setForm] = useState<BuilderForm>(createInitialBuilderForm);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [saveMessage, setSaveMessage] = useState<string>('');
   const [activePageUid, setActivePageUid] = useState<string>(form.pages[0]?.uid ?? '');
   const [activeSectionUid, setActiveSectionUid] = useState<string>(form.pages[0]?.sections[0]?.uid ?? '');
   const [activeQuestionUid, setActiveQuestionUid] = useState<string>(
@@ -369,13 +373,27 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
     }));
   };
 
-  const handleSave = () => {
-    const output = {
+  const toApiQuestionType = (type: BuilderQuestion['type']): ApiQuestionType => {
+    if (type === 'switch') return 'boolean';
+    return type;
+  };
+
+  const handleSave = async () => {
+    if (!selectedProduct?.productId) {
+      setSaveStatus('error');
+      setSaveMessage('Select a product before saving.');
+      return;
+    }
+
+    setSaveStatus('saving');
+    setSaveMessage('');
+
+    const payload: Partial<Product> = {
       id: safeId(form.id) || 'new_eapp',
       version: form.version || '1.0.0',
       carrier: form.carrier.trim(),
       productName: form.productName.trim(),
-      productId: safeId(form.productId) || 'new_product',
+      productId: safeId(form.productId) || selectedProduct.productId,
       effectiveDate: form.effectiveDate,
       locale: form.locale.trim() || 'en-US',
       description: form.description.trim(),
@@ -391,17 +409,17 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
 
             return {
               id: questionId,
-              type: question.type,
+              type: toApiQuestionType(question.type),
               label: question.label.trim() || questionId,
-              hint: question.hint.trim() || null,
+              hint: question.hint.trim() || undefined,
               placeholder: question.placeholder.trim() || null,
               order: runningOrder,
               required: question.required,
               visibility: null,
               options,
-              validation: question.required ? [{ type: 'required' }] : [],
-              groupConfig: null,
-              allocationConfig: null,
+              validation: question.required ? [{ type: 'required' as const }] : undefined,
+              groupConfig: undefined,
+              allocationConfig: undefined,
             };
           }),
         );
@@ -420,7 +438,14 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
       }),
     };
 
-    console.log('Generated App Builder JSON:', output);
+    try {
+      await updateProduct(selectedProduct.productId, payload);
+      setSaveStatus('success');
+      setSaveMessage('Application saved successfully.');
+    } catch (error) {
+      setSaveStatus('error');
+      setSaveMessage(error instanceof Error ? error.message : 'Failed to save application.');
+    }
   };
 
   const activePage = form.pages.find((page) => page.uid === activePageUid) ?? form.pages[0] ?? null;
@@ -604,10 +629,17 @@ function ApplicationEditorPanel({ selectedProduct }: ApplicationEditorPanelProps
             />
           </Stack>
         </Stack>
-        <Button variant="contained" onClick={handleSave} sx={{ bgcolor: palette.accent, '&:hover': { bgcolor: '#258ff0' } }}>
-          Save JSON
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={saveStatus === 'saving'}
+          sx={{ bgcolor: palette.accent, '&:hover': { bgcolor: '#258ff0' } }}
+        >
+          {saveStatus === 'saving' ? 'Saving...' : 'Save Application'}
         </Button>
       </Stack>
+      {saveStatus === 'success' && <Alert severity="success">{saveMessage}</Alert>}
+      {saveStatus === 'error' && <Alert severity="error">{saveMessage}</Alert>}
 
       <Box sx={{ p: 2, border: '1px solid', borderColor: palette.border, bgcolor: palette.canvas }}>
         <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} alignItems={{ xs: 'stretch', lg: 'center' }}>
