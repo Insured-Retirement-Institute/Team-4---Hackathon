@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -13,7 +13,11 @@ import { type Product } from '../../../services/apiService';
 const APP_BUILDER_SELECTED_PRODUCT_KEY = 'app_builder_selected_product';
 const getProductKey = (product: Product | null) => product?.id || product?.productId || '';
 
-function AppBuilderTabs() {
+type AppBuilderTabsProps = {
+  onProgressChange?: (progress: number) => void;
+};
+
+function AppBuilderTabs({ onProgressChange }: AppBuilderTabsProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedDistributorIds, setSelectedDistributorIds] = useState<string[]>([]);
@@ -106,6 +110,17 @@ function AppBuilderTabs() {
   ];
   const isFirstStep = activeTab === 0;
   const isLastStep = activeTab === steps.length - 1;
+  const baseProgress = ((activeTab + 1) / steps.length) * 100;
+  const progress =
+    !hasSelectedProduct
+      ? 10
+      : isLastStep && selectedDistributorIds.length === 0
+      ? 90
+      : baseProgress;
+
+  useEffect(() => {
+    onProgressChange?.(progress);
+  }, [onProgressChange, progress]);
 
   const handleBack = () => {
     if (isFirstStep) return;
@@ -127,21 +142,23 @@ function AppBuilderTabs() {
   return (
     <Box>
       <Box sx={{ mb: 2, overflowX: 'auto' }}>
-        <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 760, py: 1 }}>
+        <Stack direction="row" alignItems="center" spacing={0} sx={{ minWidth: 760, py: 1 }}>
           {steps.map((step, index) => {
             const active = activeTab === index;
             const completedOrActive = index <= activeTab;
             return (
-              <Stack key={step.label} direction="row" alignItems="center" spacing={1.25} sx={{ flex: 1 }}>
+              <Fragment key={step.label}>
                 <Box
                   sx={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 1,
+                    px: 0.5,
                     cursor: 'default',
                     opacity: step.disabled ? 0.6 : 1,
                     color: completedOrActive ? '#3a9df7' : '#8d929b',
                     whiteSpace: 'nowrap',
+                    flexShrink: 0,
                   }}
                 >
                   <Box
@@ -165,9 +182,17 @@ function AppBuilderTabs() {
                   </Typography>
                 </Box>
                 {index < steps.length - 1 ? (
-                  <Box sx={{ flex: 1, height: 1, minWidth: 40, bgcolor: activeTab > index ? '#3a9df7' : '#d2d6dd' }} />
+                  <Box
+                    sx={{
+                      flex: 1,
+                      minWidth: 72,
+                      mx: 1.25,
+                      borderTop: '2px solid',
+                      borderColor: activeTab > index ? '#3a9df7' : '#d2d6dd',
+                    }}
+                  />
                 ) : null}
-              </Stack>
+              </Fragment>
             );
           })}
         </Stack>

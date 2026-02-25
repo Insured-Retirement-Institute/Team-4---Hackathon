@@ -34,7 +34,7 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
     if (id.includes('tax_status')) return findOptionValue(question, ['ira', 'qualified']) ?? '';
     if (id.includes('owner_type')) return findOptionValue(question, ['individual', 'natural']) ?? '';
     if (id.includes('id_type')) return findOptionValue(question, ['driver', 'license', 'state']) ?? '';
-    if (id.includes('state')) return findOptionValue(question, ['ca', 'california']) ?? '';
+    if (id.includes('state')) return findOptionValue(question, ['ia', 'iowa']) ?? '';
     if (id.includes('country')) return findOptionValue(question, ['us', 'united']) ?? '';
     if (id.includes('plan_type')) return findOptionValue(question, ['ira', 'qualified']) ?? '';
     if (id.includes('product_type')) return findOptionValue(question, ['annuity', 'fixed']) ?? '';
@@ -43,6 +43,10 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
     if (id.includes('transfer_timing')) return findOptionValue(question, ['asap', 'immediate', 'next']) ?? '';
     if (id.includes('backup_withholding')) return findOptionValue(question, ['no']) ?? '';
     if (id.includes('funding_methods')) return findOptionValue(question, ['check', 'transfer']) ?? '';
+    if (id.includes('bene_type')) return findOptionValue(question, ['primary']) ?? '';
+    if (id.includes('bene_relationship')) return findOptionValue(question, ['spouse', 'child']) ?? '';
+    if (id.includes('bene_entity_type')) return findOptionValue(question, ['individual', 'person', 'natural']) ?? '';
+    if (id.includes('bene_distribution_method')) return findOptionValue(question, ['per_stirpes', 'equal', 'per']) ?? '';
     return question.options?.[0]?.value ?? '';
   }
 
@@ -56,11 +60,13 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
     ) return today;
     if (id.includes('expiration')) return '2030-12-31';
     if (id.includes('trust_date')) return '2015-06-15';
-    if (id.includes('joint_annuitant_dob')) return '1982-11-03';
-    if (id.includes('joint_owner_dob')) return '1982-11-03';
-    if (id.includes('owner_dob')) return '1978-05-18';
-    if (id.includes('dob')) return '1978-05-18';
-    return '2025-01-15';
+    if (id.includes('joint_annuitant_dob')) return '1968-07-22';
+    if (id.includes('joint_owner_dob')) return '1968-07-22';
+    if (id.includes('bene_dob')) return '1962-09-14';
+    if (id.includes('owner_dob')) return '1965-03-15';
+    if (id.includes('annuitant_dob')) return '1965-03-15';
+    if (id.includes('dob')) return '1965-03-15';
+    return '2026-01-15';
   }
 
   if (question.type === 'email') {
@@ -80,7 +86,9 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
   if (question.type === 'ssn') {
     if (id.includes('joint_annuitant')) return '234-56-7890';
     if (id.includes('joint')) return '234-56-7890';
+    if (id.includes('bene_ssn')) return '987-65-4321';
     if (id.includes('owner')) return '345-67-8901';
+    if (id.includes('annuitant')) return '123-45-6789';
     return '123-45-6789';
   }
 
@@ -98,6 +106,7 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
   if (question.type === 'number') {
     if (id.includes('years_employed')) return '12';
     if (id.includes('transfer_count')) return '1';
+    if (id.includes('bene_percentage')) return '100';
     if (id.includes('percentage')) return '100';
     return '1';
   }
@@ -128,16 +137,25 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
   if (id.includes('joint_owner_first_name')) return 'Sam';
   if (id.includes('joint_owner_middle_initial')) return 'K';
   if (id.includes('joint_owner_last_name')) return 'Rivera';
+  if (id.includes('bene_first_name')) return 'Jane';
+  if (id.includes('bene_middle_initial')) return 'E';
+  if (id.includes('bene_last_name')) return 'Patel';
   if (id.includes('owner_first_name')) return 'Alex';
   if (id.includes('owner_middle_initial')) return 'R';
   if (id.includes('owner_last_name')) return 'Patel';
   if (id.includes('first_name')) return 'Alex';
   if (id.includes('middle_initial')) return 'R';
   if (id.includes('last_name')) return 'Patel';
+  if (id.includes('surrendering_owner_name')) return 'Alex R Patel';
+  if (id.includes('surrendering_annuitant_name')) return 'Alex R Patel';
+  if (id.includes('surrendering_joint_owner_name')) return 'Sam K Rivera';
+  if (id.includes('surrendering_joint_annuitant_name')) return 'Sam K Rivera';
+  if (id.includes('surrendering_company_name')) return 'Lincoln Financial Group';
+  if (id.includes('surrendering_account_number')) return 'ANN-9876543';
   if (id.includes('street_address') || id.includes('address_1')) return '4100 Market St';
   if (id.includes('address_2')) return 'Suite 200';
   if (id.includes('city')) return 'Des Moines';
-  if (id.includes('state')) return 'CA';
+  if (id.includes('state')) return 'IA';
   if (id.includes('zip')) return '50309';
   if (id.includes('occupation')) return 'Operations Manager';
   if (id.includes('employer_name')) return 'Heartland Logistics';

@@ -1,23 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import HistoryIcon from '@mui/icons-material/History';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 import LinearProgress from '@mui/material/LinearProgress';
+import MenuItem from '@mui/material/MenuItem';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
-import Alert from '@mui/material/Alert';
 import { listApplications, getProducts, type ApplicationInstance, type Product } from '../services/apiService';
 
 interface EnrichedApplication extends ApplicationInstance {
   productName: string;
   carrier: string;
+  productType: string;
   version: string;
 }
 
@@ -33,11 +42,19 @@ function relativeTime(isoDate: string): string {
   return `${days}d ago`;
 }
 
+function formatProductType(raw: string): string {
+  return raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function ApplicationHistoryPage() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState<EnrichedApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [statusFilter, setStatusFilter] = useState<'all' | 'in_progress' | 'submitted'>('all');
+  const [carrierFilter, setCarrierFilter] = useState<string[]>([]);
+  const [productTypeFilter, setProductTypeFilter] = useState<string[]>([]);
 
   useEffect(() => {
     Promise.all([listApplications(), getProducts()])
@@ -50,6 +67,7 @@ export default function ApplicationHistoryPage() {
               ...app,
               productName: product?.productName ?? app.productId,
               carrier: product?.carrier ?? '',
+              productType: product?.productType ?? '',
               version: product?.version ?? '',
             };
           })
@@ -60,9 +78,40 @@ export default function ApplicationHistoryPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const carriers = useMemo(
+    () => [...new Set(applications.map((a) => a.carrier).filter(Boolean))].sort(),
+    [applications],
+  );
+
+  const productTypes = useMemo(
+    () => [...new Set(applications.map((a) => a.productType).filter(Boolean))].sort(),
+    [applications],
+  );
+
+  const filtered = useMemo(() => {
+    return applications.filter((app) => {
+      if (statusFilter !== 'all' && app.status !== statusFilter) return false;
+      if (carrierFilter.length > 0 && !carrierFilter.includes(app.carrier)) return false;
+      if (productTypeFilter.length > 0 && !productTypeFilter.includes(app.productType)) return false;
+      return true;
+    });
+  }, [applications, statusFilter, carrierFilter, productTypeFilter]);
+
   const handleContinue = (app: EnrichedApplication) => {
     navigate(`/wizard-v2/${encodeURIComponent(app.productId)}?resume=${app.id}`);
   };
+
+  const handleCarrierChange = (e: SelectChangeEvent<string[]>) => {
+    const val = e.target.value;
+    setCarrierFilter(typeof val === 'string' ? val.split(',') : val);
+  };
+
+  const handleProductTypeChange = (e: SelectChangeEvent<string[]>) => {
+    const val = e.target.value;
+    setProductTypeFilter(typeof val === 'string' ? val.split(',') : val);
+  };
+
+  const showFilters = !loading && !error && applications.length > 0;
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -75,9 +124,92 @@ export default function ApplicationHistoryPage() {
             Application History
           </Typography>
         </Stack>
-        <Typography variant="body1" color="text.secondary" mb={5}>
+        <Typography variant="body1" color="text.secondary" mb={4}>
           Pick up where you left off or review submitted applications.
         </Typography>
+
+        {showFilters && (
+          <Stack spacing={2} mb={3}>
+            {/* Row: status toggles + dropdowns */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} flexWrap="wrap">
+              {/* Status toggle — no label */}
+              <ToggleButtonGroup
+                value={statusFilter}
+                color="secondary"
+                exclusive
+                onChange={(_, val) => { if (val) setStatusFilter(val); }}
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    px: 2,
+                    py: 0.625,
+                    fontSize: 13,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                  },
+                }}
+              >
+                <ToggleButton value="all">All</ToggleButton>
+                <ToggleButton value="in_progress">In Progress</ToggleButton>
+                <ToggleButton value="submitted">Submitted</ToggleButton>
+              </ToggleButtonGroup>
+
+              {/* Carrier multi-select */}
+              {carriers.length > 1 && (
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <InputLabel>Carrier</InputLabel>
+                  <Select
+                    multiple
+                    value={carrierFilter}
+                    onChange={handleCarrierChange}
+                    input={<OutlinedInput label="Carrier" />}
+                    renderValue={(selected) =>
+                      selected.length === 0
+                        ? ''
+                        : selected.length === 1
+                        ? selected[0]
+                        : `${selected.length} carriers`
+                    }
+                  >
+                    {carriers.map((c) => (
+                      <MenuItem key={c} value={c}>
+                        {c}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              {/* Product type multi-select */}
+              {productTypes.length > 1 && (
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <InputLabel>Product Type</InputLabel>
+                  <Select
+                    multiple
+                    size="small"
+                    value={productTypeFilter}
+                    onChange={handleProductTypeChange}
+                    input={<OutlinedInput label="Product Type" />}
+                    renderValue={(selected) =>
+                      selected.length === 0
+                        ? ''
+                        : selected.length === 1
+                        ? formatProductType(selected[0])
+                        : `${selected.length} types`
+                    }
+                  >
+                    {productTypes.map((t) => (
+                      <MenuItem key={t} value={t}>
+                        {formatProductType(t)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </Stack>
+
+            <Divider />
+          </Stack>
+        )}
 
         {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -109,9 +241,17 @@ export default function ApplicationHistoryPage() {
           </Card>
         )}
 
-        {!loading && !error && applications.length > 0 && (
+        {!loading && !error && applications.length > 0 && filtered.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 6 }}>
+            <Typography variant="body1" color="text.secondary">
+              No applications match the selected filters.
+            </Typography>
+          </Box>
+        )}
+
+        {!loading && !error && filtered.length > 0 && (
           <Stack spacing={2}>
-            {applications.map((app) => (
+            {filtered.map((app) => (
               <Card
                 key={app.id}
                 elevation={0}
@@ -130,7 +270,6 @@ export default function ApplicationHistoryPage() {
                     alignItems={{ sm: 'center' }}
                     justifyContent="space-between"
                   >
-                    {/* Left: icon + details */}
                     <Stack direction="row" spacing={2} alignItems="center" flex={1} minWidth={0}>
                       <Box
                         sx={{
@@ -168,6 +307,14 @@ export default function ApplicationHistoryPage() {
                             color={app.status === 'submitted' ? 'success' : 'warning'}
                             sx={{ height: 20, fontSize: 10 }}
                           />
+                          {app.productType && (
+                            <Chip
+                              label={formatProductType(app.productType)}
+                              size="small"
+                              variant="outlined"
+                              sx={{ height: 20, fontSize: 10 }}
+                            />
+                          )}
                           <Typography variant="caption" color="text.disabled">
                             Updated {relativeTime(app.updatedAt)}
                           </Typography>
@@ -180,8 +327,7 @@ export default function ApplicationHistoryPage() {
                       </Box>
                     </Stack>
 
-                    {/* Right: actions */}
-                    {app.status === 'in_progress' && (
+                    {app.status !== 'submitted' && (
                       <Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
                         <Button
                           variant="contained"

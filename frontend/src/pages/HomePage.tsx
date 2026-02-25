@@ -399,8 +399,29 @@ export default function HomePage() {
       </Box>
 
       {/* ── Features ─────────────────────────────────────────────────────── */}
-      <Box id="features" sx={{ py: { xs: 8, md: 12 }, px: 3, bgcolor: 'background.default' }}>
-        <Container maxWidth="lg">
+      <Box
+        id="features"
+        sx={{
+          py: { xs: 8, md: 12 },
+          px: 3,
+          position: 'relative',
+          backgroundImage: 'url(/bg.svg)',
+          backgroundAttachment: 'fixed',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        {/* Parallax overlay — keeps cards legible */}
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            bgcolor: 'background.default',
+            opacity: 0.9,
+            pointerEvents: 'none',
+          }}
+        />
+        <Container maxWidth="lg" sx={{ position: 'relative' }}>
           <Typography variant="overline" color="primary" fontWeight={700} display="block" mb={1}>
             What We Built
           </Typography>
@@ -468,8 +489,28 @@ export default function HomePage() {
       {inProgressSaves.length > 0 && <Divider />}
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <Box sx={{ py: { xs: 8, md: 10 }, px: 3, bgcolor: 'background.default', textAlign: 'center' }}>
-        <Container maxWidth="md">
+      <Box
+        sx={{
+          py: { xs: 8, md: 10 },
+          px: 3,
+          textAlign: 'center',
+          position: 'relative',
+          backgroundImage: 'url(/bg.svg)',
+          backgroundAttachment: 'fixed',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            bgcolor: 'background.default',
+            opacity: 0.9,
+            pointerEvents: 'none',
+          }}
+        />
+        <Container maxWidth="md" sx={{ position: 'relative' }}>
           <Typography variant="h4" fontWeight={700} mb={1.5}>
             See it in action
           </Typography>
