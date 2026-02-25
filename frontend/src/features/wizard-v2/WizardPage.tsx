@@ -6,11 +6,17 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useApplication } from '../../context/ApplicationContext';
 import { APPLICATION_DEFINITION } from './applicationDefinition';
@@ -25,6 +31,13 @@ type ValidationError = {
 type ValidationResponse = {
   valid?: boolean;
   errors?: ValidationError[];
+  message?: string;
+};
+
+type DocusignStartResponse = {
+  signingUrl?: string;
+  envelopeId?: string;
+  error?: string;
   message?: string;
 };
 
@@ -375,6 +388,25 @@ function buildSubmissionPayload(values: AnswerMap) {
   };
 }
 
+function getSignerDefaults(values: AnswerMap) {
+  const ownerSameAsAnnuitant = asBool(values.owner_same_as_annuitant);
+  const ownerName = [asString(values.owner_first_name), asString(values.owner_last_name)]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const annuitantName = [asString(values.annuitant_first_name), asString(values.annuitant_last_name)]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const signerName = ownerSameAsAnnuitant ? annuitantName || ownerName : ownerName || annuitantName;
+  const signerEmail = asString(values.owner_email) || asString(values.annuitant_email);
+
+  return {
+    signerName: signerName.trim(),
+    signerEmail: signerEmail.trim(),
+  };
+}
+
 function ReviewPanel() {
   const { pages, values } = useWizardV2Controller();
 
@@ -444,6 +476,14 @@ function WizardPageContent() {
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [docusignError, setDocusignError] = useState<string | null>(null);
+  const [isDocusignLoading, setIsDocusignLoading] = useState(false);
+  const [docusignOpened, setDocusignOpened] = useState(false);
+  const [docusignEnvelopeId, setDocusignEnvelopeId] = useState<string | null>(null);
+  const [signerDialogOpen, setSignerDialogOpen] = useState(false);
+  const [signerName, setSignerName] = useState('');
+  const [signerEmail, setSignerEmail] = useState('');
+  const [signerFieldErrors, setSignerFieldErrors] = useState<{ name?: string; email?: string }>({});
   const lastAppliedRef = useRef<Record<string, string | boolean>>({});
 
   // Continuously apply new fields from ApplicationContext (e.g. from widget chat) into wizard
@@ -500,6 +540,10 @@ function WizardPageContent() {
   const isFormComplete = useMemo(
     () => pages.every((page) => isPageComplete(page)),
     [isPageComplete, pages],
+  );
+
+  const shouldShowDocusignStatus = Boolean(
+    isDocusignLoading || docusignError || docusignOpened || docusignEnvelopeId,
   );
 
   const handleNext = () => {
@@ -592,6 +636,115 @@ function WizardPageContent() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+const handleStartDocusign = async (
+  requestedName: string,
+  requestedEmail: string,
+  popup?: Window | null
+) => {
+  setDocusignError(null);
+  setDocusignOpened(false);
+  setDocusignEnvelopeId(null);
+  setIsDocusignLoading(true);
+
+  const applicationId = `app_${APPLICATION_DEFINITION.id}`;
+
+  try {
+    const response = await fetch(`/application/${applicationId}/docusign/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        signerEmail: requestedEmail,
+        signerName: requestedName,
+      }),
+    });
+
+    const result = (await response.json()) as DocusignStartResponse;
+
+    if (!response.ok) {
+      if (popup && !popup.closed) popup.close();
+      setDocusignError(result.error || result.message || 'DocuSign request failed. Please try again.');
+      return;
+    }
+
+    if (!result.signingUrl) {
+      if (popup && !popup.closed) popup.close();
+      setDocusignError('DocuSign did not return a signing URL.');
+      return;
+    }
+
+    setDocusignEnvelopeId(result.envelopeId ?? null);
+
+    // If we successfully opened a tab synchronously, navigate it now.
+    if (popup && !popup.closed) {
+      popup.location.href = result.signingUrl;
+    } else {
+      // Fallback: if popup was blocked, navigate current tab
+      window.location.href = result.signingUrl;
+    }
+
+    setDocusignOpened(true);
+  } catch (error) {
+    if (popup && !popup.closed) popup.close();
+    console.error('DocuSign request failed:', error);
+    setDocusignError('Unable to reach the DocuSign service. Please try again.');
+  } finally {
+    setIsDocusignLoading(false);
+  }
+};
+
+const handleDocusignClick = () => {
+  const defaults = getSignerDefaults(values as AnswerMap);
+
+  if (!defaults.signerName || !defaults.signerEmail) {
+    setSignerName(defaults.signerName);
+    setSignerEmail(defaults.signerEmail);
+    setSignerFieldErrors({});
+    setSignerDialogOpen(true);
+    return;
+  }
+
+  // Open the tab immediately (user gesture), then fill it after fetch returns.
+  const popup = window.open('', '_blank', 'noopener,noreferrer');
+
+  // Optional: if popup blocked, show a helpful message.
+  if (!popup) {
+    setDocusignError('Your browser blocked the DocuSign popup. Please allow popups and try again.');
+  }
+
+  handleStartDocusign(defaults.signerName, defaults.signerEmail, popup);
+};
+
+  const handleSignerDialogClose = () => {
+    if (!isDocusignLoading) {
+      setSignerDialogOpen(false);
+    }
+  };
+
+  const handleSignerDialogContinue = () => {
+    const trimmedName = signerName.trim();
+    const trimmedEmail = signerEmail.trim();
+    const nextErrors: { name?: string; email?: string } = {};
+
+    if (!trimmedName) {
+      nextErrors.name = 'Full name is required.';
+    }
+
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      nextErrors.email = 'Valid email is required.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setSignerFieldErrors(nextErrors);
+      return;
+    }
+
+    setSignerFieldErrors({});
+    setSignerDialogOpen(false);
+    handleStartDocusign(trimmedName, trimmedEmail);
   };
 
   const handleSidebarPageClick = (pageIndex: number) => {
@@ -693,6 +846,34 @@ function WizardPageContent() {
             )}
 
             {isReviewStep && <ReviewPanel />}
+
+            {isReviewStep && shouldShowDocusignStatus && (
+              <Stack spacing={1.5} sx={{ mt: 3 }}>
+                {isDocusignLoading && (
+                  <Alert severity="info" icon={<CircularProgress size={16} color="inherit" />}>
+                    Starting DocuSign session...
+                  </Alert>
+                )}
+                {docusignError && <Alert severity="error">{docusignError}</Alert>}
+                {docusignOpened && (
+                  <Alert severity="success">
+                    DocuSign opened in a new tab. After signing, return here to continue.
+                  </Alert>
+                )}
+                {docusignEnvelopeId && (
+                  <Typography variant="caption" color="text.secondary">
+                    Envelope ID: {docusignEnvelopeId}
+                  </Typography>
+                )}
+                {docusignOpened && (
+                  <Box>
+                    <Button variant="outlined" size="small" component="a" href="/docusign/return">
+                      Go to DocuSign return page
+                    </Button>
+                  </Box>
+                )}
+              </Stack>
+            )}
           </Box>
         </Box>
 
@@ -726,20 +907,72 @@ function WizardPageContent() {
                   </Button>
                 )}
                 {isReviewStep && (
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || !isFormComplete}
-                  >
-                    {isSubmitting ? 'Submitting...' : 'Submit Application'}
-                  </Button>
+                  <>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      onClick={handleDocusignClick}
+                      disabled={isDocusignLoading}
+                      startIcon={isDocusignLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+                    >
+                      {isDocusignLoading ? 'Starting DocuSign...' : 'Sign with DocuSign'}
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      onClick={handleSubmit}
+                      disabled={isSubmitting || !isFormComplete}
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                    </Button>
+                  </>
                 )}
               </Stack>
             </Stack>
           </Box>
         </Box>
       </Box>
+
+      <Dialog
+        open={signerDialogOpen}
+        onClose={handleSignerDialogClose}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Signer details</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Full name"
+              value={signerName}
+              onChange={(event) => setSignerName(event.target.value)}
+              error={Boolean(signerFieldErrors.name)}
+              helperText={signerFieldErrors.name}
+              autoFocus
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={signerEmail}
+              onChange={(event) => setSignerEmail(event.target.value)}
+              error={Boolean(signerFieldErrors.email)}
+              helperText={signerFieldErrors.email}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSignerDialogClose} disabled={isDocusignLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSignerDialogContinue}
+            disabled={isDocusignLoading}
+          >
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
