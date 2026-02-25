@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import AppBar from '@mui/material/AppBar';
@@ -17,6 +17,27 @@ function Layout() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   // Bridge widget.js events (iri:field_updated, etc.) into ApplicationContext
   useWidgetSync();
+
+  // Hide the floating assistant widget on settings routes.
+  useEffect(() => {
+    const onSettingsRoute = location.pathname.startsWith('/settings');
+    const applyWidgetVisibility = () => {
+      const widgetHost = document.getElementById('iri-chat-widget');
+      if (!widgetHost) return;
+      widgetHost.style.display = onSettingsRoute ? 'none' : '';
+    };
+
+    applyWidgetVisibility();
+    const observer = new MutationObserver(() => applyWidgetVisibility());
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    if (onSettingsRoute) {
+      const instance = window.IRIChat?._instance as ({ _closePanel?: () => void } | undefined);
+      instance?._closePanel?.();
+    }
+
+    return () => observer.disconnect();
+  }, [location.pathname]);
 
   const navItems = [
     { label: 'Home', path: '/' },

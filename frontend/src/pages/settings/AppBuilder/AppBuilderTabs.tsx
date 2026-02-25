@@ -173,54 +173,80 @@ function AppBuilderTabs() {
         </Stack>
       </Box>
 
-      <Stack direction="row" spacing={1} justifyContent="space-between" sx={{ mb: 2 }}>
-        {isFirstStep ? <Box /> : (
-          <Button variant="outlined" onClick={handleBack}>
-            Back
-          </Button>
-        )}
-        {isLastStep ? (
-          <Button
-            variant="contained"
-            onClick={handleSaveApplication}
-            disabled={updateDisabled}
-            sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}
-          >
-            {saveStatus === 'saving' ? 'Updating...' : 'Update Product'}
-          </Button>
-        ) : (
-          <Button variant="contained" onClick={handleNext} disabled={nextDisabled} sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}>
-            Next
-          </Button>
-        )}
-      </Stack>
-
-      {activeTab === 0 && (
-        <ProductSelectionPanel
-          selectedProductKey={getProductKey(selectedProduct) || null}
-          onSelectProduct={handleProductSelect}
-          onInvalidSelection={handleInvalidSelection}
-        />
-      )}
-      {hasSelectedProduct ? (
-        <Box sx={{ display: activeTab === 1 ? 'block' : 'none' }}>
-          <ApplicationEditorPanel
-            selectedProduct={selectedProduct}
-            selectedDistributorIds={selectedDistributorIds}
-            onRegisterSaveHandler={registerSaveHandler}
+      <Box sx={{ pb: 11 }}>
+        {activeTab === 0 && (
+          <ProductSelectionPanel
+            selectedProductKey={getProductKey(selectedProduct) || null}
+            onSelectProduct={handleProductSelect}
+            onInvalidSelection={handleInvalidSelection}
           />
-        </Box>
-      ) : null}
-      {activeTab === 2 && (
-        <ApprovedDistributorsPanel
-          selectedDistributorIds={selectedDistributorIds}
-          onToggleDistributor={(distributorId) =>
-            setSelectedDistributorIds((prev) =>
-              prev.includes(distributorId) ? prev.filter((id) => id !== distributorId) : [...prev, distributorId],
-            )
-          }
-        />
-      )}
+        )}
+        {hasSelectedProduct ? (
+          <Box sx={{ display: activeTab === 1 ? 'block' : 'none' }}>
+            <ApplicationEditorPanel
+              selectedProduct={selectedProduct}
+              selectedDistributorIds={selectedDistributorIds}
+              onRegisterSaveHandler={registerSaveHandler}
+            />
+          </Box>
+        ) : null}
+        {activeTab === 2 && (
+          <ApprovedDistributorsPanel
+            selectedDistributorIds={selectedDistributorIds}
+            onToggleDistributor={(distributorId) =>
+              setSelectedDistributorIds((prev) =>
+                prev.includes(distributorId) ? prev.filter((id) => id !== distributorId) : [...prev, distributorId],
+              )
+            }
+          />
+        )}
+      </Box>
+
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 20,
+          py: 1.5,
+          px: 3,
+          borderTop: 'none',
+          bgcolor: 'transparent',
+          boxShadow: 'none',
+        }}
+      >
+        <Stack direction="row" spacing={1} justifyContent="space-between">
+          {isFirstStep ? <Box /> : (
+            <Button
+              variant="outlined"
+              onClick={handleBack}
+              sx={{ bgcolor: '#ffffff', '&:hover': { bgcolor: '#ffffff' } }}
+            >
+              Back
+            </Button>
+          )}
+          {isLastStep ? (
+            <Button
+              variant="contained"
+              onClick={handleSaveApplication}
+              disabled={updateDisabled}
+              sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}
+            >
+              {saveStatus === 'saving' ? 'Updating...' : 'Update Product'}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              disabled={nextDisabled}
+              sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}
+            >
+              Next
+            </Button>
+          )}
+        </Stack>
+      </Box>
 
       <Snackbar
         key={saveNoticeMessage}
