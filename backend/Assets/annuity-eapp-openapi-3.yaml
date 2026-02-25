@@ -1,0 +1,2492 @@
+openapi: 3.1.0
+
+info:
+  title: Annuity E-Application API
+  description: |
+    A dynamic, renderable e-application API for annuity products.
+
+    This API is designed for two primary consumers:
+    - **Frontend Applications** — Render pages, questions, and validation rules dynamically
+      based on the response structure.
+    - **AI Agents / LLMs** — Use `hint` fields on each question for natural language prompting,
+      conditions for contextual question flow, and validation rules for inline answer validation.
+
+    ### Key Concepts
+    - **Application** — Top-level envelope containing metadata and all pages.
+    - **Page** — A logical grouping of questions with optional conditional visibility.
+      Pages marked with `pageRepeat` are templates rendered multiple times based on a
+      source question answer (e.g., one page per surrendering company in a 1035 exchange).
+    - **Question** — A single input with type, label, hint, options, visibility, and validation.
+    - **Condition** — A recursive expression tree supporting simple, compound (AND/OR/NOT),
+      and computed comparisons.
+    - **Validation** — Rules applied at field, cross-field, group-sum, async, and allocation levels.
+    - **Field Sync** — Bidirectional binding between questions that must share the same
+      value (e.g., owner SSN on the main application and on each 1035 transfer form).
+      Changes to any member propagate to all others; fields remain editable with a
+      desync warning.
+
+    ### OpenAPI Version
+    This spec targets **OpenAPI 3.1.0**, which aligns fully with JSON Schema Draft 2020-12.
+    Notable implications:
+    - `nullable` is not used; nullability is expressed via `type: ['string', 'null']` or `oneOf`.
+    - Schema-level `example` (singular) is replaced by `examples` (JSON Schema array).
+    - `$ref` siblings are permitted without `allOf` wrapping.
+    - `exclusiveMinimum` / `exclusiveMaximum` are numeric values, not booleans.
+    - `const` is used instead of single-value `enum` where a field has exactly one valid value.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: https://api-sandbox.example.com/v1
+    description: Sandbox
+
+tags:
+  - name: Application Definition
+    description: Retrieve the full e-application structure for a given product.
+  - name: Validation
+    description: Validate a partial or full set of answers against application rules.
+  - name: Submission
+    description: Submit a completed application.
+  - name: Products
+    description: Manage product definitions (CRUD).
+  - name: Applications
+    description: Create and manage application instances.
+
+# ─────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────
+
+paths:
+
+  /application/{productId}:
+    get:
+      tags:
+        - Application Definition
+      summary: Get Application Definition
+      description: |
+        Returns the complete e-application definition for the specified product,
+        including all pages, questions, visibility conditions, and validation rules.
+
+        Frontend renderers use this response to build the form dynamically.
+        AI agents use `hint` fields to phrase questions conversationally and
+        `pageRepeat` / `visibility` structures to determine question flow.
+      operationId: getApplicationDefinition
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Unique identifier for the annuity product.
+          schema:
+            type: string
+          examples:
+            fixed_annuity:
+              summary: Midland National Fixed Annuity
+              value: midland-fixed-annuity-001
+        - name: locale
+          in: query
+          required: false
+          description: BCP 47 locale for label and option localization. Defaults to `en-US`.
+          schema:
+            type: string
+            default: en-US
+          examples:
+            english:
+              summary: US English
+              value: en-US
+      responses:
+        '200':
+          description: Application definition returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDefinition'
+              examples:
+                fixed_annuity:
+                  summary: Midland National Fixed Annuity (abbreviated)
+                  value:
+                    id: midland-fixed-annuity-001
+                    version: 1.0.0
+                    carrier: Midland National Life Insurance Company
+                    productName: Fixed Annuity Application
+                    productId: midland-fixed-annuity-001
+                    effectiveDate: '2021-03-01'
+                    locale: en-US
+                    description: Application for a Midland National fixed annuity contract.
+                    pages: []
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  summary: Unknown product ID
+                  value:
+                    code: PRODUCT_NOT_FOUND
+                    message: No application definition found for product ID 'xyz-999'.
+                    details: null
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                server_error:
+                  summary: Unexpected server failure
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred. Please try again.
+                    details: null
+
+  /application/{applicationId}/validate:
+    post:
+      tags:
+        - Validation
+      summary: Validate Application Answers
+      description: |
+        Validates a partial or complete set of answers against the application definition rules.
+
+        Supports incremental validation (`scope=page`) or full validation (`scope=full`).
+        Returns a list of validation errors keyed by question ID.
+
+        AI agents should call this endpoint after collecting answers for each page to confirm
+        correctness before proceeding to the next set of questions.
+
+        ### Repeated page answers
+        For `pageRepeat` pages, answers must be submitted as an array under the page template ID
+        (see `AnswerMap` for the required structure).
+      operationId: validateApplicationAnswers
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          description: Unique identifier for the in-progress application instance.
+          schema:
+            type: string
+          examples:
+            sample:
+              value: app-instance-abc123
+        - name: scope
+          in: query
+          required: false
+          description: |
+            Scope of validation.
+            - `page` — validates only the answers for the specified `pageId`.
+            - `full` — validates all provided answers.
+          schema:
+            type: string
+            enum: [page, full]
+            default: full
+          examples:
+            full_validation:
+              summary: Validate all answers
+              value: full
+            page_validation:
+              summary: Validate a single page
+              value: page
+        - name: pageId
+          in: query
+          required: false
+          description: Required when `scope=page`. The template ID of the page to validate.
+          schema:
+            type: string
+          examples:
+            owner_page:
+              value: page-annuitant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+            examples:
+              page_answers:
+                summary: Validate annuitant page answers
+                value:
+                  productId: midland-fixed-annuity-001
+                  answers:
+                    annuitantFirstName: Jane
+                    annuitantLastName: Smith
+                    annuitant_dob: '1965-03-15'
+                    annuitantTaxId: '123-45-6789'
+                    annuitant_gender: female
+                    annuitant_us_citizen: 'yes'
+      responses:
+        '200':
+          description: Validation completed. Returns any errors found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+              examples:
+                valid:
+                  summary: No errors
+                  value:
+                    valid: true
+                    errors: []
+                invalid:
+                  summary: Validation errors present
+                  value:
+                    valid: false
+                    errors:
+                      - questionId: annuitant_dob
+                        pageRepeatIndex: null
+                        groupIndex: null
+                        groupFieldId: null
+                        filterField: null
+                        filterValue: null
+                        type: min_date
+                        message: Annuitant cannot be older than 85 at time of application.
+                group_sum_error:
+                  summary: Beneficiary percentage sum failure
+                  value:
+                    valid: false
+                    errors:
+                      - questionId: owner_beneficiaries
+                        pageRepeatIndex: null
+                        groupIndex: null
+                        groupFieldId: null
+                        filterField: beneType
+                        filterValue: primary
+                        type: group_sum
+                        message: 'Primary beneficiary percentages must total 100% (current total: 90%)'
+        '400':
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Application instance not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /application/{applicationId}/submit:
+    post:
+      tags:
+        - Submission
+      summary: Submit Application
+      description: |
+        Submits the completed application for processing. Full server-side validation
+        runs before acceptance. If errors are found the submission is rejected and
+        errors are returned with HTTP 422.
+
+        A successful submission returns a confirmation number and initial status.
+      operationId: submitApplication
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          description: Unique identifier for the in-progress application instance.
+          schema:
+            type: string
+          examples:
+            sample:
+              value: app-instance-abc123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmissionRequest'
+            examples:
+              aiProducerSubmission:
+                summary: Submission originating from an AI agent
+                value:
+                  productId: midland-fixed-annuity-001
+                  answers:
+                    annuitantFirstName: Jane
+                    annuitantLastName: Smith
+                  metadata:
+                    submissionSource: aiProducer
+                    producerId: producer-rovo-001
+                    ipAddress: null
+                    userAgent: null
+      responses:
+        '200':
+          description: Application submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionResponse'
+              examples:
+                received:
+                  summary: Application received and pending review
+                  value:
+                    confirmationNumber: ANN-2025-00048291
+                    status: received
+                    submittedAt: '2025-06-15T14:30:00Z'
+                    message: Your application has been received and is pending review. You will be contacted within 2 business days.
+        '422':
+          description: Validation failed — application not submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+              examples:
+                failed_validation:
+                  summary: Missing required signature
+                  value:
+                    valid: false
+                    errors:
+                      - questionId: owner_signature
+                        pageRepeatIndex: null
+                        groupIndex: null
+                        groupFieldId: null
+                        filterField: null
+                        filterValue: null
+                        type: required
+                        message: Owner signature is required before submitting.
+        '400':
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Application instance not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Products ──────────────────────────────────────────────
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List all products
+      operationId: listProducts
+      responses:
+        '200':
+          description: Array of product objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductSummary'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Products
+      summary: Create a product
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - carrier
+                - productName
+                - productId
+              properties:
+                carrier:
+                  type: string
+                productName:
+                  type: string
+                productId:
+                  type: string
+      responses:
+        '201':
+          description: Product created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '400':
+          description: Missing required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get a product by ID
+      operationId: getProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Products
+      summary: Update a product
+      operationId: updateProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Product updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Products
+      summary: Delete a product
+      operationId: deleteProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Product deleted.
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Applications ─────────────────────────────────────────
+
+  /applications:
+    post:
+      tags:
+        - Applications
+      summary: Create a new application
+      operationId: createApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+              properties:
+                productId:
+                  type: string
+            examples:
+              create:
+                value:
+                  productId: midland-fixed-annuity-001
+      responses:
+        '201':
+          description: Application created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '400':
+          description: Missing productId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{id}:
+    get:
+      tags:
+        - Applications
+      summary: Get an application by ID
+      operationId: getApplication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Application object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '404':
+          description: Application not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{id}/answers:
+    put:
+      tags:
+        - Applications
+      summary: Update application answers
+      operationId: updateApplicationAnswers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - answers
+              properties:
+                answers:
+                  type: object
+            examples:
+              partialUpdate:
+                value:
+                  answers:
+                    annuitant_first_name: Jane
+                    annuitant_last_name: Smith
+      responses:
+        '200':
+          description: Updated application with merged answers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '400':
+          description: Missing answers in request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Application not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Application already submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# ─────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────
+
+components:
+  schemas:
+
+    # ─────────────────────────────────────────
+    # APPLICATION DEFINITION
+    # ─────────────────────────────────────────
+
+    ApplicationDefinition:
+      type: object
+      description: Top-level e-application envelope containing metadata and all pages.
+      required:
+        - id
+        - version
+        - carrier
+        - productName
+        - productId
+        - effectiveDate
+        - locale
+        - description
+        - pages
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this application definition.
+          examples:
+            - midland-fixed-annuity-001
+        version:
+          type: string
+          description: Semantic version of this application definition.
+          examples:
+            - 1.0.0
+        carrier:
+          type: string
+          description: Name of the insurance carrier offering this product.
+          examples:
+            - Midland National Life Insurance Company
+        productName:
+          type: string
+          description: Display name of the annuity product.
+          examples:
+            - Fixed Annuity Application
+        productId:
+          type: string
+          description: Unique product identifier used to fetch this definition.
+          examples:
+            - midland-fixed-annuity-001
+        effectiveDate:
+          type: string
+          format: date
+          description: Date this application version became effective (ISO 8601).
+          examples:
+            - '2021-03-01'
+        locale:
+          type: string
+          description: BCP 47 locale code for this application.
+          examples:
+            - en-US
+        description:
+          type: string
+          description: |
+            Human-readable description of the overall application. AI agents should
+            read this to the applicant at the start of the conversation to set context.
+          examples:
+            - >-
+              This application is used to apply for a Midland National fixed annuity
+              contract. Please have your Social Security number, funding account details,
+              and beneficiary information available before beginning.
+        pages:
+          type: array
+          description: Ordered list of pages comprising the application.
+          items:
+            $ref: '#/components/schemas/Page'
+        fieldSyncs:
+          type: array
+          description: |
+            Bidirectional field synchronization rules. Each entry defines a group of
+            question IDs whose values should remain in sync. When a user changes any
+            field in the group, all other members are pre-filled with the new value.
+
+            Fields on **repeating pages** (`pageRepeat`) are synced across every rendered
+            instance: updating a non-repeating source propagates to all instances, and
+            updating any single instance propagates back to the non-repeating field
+            (and therefore cascades to all other instances).
+
+            Synced fields remain editable. If the user manually overrides a pre-filled
+            value, the UI should display a desync warning indicating the field no longer
+            matches its linked field(s). The override is preserved in the `AnswerMap`
+            as-is; no special envelope is required — desync state is a UI concern.
+          items:
+            $ref: '#/components/schemas/FieldSyncGroup'
+          default: []
+
+    # ─────────────────────────────────────────
+    # PAGE
+    # ─────────────────────────────────────────
+
+    Page:
+      type: object
+      description: |
+        A logical grouping of questions or disclosures representing one step or screen
+        in the application.
+
+        ### Page types (`pageType`)
+        - **`standard`** (default) — A form page containing `questions` and optional
+          `groupValidations`. This is the typical input-collection page.
+        - **`disclosure`** — A content-first page where legal or regulatory text must be
+          presented and acknowledged before the applicant may proceed. Contains a
+          `disclosures` array; may also include `questions` for supplemental inputs
+          that appear after the disclosure content (e.g., a suitability questionnaire
+          appended to a suitability disclosure).
+
+        ### Repeating pages (`pageRepeat`)
+        Pages with a `pageRepeat` object are **template pages** rendered `N` times,
+        where `N` is the integer value of `pageRepeat.sourceField`. Each instance gets
+        a titled heading from `titleTemplate` and its answers are stored as an ordered
+        array in the `AnswerMap` under the template page ID.
+      required:
+        - id
+        - title
+        - order
+        - pageType
+      properties:
+        id:
+          type: string
+          description: |
+            Unique page identifier. For repeating page templates, this is the template ID.
+            UI contexts may render instances as `{id}#1`, `{id}#2`, etc., but answers
+            are always stored as an array under the bare template ID.
+          examples:
+            - page-annuitant
+            - page-1035-transfer
+            - page-disclosures
+        title:
+          type: string
+          description: |
+            Display title. For repeating pages, `pageRepeat.titleTemplate` overrides
+            this for each rendered instance; this serves as fallback.
+          examples:
+            - Annuitant Information
+            - Important Disclosures
+        description:
+          type: ['string', 'null']
+          description: |
+            Optional contextual text shown at the top of the page. AI agents should
+            read or paraphrase this before presenting questions or disclosures.
+          examples:
+            - The annuitant is the person whose life the annuity contract is based on.
+        order:
+          type: integer
+          description: |
+            Ascending display position. For repeating page templates, all rendered
+            instances occupy this position consecutively before the next page.
+          minimum: 1
+          examples:
+            - 1
+        pageType:
+          type: string
+          enum: [standard, disclosure]
+          default: standard
+          description: |
+            Determines the rendering mode and required fields for this page.
+
+            - `standard` — Input-collection page. Requires `questions`.
+            - `disclosure` — Legal content page. Requires `disclosures`. May also
+              include `questions` for supplemental inputs following the disclosure text.
+
+            **AI agent behavior difference:**
+            - `standard` pages: ask questions conversationally in order.
+            - `disclosure` pages: present or summarize each disclosure's content,
+              then ask for the acknowledgment before moving to the next disclosure.
+              If `viewRequired: true`, the agent must convey that they are reading
+              the full disclosure before requesting acknowledgment.
+          examples:
+            - standard
+            - disclosure
+        visibility:
+          description: |
+            Optional condition controlling page visibility. `null` means always visible.
+            Evaluated against all previously collected answers.
+          oneOf:
+            - $ref: '#/components/schemas/ConditionExpression'
+            - type: 'null'
+        pageRepeat:
+          description: |
+            When present, this page is a repeating template driven by a numeric answer.
+
+            **In-page conditions** reference sibling questions by bare ID — the renderer
+            resolves them within the current instance. **Cross-page conditions** use bare
+            IDs resolved from the global answer map.
+
+            **Answer storage format:**
+            ```json
+            {
+              "page-1035-transfer": [
+                { "surrenderingCompanyName": "Lincoln Financial", "transferScope": "full" },
+                { "surrenderingCompanyName": "Nationwide", "transferScope": "partial" }
+              ]
+            }
+            ```
+
+            **AI agent behavior:** Announce each instance using `titleTemplate` before
+            asking questions (e.g., "Now let's collect your second 1035 exchange details.").
+          oneOf:
+            - $ref: '#/components/schemas/PageRepeatConfig'
+            - type: 'null'
+        disclosures:
+          description: |
+            Ordered list of disclosure items on this page. Required when `pageType` is
+            `disclosure`; `null` or absent on `standard` pages.
+
+            Each disclosure is a self-contained unit of legal or regulatory content
+            paired with an acknowledgment. Disclosures support individual `visibility`
+            conditions, allowing state-specific or product-specific items to be included
+            in a single page and conditionally shown based on collected answers.
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/Disclosure'
+              minItems: 1
+            - type: 'null'
+        questions:
+          type: array
+          description: |
+            Ordered list of questions on this page. Required on `standard` pages.
+            Optional on `disclosure` pages — used for supplemental inputs that follow
+            the disclosure content (e.g., a suitability questionnaire appended to a
+            suitability disclosure page).
+          items:
+            $ref: '#/components/schemas/Question'
+          default: []
+        groupValidations:
+          type: array
+          description: |
+            Page-level validations spanning multiple questions or repeatable group items,
+            such as "primary beneficiary percentages must sum to 100%".
+          items:
+            $ref: '#/components/schemas/GroupValidationRule'
+          default: []
+
+    # ─────────────────────────────────────────
+    # PAGE REPEAT CONFIG
+    # ─────────────────────────────────────────
+
+    PageRepeatConfig:
+      type: object
+      description: |
+        Converts a page into a dynamically repeating template driven by the integer
+        answer to `sourceField`.
+
+        ### Typical use case
+        When a premium is funded by one or more 1035 exchanges, direct transfers, or
+        qualified rollovers, the applicant answers `transfer_count`. The transfer-detail
+        page template is then repeated that many times — once per surrendering company —
+        each instance independently collecting a full ACORD 951e set of questions.
+      required:
+        - sourceField
+        - minRepeat
+        - maxRepeat
+        - titleTemplate
+      properties:
+        sourceField:
+          type: string
+          description: |
+            Question ID whose integer answer determines the repeat count. The referenced
+            question must be `type: number` with `min`/`max` validation consistent with
+            `minRepeat`/`maxRepeat`.
+          examples:
+            - transfer_count
+        minRepeat:
+          type: integer
+          description: Minimum number of instances. Should match the `min` validation on `sourceField`.
+          minimum: 1
+          examples:
+            - 1
+        maxRepeat:
+          type: integer
+          description: Maximum number of instances. Should match the `max` validation on `sourceField`.
+          minimum: 1
+          examples:
+            - 10
+        titleTemplate:
+          type: string
+          description: |
+            Template string for each rendered instance's page title.
+            Interpolation tokens:
+            - `#{index}` — 1-based instance number
+            - `#{total}` — total count from the `sourceField` answer
+          examples:
+            - '1035 Exchange / Rollover / Transfer – #{index} of #{total}'
+
+    # ─────────────────────────────────────────
+    # DISCLOSURE
+    # ─────────────────────────────────────────
+
+    Disclosure:
+      type: object
+      description: |
+        A single unit of legal or regulatory content that must be presented and
+        acknowledged by the applicant before they can proceed.
+
+        Disclosures are the building blocks of `disclosure`-type pages. Each disclosure
+        is self-contained: it carries its own content, an optional visibility condition
+        (enabling state-specific or product-specific disclosure logic within a single page),
+        and a required acknowledgment that is stored in the `AnswerMap` like any other answer.
+
+        ### viewRequired behavior
+        When `viewRequired: true`, the disclosure must be fully presented before the
+        acknowledgment control is enabled:
+        - **UI renderers** should lock the acknowledgment button/checkbox until the
+          user has scrolled to the bottom of the content or clicked through all pages.
+        - **AI agents** must read or clearly summarize the full disclosure content before
+          asking for acknowledgment. If `content.type` is `url`, the agent should fetch
+          and present the key points of the document at that URL.
+
+        ### Acknowledgment storage
+        The acknowledgment answer is stored in `AnswerMap` under `acknowledgment.questionId`,
+        exactly like any other question answer:
+        - `boolean` type → `true` when checked
+        - `signature` type → the signature capture token string
+
+      required:
+        - id
+        - title
+        - content
+        - viewRequired
+        - acknowledgment
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this disclosure within the application.
+          examples:
+            - disclosure-buyers-guide
+            - disclosure-free-look
+            - disclosure-replacement
+        title:
+          type: string
+          description: |
+            Display title of the disclosure. Shown as a heading above the content block.
+            AI agents announce this title before presenting the disclosure.
+          examples:
+            - NAIC Annuity Buyer's Guide
+            - Free Look Period Notice
+            - Replacement Disclosure
+        description:
+          type: ['string', 'null']
+          description: |
+            Brief one- or two-sentence summary of what this disclosure covers.
+            Used by AI agents to orient the applicant before reading the full content.
+          examples:
+            - This guide explains how annuities work, the different types available, and your rights as a purchaser.
+        content:
+          $ref: '#/components/schemas/DisclosureContent'
+        viewRequired:
+          type: boolean
+          description: |
+            When `true`, the full content must be presented (scrolled through or read)
+            before the acknowledgment control is enabled. When `false`, the applicant
+            may acknowledge without reading in full — though the content is still displayed.
+          examples:
+            - true
+        visibility:
+          description: |
+            Optional condition controlling whether this individual disclosure is shown.
+            `null` means always shown when the parent page is visible.
+            Use this to conditionally include state-specific or product-specific disclosures
+            within a single disclosure page rather than creating separate pages per condition.
+          oneOf:
+            - $ref: '#/components/schemas/ConditionExpression'
+            - type: 'null'
+        acknowledgment:
+          $ref: '#/components/schemas/DisclosureAcknowledgment'
+
+    DisclosureContent:
+      type: object
+      description: |
+        The legal or regulatory text of a disclosure, with flexible delivery options.
+
+        Three content types are supported to accommodate disclosures ranging from a
+        few sentences to multi-page regulatory documents:
+
+        - **`markdown`** — Content is embedded directly as a Markdown string in `body`.
+          Suitable for short-to-medium disclosures (free look notices, fraud warnings).
+          Renderers display it as formatted text; AI agents read or paraphrase it.
+
+        - **`html`** — Content is embedded as an HTML string in `body`.
+          Suitable for disclosures with complex formatting (tables, indented lists).
+          Renderers display it in a sandboxed container; AI agents strip tags and
+          read the plain text.
+
+        - **`url`** — Content is hosted at an external URL provided in `body`.
+          Suitable for long regulatory documents (NAIC Buyer's Guide, full policy forms).
+          Renderers display the document in an embedded viewer or open it in a new tab.
+          AI agents must fetch the URL, extract plain text, and summarize key points
+          before asking for acknowledgment.
+      required:
+        - type
+        - body
+      properties:
+        type:
+          type: string
+          enum: [markdown, html, url]
+          description: Delivery format of the disclosure content.
+          examples:
+            - markdown
+            - url
+        body:
+          type: string
+          description: |
+            The disclosure content or URL, depending on `type`:
+            - `markdown` / `html` — The full disclosure text.
+            - `url` — A fully-qualified HTTPS URL pointing to the document.
+              Must be accessible without authentication so AI agents can fetch it.
+          examples:
+            - |
+              ## Free Look Period
+
+              You have the right to return this annuity contract within **10 days**
+              of receipt (longer in some states) for a full refund of your premium.
+              To return the contract, deliver or mail it to Midland National
+              Life Insurance Company at 8300 Mills Civic Pkwy, West Des Moines, IA 50266.
+            - https://documents.example.com/disclosures/naic-buyers-guide-annuity-2024.pdf
+
+    DisclosureAcknowledgment:
+      type: object
+      description: |
+        Defines how the applicant confirms they have received and understood a disclosure.
+
+        The acknowledgment answer is stored in `AnswerMap` under `questionId` exactly
+        like any other question answer, enabling standard validation and submission
+        handling without special-casing disclosure pages.
+
+        Two acknowledgment types are supported:
+        - **`boolean`** — Rendered as a checkbox the applicant must check.
+          AI agents ask a yes/no confirmation question.
+          Stored as `true` in `AnswerMap` when acknowledged.
+        - **`signature`** — Rendered as a signature pad requiring a captured signature.
+          AI agents collect an e-signature. Stored as a signature token string.
+          Use for disclosures requiring a legally binding signature (e.g., replacement
+          notice, suitability attestation).
+      required:
+        - questionId
+        - type
+        - label
+        - hint
+        - required
+      properties:
+        questionId:
+          type: string
+          description: |
+            Key under which this acknowledgment is stored in `AnswerMap`.
+            Must be unique across the entire application, following the same
+            uniqueness rules as question IDs.
+          examples:
+            - isBuyersGuideAcknowledged
+            - isFreeLookAcknowledged
+            - disc_replacement_signature
+        type:
+          type: string
+          enum: [boolean, signature]
+          description: |
+            The input type for this acknowledgment:
+            - `boolean` — Checkbox confirmation.
+            - `signature` — Captured electronic signature.
+          examples:
+            - boolean
+            - signature
+        label:
+          type: string
+          description: |
+            The full statement the applicant is agreeing to when they acknowledge.
+            This text appears next to the checkbox or above the signature pad.
+            Write this as a first-person declaration the applicant is making.
+          examples:
+            - I acknowledge receipt of the NAIC Annuity Buyer's Guide and confirm I have had the opportunity to review it before signing this application.
+            - I have read and understand the free look period notice above and acknowledge my right to return this contract within the applicable period for a full refund.
+        hint:
+          type: string
+          description: |
+            Natural language instruction for AI agents describing how to present
+            this acknowledgment to the applicant. Include the key point the applicant
+            is confirming and any important context they need before agreeing.
+          examples:
+            - Ask the applicant to confirm they have received and reviewed the NAIC Annuity Buyer's Guide. Explain that this guide describes how annuities work and their rights as a purchaser. They must confirm receipt before proceeding.
+            - Inform the applicant that they have the right to return this contract within the free look period (typically 10–30 days depending on their state) for a full refund. Ask them to confirm they understand and acknowledge this right.
+        required:
+          type: boolean
+          description: |
+            Whether this acknowledgment must be completed before the page can be submitted.
+            Should be `true` for all regulatory disclosures.
+          examples:
+            - true
+
+    # ─────────────────────────────────────────
+    # QUESTION
+    # ─────────────────────────────────────────
+
+    Question:
+      type: object
+      description: A single input field within a page.
+      required:
+        - id
+        - type
+        - label
+        - hint
+        - order
+        - required
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this question across the entire application.
+          examples:
+            - annuitantFirstName
+        type:
+          $ref: '#/components/schemas/QuestionType'
+        label:
+          type: string
+          description: Display label shown to the user in a form UI.
+          examples:
+            - First Name
+        hint:
+          type: string
+          description: |
+            Natural language instruction for AI agents and LLMs. Describes how to ask
+            this question conversationally, relevant context, and the expected answer.
+            UI renderers may surface this as help text or a tooltip.
+          examples:
+            - >-
+              Ask for the annuitant's legal first name as it appears on
+              government-issued identification.
+        placeholder:
+          type: ['string', 'null']
+          description: Placeholder text shown inside the input field. `null` if not applicable.
+          examples:
+            - e.g. Jane
+        order:
+          type: integer
+          description: Display order within the page, ascending.
+          minimum: 1
+          examples:
+            - 1
+        required:
+          type: boolean
+          description: Whether this question must be answered before the page can be completed.
+          examples:
+            - true
+        visibility:
+          description: |
+            Optional condition controlling whether this question is shown. `null` means
+            always visible. Evaluated against all collected answers including same-page answers.
+          oneOf:
+            - $ref: '#/components/schemas/ConditionExpression'
+            - type: 'null'
+        options:
+          description: |
+            Static list of selectable options. Required for `select`, `multi_select`, and
+            `radio` types. `null` for all other types.
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/QuestionOption'
+            - type: 'null'
+        validation:
+          type: array
+          description: Validation rules applied to this question's answer.
+          items:
+            $ref: '#/components/schemas/ValidationRule'
+          default: []
+        groupConfig:
+          description: Configuration for `repeatable_group` questions. `null` for all other types.
+          oneOf:
+            - $ref: '#/components/schemas/RepeatableGroupConfig'
+            - type: 'null'
+        allocationConfig:
+          description: Configuration for `allocation_table` questions. `null` for all other types.
+          oneOf:
+            - $ref: '#/components/schemas/AllocationTableConfig'
+            - type: 'null'
+
+    QuestionType:
+      type: string
+      description: |
+        Input type of a question. Determines rendering, validation behavior, and which
+        additional config properties (`groupConfig`, `allocationConfig`, `options`) apply.
+      enum:
+        - short_text        # Single-line string input
+        - long_text         # Multi-line string input
+        - number            # Numeric value
+        - currency          # Decimal with currency formatting
+        - date              # Date picker; answers stored as ISO 8601 date string
+        - boolean           # Yes / No toggle
+        - select            # Single choice from a static options list
+        - multi_select      # Multiple choices from a static options list
+        - radio             # Single choice rendered as radio buttons
+        - phone             # Formatted US phone number
+        - email             # Email address
+        - ssn               # Masked Tax ID input (SSN/TIN format, stored encrypted server-side)
+        - signature         # Full electronic signature capture
+        - initials          # Abbreviated initials capture (2–5 characters or stylized initial mark).
+                            # Distinct from `signature` — rendered as a small inline box rather than
+                            # a full signature pad. Stored as a short string or token. Used when a
+                            # form requires initials in addition to a full signature on the same page.
+        - file_upload       # Document or image attachment
+        - repeatable_group  # A repeating set of sub-fields (e.g., multiple beneficiaries)
+        - allocation_table  # Fund allocation table requiring percentages summing to a total
+      examples:
+        - short_text
+
+    QuestionOption:
+      type: object
+      description: A single selectable option for `select`, `multi_select`, or `radio` questions.
+      required:
+        - value
+        - label
+      properties:
+        value:
+          type: string
+          description: Machine-readable value stored when this option is selected.
+          examples:
+            - individual
+        label:
+          type: string
+          description: Human-readable label displayed to the user or read by the AI agent.
+          examples:
+            - Individual
+
+    # ─────────────────────────────────────────
+    # REPEATABLE GROUP
+    # ─────────────────────────────────────────
+
+    RepeatableGroupConfig:
+      type: object
+      description: |
+        Configuration for a `repeatable_group` question, allowing the user to add
+        multiple instances of a structured set of sub-fields — for example, multiple
+        beneficiaries, producer commission splits, or replacement contracts.
+      required:
+        - minItems
+        - maxItems
+        - addLabel
+        - fields
+      properties:
+        minItems:
+          type: integer
+          description: Minimum required group instances.
+          minimum: 0
+          examples:
+            - 1
+        maxItems:
+          type: integer
+          description: Maximum allowed group instances.
+          minimum: 1
+          examples:
+            - 10
+        addLabel:
+          type: string
+          description: Label for the button or prompt that adds a new group instance.
+          examples:
+            - Add Primary Beneficiary
+        fields:
+          type: array
+          description: Sub-fields rendered inside each group instance.
+          items:
+            $ref: '#/components/schemas/GroupField'
+
+    GroupField:
+      type: object
+      description: A single sub-field definition within a repeatable group.
+      required:
+        - id
+        - type
+        - label
+        - required
+      properties:
+        id:
+          type: string
+          description: Field identifier, unique within this group definition.
+          examples:
+            - beneFirstName
+        type:
+          $ref: '#/components/schemas/QuestionType'
+        label:
+          type: string
+          examples:
+            - First Name
+        required:
+          type: boolean
+          examples:
+            - true
+        options:
+          description: Options for `select`, `multi_select`, or `radio` sub-fields. `null` otherwise.
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/QuestionOption'
+            - type: 'null'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationRule'
+          default: []
+
+    # ─────────────────────────────────────────
+    # ALLOCATION TABLE
+    # ─────────────────────────────────────────
+
+    AllocationTableConfig:
+      type: object
+      description: |
+        Configuration for an `allocation_table` question presenting a list of investment
+        funds. Users assign a percentage to each fund they want to allocate to; all
+        non-zero entries must sum to `totalRequired`.
+      required:
+        - totalRequired
+        - minPerFund
+        - maxPerFund
+        - allowPartialAllocation
+        - funds
+      properties:
+        totalRequired:
+          type: number
+          description: The target total all fund percentages must sum to.
+          examples:
+            - 100
+        minPerFund:
+          type: number
+          description: Minimum percentage assignable to any single fund. `0` means a fund may be skipped.
+          examples:
+            - 0
+        maxPerFund:
+          type: number
+          description: Maximum percentage assignable to any single fund.
+          examples:
+            - 100
+        allowPartialAllocation:
+          type: boolean
+          description: |
+            When `false`, total allocations must equal `totalRequired` before the page
+            can be completed. When `true`, partial totals are permitted.
+          examples:
+            - false
+        funds:
+          type: array
+          description: Available funds eligible to receive allocations.
+          items:
+            $ref: '#/components/schemas/Fund'
+
+    Fund:
+      type: object
+      description: |
+        A single investment fund or crediting strategy available for allocation.
+
+        In addition to the generic display fields (`name`, `description`, `category`,
+        `riskLevel`), fixed index annuity products carry rich metadata about how each
+        option earns interest. The optional fields `creditingMethod`, `index`, `termYears`,
+        `hasStrategyFee`, and `strategyFeeAnnualPct` capture this structure and enable
+        UI renderers to group options (e.g., "Annual Point-to-Point", "Two-Year Point-to-Point")
+        and display strategy fee warnings before the applicant selects an option.
+
+        **Strategy fee warning:** When `hasStrategyFee: true`, UI renderers should display a
+        prominent warning that this strategy deducts a fee from accumulation value each term and
+        may result in a loss of premium if the index performs flat or negatively. AI agents must
+        explain this trade-off before the applicant can allocate to such a strategy.
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: Unique fund / crediting strategy identifier.
+          examples:
+            - fund-sp500-annual-cap
+            - fund-fixed-account
+        name:
+          type: string
+          description: Display name of the fund or crediting strategy.
+          examples:
+            - S&P 500® Index — Annual Point-to-Point Cap
+            - Fixed Account
+        description:
+          type: ['string', 'null']
+          description: Short description of how this option earns interest.
+          examples:
+            - Annual Point-to-Point with Cap Rate applied to S&P 500® Index gains. Floor of 0%.
+        category:
+          type: ['string', 'null']
+          description: |
+            Grouping label used to organize options in the UI. Typically the crediting
+            method family (e.g., "Annual Point-to-Point", "Two-Year Point-to-Point",
+            "Monthly Point-to-Point", "Fixed Account").
+          examples:
+            - Annual Point-to-Point
+        riskLevel:
+          description: Qualitative risk classification.
+          oneOf:
+            - type: string
+              enum: [low, low-medium, medium, medium-high, high]
+            - type: 'null'
+          examples:
+            - medium
+        creditingMethod:
+          description: |
+            The interest crediting method used by this option. Determines how index
+            performance is translated into an interest credit.
+
+            - `annual_point_to_point_cap` — Annual index change, capped at the cap rate.
+            - `annual_point_to_point_participation` — Annual index change multiplied by participation rate.
+            - `annual_point_to_point_participation_enhanced` — Participation rate crediting with a
+              strategy fee deducted each term in exchange for a higher participation rate.
+            - `two_year_point_to_point_participation` — Two-year index change multiplied by participation rate.
+            - `two_year_point_to_point_participation_enhanced` — Two-year participation rate with strategy fee.
+            - `monthly_point_to_point_cap` — Monthly index changes summed over the term, each month
+              subject to a monthly cap rate.
+            - `annual_inverse_performance_trigger` — Earns a declared fixed rate when the index
+              is flat or negative; earns nothing when the index is positive.
+            - `fixed` — Earns a declared fixed interest rate; not linked to any external index.
+          oneOf:
+            - type: string
+              enum:
+                - annual_point_to_point_cap
+                - annual_point_to_point_participation
+                - annual_point_to_point_participation_enhanced
+                - two_year_point_to_point_participation
+                - two_year_point_to_point_participation_enhanced
+                - monthly_point_to_point_cap
+                - annual_inverse_performance_trigger
+                - fixed
+            - type: 'null'
+          examples:
+            - annual_point_to_point_cap
+        index:
+          type: ['string', 'null']
+          description: |
+            Name of the external index this strategy is linked to.
+            `null` for the fixed account, which is not linked to any index.
+          examples:
+            - 'S&P 500® Index'
+            - 'Fidelity Multifactor Yield Index 5% ER'
+            - 'NASDAQ-100 Volatility Control 12%™ Index'
+            - 'S&P Multi-Asset Risk Control 5% Excess Return Index'
+            - 'S&P 500® Dynamic Intraday TCA Index'
+        termYears:
+          description: |
+            Length of the crediting term in years. Interest is credited at the end
+            of each term. `null` for the fixed account (which credits daily).
+          oneOf:
+            - type: integer
+              enum: [1, 2]
+            - type: 'null'
+          examples:
+            - 1
+            - 2
+        hasStrategyFee:
+          type: ['boolean', 'null']
+          description: |
+            `true` when this crediting strategy charges a strategy fee deducted from
+            accumulation value each term. `false` for standard options. `null` when
+            not applicable (e.g., fixed account). When `true`, `strategyFeeAnnualPct`
+            will be set.
+          examples:
+            - false
+            - true
+        strategyFeeAnnualPct:
+          description: |
+            Annual strategy fee percentage deducted from the accumulation value allocated
+            to this strategy each term. For a two-year term, the effective fee is this
+            percentage multiplied by 2. `null` when `hasStrategyFee` is `false` or `null`.
+          oneOf:
+            - type: number
+            - type: 'null'
+          examples:
+            - 1.00
+            - null
+
+    # ─────────────────────────────────────────
+    # CONDITIONS
+    # ─────────────────────────────────────────
+
+    ConditionExpression:
+      description: |
+        A recursive conditional expression controlling page or question visibility.
+        Supports three complexity levels:
+
+        - **Simple (leaf):** Compare one field's answer to a static value or another field.
+        - **Compound:** Combine conditions with `AND`, `OR`, or `NOT`.
+        - **Computed:** Use relative date expressions as values (e.g., `"-18y"` means
+          18 years ago from today, so a `max_date: -18y` rule enforces minimum age of 18).
+
+        Evaluated against the current answer map. Within `pageRepeat` templates,
+        same-page field references resolve against the current instance's answers.
+      oneOf:
+        - $ref: '#/components/schemas/LeafCondition'
+        - $ref: '#/components/schemas/CompoundCondition'
+
+    LeafCondition:
+      type: object
+      description: Compares one question's answer to a static value or another question's answer.
+      required:
+        - field
+        - op
+      properties:
+        field:
+          type: string
+          description: Question ID whose answer is the left-hand operand.
+          examples:
+            - owner_type
+        op:
+          type: string
+          description: Comparison operator.
+          enum:
+            - eq          # equals
+            - neq         # not equals
+            - gt          # greater than
+            - gte         # greater than or equal
+            - lt          # less than
+            - lte         # less than or equal
+            - in          # answer is in the provided array
+            - not_in      # answer is not in the provided array
+            - contains    # multi_select answer contains this value
+            - min_items   # repeatable_group or multi_select has at least N items
+            - max_items   # repeatable_group or multi_select has at most N items
+          examples:
+            - eq
+        value:
+          description: |
+            Right-hand operand. Type varies by question type and operator:
+            - `string` for text, select, radio, date (ISO or relative: `"today"`, `"-18y"`)
+            - `number` for numeric fields and item-count operators
+            - `boolean` for boolean fields
+            - `array` for `in` / `not_in` operators
+            Mutually exclusive with `ref_field`.
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+              items: {}
+        ref_field:
+          type: ['string', 'null']
+          description: |
+            When set, compares `field`'s answer against another question's live answer
+            instead of a static `value`. Used for cross-field conditions.
+            Mutually exclusive with `value`.
+          examples:
+            - start_date
+
+    CompoundCondition:
+      type: object
+      description: Combines multiple `ConditionExpression` nodes with boolean logic.
+      required:
+        - operator
+        - conditions
+      properties:
+        operator:
+          type: string
+          enum: [AND, OR, NOT]
+          description: |
+            - `AND` — all child conditions must be true
+            - `OR` — at least one child condition must be true
+            - `NOT` — the single child condition must be false
+          examples:
+            - AND
+        conditions:
+          type: array
+          description: Child conditions. For `NOT`, exactly one item is expected.
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ConditionExpression'
+
+    # ─────────────────────────────────────────
+    # VALIDATION RULES
+    # ─────────────────────────────────────────
+
+    ValidationRule:
+      description: |
+        A single validation rule applied to a question's answer. The `type` field is the
+        discriminator — it determines the rule variant and which additional properties apply.
+      oneOf:
+        - $ref: '#/components/schemas/RequiredRule'
+        - $ref: '#/components/schemas/MinRule'
+        - $ref: '#/components/schemas/MaxRule'
+        - $ref: '#/components/schemas/MinLengthRule'
+        - $ref: '#/components/schemas/MaxLengthRule'
+        - $ref: '#/components/schemas/PatternRule'
+        - $ref: '#/components/schemas/MinDateRule'
+        - $ref: '#/components/schemas/MaxDateRule'
+        - $ref: '#/components/schemas/EqualsRule'
+        - $ref: '#/components/schemas/EqualsTodayRule'
+        - $ref: '#/components/schemas/CrossFieldRule'
+        - $ref: '#/components/schemas/AllocationSumRule'
+        - $ref: '#/components/schemas/AsyncRule'
+      discriminator:
+        propertyName: type
+        mapping:
+          required:       '#/components/schemas/RequiredRule'
+          min:            '#/components/schemas/MinRule'
+          max:            '#/components/schemas/MaxRule'
+          min_length:     '#/components/schemas/MinLengthRule'
+          max_length:     '#/components/schemas/MaxLengthRule'
+          pattern:        '#/components/schemas/PatternRule'
+          min_date:       '#/components/schemas/MinDateRule'
+          max_date:       '#/components/schemas/MaxDateRule'
+          equals:         '#/components/schemas/EqualsRule'
+          equals_today:   '#/components/schemas/EqualsTodayRule'
+          cross_field:    '#/components/schemas/CrossFieldRule'
+          allocation_sum: '#/components/schemas/AllocationSumRule'
+          async:          '#/components/schemas/AsyncRule'
+
+    RequiredRule:
+      type: object
+      description: The field must have a non-null, non-empty answer.
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: required
+        description:
+          type: ['string', 'null']
+
+    MinRule:
+      type: object
+      description: Numeric answer must be greater than or equal to `value`.
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: min
+        value:
+          type: number
+          examples:
+            - 10000
+        description:
+          type: ['string', 'null']
+          examples:
+            - Minimum initial premium is $10,000
+
+    MaxRule:
+      type: object
+      description: Numeric answer must be less than or equal to `value`.
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: max
+        value:
+          type: number
+          examples:
+            - 1000000
+        description:
+          type: ['string', 'null']
+
+    MinLengthRule:
+      type: object
+      description: String answer must be at least `value` characters long.
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: min_length
+        value:
+          type: integer
+          examples:
+            - 2
+        description:
+          type: ['string', 'null']
+
+    MaxLengthRule:
+      type: object
+      description: String answer must not exceed `value` characters.
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: max_length
+        value:
+          type: integer
+          examples:
+            - 50
+        description:
+          type: ['string', 'null']
+
+    PatternRule:
+      type: object
+      description: String answer must match the ECMAScript-compatible regular expression.
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: pattern
+        value:
+          type: string
+          description: Regular expression pattern string.
+          examples:
+            - '^\d{3}-\d{2}-\d{4}$'
+        description:
+          type: ['string', 'null']
+          examples:
+            - Must be in format XXX-XX-XXXX
+
+    MinDateRule:
+      type: object
+      description: |
+        Date answer must be on or after the specified minimum.
+        Supports ISO date strings (`YYYY-MM-DD`) and relative expressions:
+        `"today"`, `"-85y"` (85 years ago), `"+1d"` (tomorrow).
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: min_date
+        value:
+          type: string
+          examples:
+            - '-85y'
+            - today
+        description:
+          type: ['string', 'null']
+          examples:
+            - Annuitant cannot be older than 85 at time of application
+
+    MaxDateRule:
+      type: object
+      description: |
+        Date answer must be on or before the specified maximum.
+        Supports ISO date strings and relative expressions such as `"-18y"`
+        (18 years ago — enforcing a minimum age of 18).
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: max_date
+        value:
+          type: string
+          examples:
+            - '-18y'
+            - today
+        description:
+          type: ['string', 'null']
+          examples:
+            - Owner must be at least 18 years old
+
+    EqualsRule:
+      type: object
+      description: |
+        Answer must exactly equal `value`. Commonly enforces boolean acknowledgements
+        (e.g., a required checkbox must be `true`).
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: equals
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+          examples:
+            - true
+        description:
+          type: ['string', 'null']
+          examples:
+            - Applicant must acknowledge the statement before proceeding
+
+    EqualsTodayRule:
+      type: object
+      description: Date answer must equal today's date. Used for signature date fields.
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: equals_today
+        description:
+          type: ['string', 'null']
+          examples:
+            - Signature date must be today's date
+
+    CrossFieldRule:
+      type: object
+      description: |
+        Validates a relational constraint between two question answers.
+        For example, `end_date` must be greater than `start_date`.
+      required: [type, field, op, ref_field]
+      properties:
+        type:
+          type: string
+          const: cross_field
+        field:
+          type: string
+          description: Question ID whose answer is the left-hand operand.
+          examples:
+            - end_date
+        op:
+          type: string
+          enum: [eq, neq, gt, gte, lt, lte]
+          examples:
+            - gt
+        ref_field:
+          type: string
+          description: Question ID whose answer is the right-hand operand.
+          examples:
+            - start_date
+        description:
+          type: ['string', 'null']
+          examples:
+            - End date must be after start date
+
+    AllocationSumRule:
+      type: object
+      description: |
+        All fund allocation percentages in an `allocation_table` question must sum to `value`.
+        Applied at the question level. For summing a field across `repeatable_group` items,
+        see `GroupValidationRule`.
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          const: allocation_sum
+        value:
+          type: number
+          examples:
+            - 100
+        description:
+          type: ['string', 'null']
+          examples:
+            - Total fund allocation must equal 100%
+
+    AsyncRule:
+      type: object
+      description: |
+        Triggers an asynchronous call to an external validation service identified
+        by `serviceKey`. The server executes the service and returns any errors in
+        the standard `ValidationError` format. Common uses include SSN identity
+        verification and CUSIP/product lookup.
+      required: [type, serviceKey]
+      properties:
+        type:
+          type: string
+          const: async
+        serviceKey:
+          type: string
+          description: Identifier for the registered external validation service.
+          examples:
+            - ssn_verification    # Validates Tax ID format
+        description:
+          type: ['string', 'null']
+          examples:
+            - Verifies SSN against owner name and date of birth
+
+    # ─────────────────────────────────────────
+    # GROUP VALIDATION RULE
+    # ─────────────────────────────────────────
+
+    GroupValidationRule:
+      type: object
+      description: |
+        Validates an aggregated constraint across items in a `repeatable_group` question.
+
+        ### filterField / filterValue
+        When a single repeatable group stores items of different logical subtypes
+        (e.g., primary and contingent beneficiaries in one list), use `filterField` and
+        `filterValue` to restrict aggregation to only the matching subset.
+
+        **Example — primary beneficiaries only:**
+        ```yaml
+        type: group_sum
+        questionId: owner_beneficiaries
+        field: benePercentage
+        filterField: beneType
+        filterValue: primary
+        operator: eq
+        value: 100
+        description: Primary beneficiary percentages must total 100%
+        ```
+
+        Omitting `filterField` aggregates **all** items in the group.
+      required:
+        - type
+        - questionId
+        - field
+        - operator
+        - value
+      properties:
+        type:
+          type: string
+          const: group_sum
+        questionId:
+          type: string
+          description: ID of the `repeatable_group` question whose items are aggregated.
+          examples:
+            - owner_beneficiaries
+        field:
+          type: string
+          description: Sub-field ID within each group item whose values are summed.
+          examples:
+            - benePercentage
+        filterField:
+          type: ['string', 'null']
+          description: |
+            Optional sub-field used to filter which group items are included. Must be
+            paired with `filterValue`. `null` means all items are included.
+          examples:
+            - beneType
+        filterValue:
+          description: |
+            Value `filterField` must equal for an item to be included. Must be paired
+            with `filterField`. `null` when no filter is applied.
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: 'null'
+          examples:
+            - primary
+        operator:
+          type: string
+          enum: [eq, gte, lte]
+          description: Comparison operator applied to the aggregated result.
+          examples:
+            - eq
+        value:
+          type: number
+          description: Target value the aggregated result must satisfy.
+          examples:
+            - 100
+        condition:
+          description: |
+            Optional condition that must be `true` for this rule to apply.
+            Useful for conditional group rules — e.g., only validate contingent
+            percentages when at least one contingent beneficiary has been added.
+          oneOf:
+            - $ref: '#/components/schemas/ConditionExpression'
+            - type: 'null'
+        description:
+          type: ['string', 'null']
+          examples:
+            - Primary beneficiary percentages must total 100%
+
+    # ─────────────────────────────────────────
+    # FIELD SYNC
+    # ─────────────────────────────────────────
+
+    FieldSyncGroup:
+      type: object
+      description: |
+        Defines a bidirectional binding between two or more questions whose values
+        should remain synchronized throughout the application.
+
+        ### Behavior
+        All syncs are **bidirectional**: updating any member pre-fills every other
+        member with the same value. Fields remain fully editable. If the user
+        manually changes a pre-filled value so it no longer matches, the frontend
+        should display a **desync warning** (e.g., "This value no longer matches
+        Owner SSN on the Owner page"). The `overrideWarning` property provides the
+        suggested warning text; the frontend may use it as-is or adapt it to its
+        UI conventions.
+
+        Desync state is a **UI concern** — the `AnswerMap` stores whatever value
+        the user committed, with no special wrapper or flag.
+
+        ### Repeating pages
+        When a synced field lives on a **repeating page** (`pageRepeat`), the sync
+        applies to that field across **every rendered instance**:
+        - A change to the non-repeating member propagates to all instances.
+        - A change on any single instance propagates to the non-repeating member
+          (and therefore cascades to every other instance).
+        - The user may desync individual instances independently.
+
+        ### AI agent guidance
+        AI agents should treat synced fields as pre-answered unless the user
+        explicitly provides a different value. When collecting answers, the agent
+        should note: "I'll carry over your [field] from the owner section — let
+        me know if it should be different for this transfer."
+
+        ### Example
+        ```yaml
+        id: sync-owner-taxId
+        description: >-
+          Owner SSN entered on the Owner page should auto-populate the
+          surrendering owner SSN on every 1035 transfer page instance.
+        fields:
+          - ownerTaxId
+          - surrendering_ownerTaxId
+        behavior: pre_fill_warn
+        overrideWarning: >-
+          This value no longer matches the Owner SSN on the Owner page.
+          Verify this is intentional.
+        condition: null
+        ```
+      required:
+        - id
+        - fields
+        - behavior
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this sync group.
+          examples:
+            - sync-owner-taxId
+            - sync-owner-name-to-transfer
+        description:
+          type: ['string', 'null']
+          description: |
+            Human-readable explanation of why these fields are synced.
+            AI agents may reference this when explaining pre-filled values.
+          examples:
+            - >-
+              Owner SSN entered on the Owner page should auto-populate the
+              surrendering owner SSN on every 1035 transfer page instance.
+        fields:
+          type: array
+          description: |
+            Question IDs that form this sync group. Must contain at least two
+            distinct IDs. All referenced IDs must exist as question IDs somewhere
+            in the application (standard questions, group fields, or disclosure
+            acknowledgments).
+
+            Order is semantically neutral (bidirectional), but the first field
+            listed is treated as the **canonical source** for initial population —
+            meaning on first load, if only one field has a value, it flows to the
+            others.
+          items:
+            type: string
+          minItems: 2
+          examples:
+            - - ownerTaxId
+              - surrendering_ownerTaxId
+        behavior:
+          type: string
+          enum:
+            - pre_fill_warn
+          description: |
+            Governs how the frontend handles synced values:
+            - **`pre_fill_warn`** — All members are pre-filled when any member
+              changes. Fields remain editable. If the user manually overrides a
+              synced value, a desync warning is displayed.
+          examples:
+            - pre_fill_warn
+        overrideWarning:
+          type: ['string', 'null']
+          description: |
+            Suggested warning text displayed when a user manually overrides a
+            synced value, breaking the link. `null` falls back to a generic
+            default (e.g., "This field is linked to {fieldLabel} and no longer
+            matches").
+          examples:
+            - >-
+              This value no longer matches the Owner SSN on the Owner page.
+              Verify this is intentional.
+        condition:
+          description: |
+            Optional condition controlling when this sync is active. When the
+            condition evaluates to `false`, the fields behave independently.
+            `null` means the sync is always active.
+          oneOf:
+            - $ref: '#/components/schemas/ConditionExpression'
+            - type: 'null'
+
+    # ─────────────────────────────────────────
+    # VALIDATION REQUEST / RESPONSE
+    # ─────────────────────────────────────────
+
+    ValidationRequest:
+      type: object
+      description: Request body for the validate endpoint.
+      required:
+        - productId
+        - answers
+      properties:
+        productId:
+          type: string
+          description: Product ID identifying which application definition to validate against.
+          examples:
+            - midland-fixed-annuity-001
+        answers:
+          $ref: '#/components/schemas/AnswerMap'
+
+    AnswerMap:
+      type: object
+      description: |
+        Map of collected answers. Supports four storage patterns:
+
+        **Standard questions** — flat key/value keyed by question ID:
+        ```json
+        { "annuitantFirstName": "Jane", "taxStatus": "ira" }
+        ```
+
+        **Repeatable group questions** — keyed by question ID, value is an ordered array
+        of objects (one per group item) keyed by group field ID:
+        ```json
+        {
+          "owner_beneficiaries": [
+            { "beneFirstName": "John", "beneType": "primary", "benePercentage": 100 }
+          ]
+        }
+        ```
+
+        **Repeating page instances** — keyed by the page template ID, value is an ordered
+        array of answer objects (one per rendered page instance):
+        ```json
+        {
+          "page-1035-transfer": [
+            { "surrenderingCompanyName": "Lincoln Financial", "transferScope": "full" },
+            { "surrenderingCompanyName": "Nationwide", "transferScope": "partial" }
+          ]
+        }
+        ```
+
+        **Disclosure acknowledgments** — stored flat by `acknowledgment.questionId`, exactly
+        like standard questions. `boolean` acknowledgments store `true`; `signature`
+        acknowledgments store the captured signature token:
+        ```json
+        {
+          "isBuyersGuideAcknowledged": true,
+          "isFreeLookAcknowledged": true,
+          "disc_replacement_signature": "sig_token_abc123"
+        }
+        ```
+      additionalProperties:
+        $ref: '#/components/schemas/AnswerValue'
+      examples:
+        - annuitantFirstName: Jane
+          annuitantLastName: Smith
+          annuitant_dob: '1965-03-15'
+          taxStatus: ira
+          funding_methods:
+            - exchange_1035
+          transfer_count: 2
+          page-1035-transfer:
+            - surrenderingCompanyName: Lincoln Financial Group
+              surrendering_account_number: ANN-9876543
+              surrendering_plan_type: ira
+              surrendering_product_type: annuity
+              estimated_transfer_amount: 75000.00
+              transferScope: full
+              transfer_timing: asap
+              isGeneralDisclosuresAcknowledged: true
+              isTaxpayerCertificationAcknowledged: true
+            - surrenderingCompanyName: Nationwide Life
+              surrendering_account_number: NW-1234567
+              surrendering_plan_type: ira
+              surrendering_product_type: annuity
+              estimated_transfer_amount: 40000.00
+              transferScope: partial
+              partial_amount_type: dollar
+              partial_dollar_amount: 25000.00
+              transfer_timing: asap
+              isGeneralDisclosuresAcknowledged: true
+              isTaxpayerCertificationAcknowledged: true
+          owner_beneficiaries:
+            - beneFirstName: John
+              bene_last_name: Smith
+              beneType: primary
+              bene_relationship: spouse
+              benePercentage: 100
+          isBuyersGuideAcknowledged: true
+          isFreeLookAcknowledged: true
+          disc_suitability_ack: true
+          disc_replacement_signature: sig_token_abc123
+
+    AnswerValue:
+      description: |
+        The value of a single answer. Varies by question type or acknowledgment type:
+        - `short_text`, `long_text`, `email`, `phone`, `ssn`, `select`, `radio`, `date`
+          (ISO 8601), `signature` (token), `file_upload` (token) → `string`
+        - `number`, `currency` → `number`
+        - `boolean` → `boolean`
+        - `multi_select` → `string[]`
+        - `repeatable_group` → `object[]`
+        - `allocation_table` → `object[]` with `fundId` and `percentage` keys
+        - Disclosure `acknowledgment` with `type: boolean` → `boolean` (`true` when acknowledged)
+        - Disclosure `acknowledgment` with `type: signature` → `string` (signature capture token)
+      oneOf:
+        - type: string
+        - type: number
+        - type: boolean
+        - type: array
+          items: {}
+        - type: 'null'
+
+    ValidationResponse:
+      type: object
+      description: Result of a validation request.
+      required:
+        - valid
+        - errors
+      properties:
+        valid:
+          type: boolean
+          description: '`true` if no validation errors were found.'
+          examples:
+            - false
+        errors:
+          type: array
+          description: List of validation errors. Empty array when `valid` is `true`.
+          items:
+            $ref: '#/components/schemas/ValidationError'
+
+    ValidationError:
+      type: object
+      description: A single validation failure for a question or group rule.
+      required:
+        - questionId
+        - type
+        - message
+      properties:
+        questionId:
+          type: string
+          description: |
+            ID of the question that failed. For repeating page instances, use
+            `pageRepeatIndex` to identify which instance.
+          examples:
+            - owner_beneficiaries
+        pageRepeatIndex:
+          type: ['integer', 'null']
+          description: |
+            0-based index of the `pageRepeat` instance that produced this error.
+            `null` for non-repeated pages.
+          examples:
+            - 1
+        groupIndex:
+          type: ['integer', 'null']
+          description: |
+            0-based index of the failing `repeatable_group` item.
+            `null` for non-group questions.
+          examples:
+            - 2
+        groupFieldId:
+          type: ['string', 'null']
+          description: |
+            Sub-field ID within the failing group item. `null` for non-group questions.
+          examples:
+            - benePercentage
+        filterField:
+          type: ['string', 'null']
+          description: |
+            For `GroupValidationRule` failures: the `filterField` active when the rule
+            failed. Enables targeted error messages distinguishing primary vs. contingent
+            beneficiary failures. `null` when no filter was applied.
+          examples:
+            - beneType
+        filterValue:
+          description: |
+            The `filterValue` active when the group rule failed. Paired with `filterField`.
+            `null` when no filter was applied.
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: 'null'
+          examples:
+            - primary
+        type:
+          type: string
+          description: The `type` of the validation rule that failed.
+          examples:
+            - group_sum
+        message:
+          type: string
+          description: Human-readable error message suitable for UI display or AI agent speech.
+          examples:
+            - 'Primary beneficiary percentages must total 100% (current total: 90%)'
+
+    # ─────────────────────────────────────────
+    # SUBMISSION REQUEST / RESPONSE
+    # ─────────────────────────────────────────
+
+    SubmissionRequest:
+      type: object
+      description: |
+        Request body for the submit endpoint. Full server-side validation runs prior
+        to acceptance. The answer map must include all required answers for all
+        visible questions across all pages (including all `pageRepeat` instances).
+      required:
+        - productId
+        - answers
+      properties:
+        productId:
+          type: string
+          examples:
+            - midland-fixed-annuity-001
+        answers:
+          $ref: '#/components/schemas/AnswerMap'
+        metadata:
+          description: Optional context about the submission channel and agent.
+          oneOf:
+            - $ref: '#/components/schemas/SubmissionMetadata'
+            - type: 'null'
+
+    SubmissionMetadata:
+      type: object
+      description: Contextual metadata about how and by whom the application was submitted.
+      properties:
+        submissionSource:
+          type: string
+          description: Channel through which the application was submitted.
+          enum: [web, mobile, ai_agent, phone]
+          examples:
+            - ai_agent
+        agentId:
+          type: ['string', 'null']
+          description: Identifier of the AI agent or licensed advisor who assisted.
+          examples:
+            - agent-rovo-001
+        ipAddress:
+          type: ['string', 'null']
+          description: IP address of the submitting client.
+          examples:
+            - 192.168.1.1
+        userAgent:
+          type: ['string', 'null']
+          description: HTTP user agent string of the submitting client.
+          examples:
+            - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+
+    SubmissionResponse:
+      type: object
+      description: Confirmation returned on successful application submission.
+      required:
+        - confirmationNumber
+        - status
+        - submittedAt
+      properties:
+        confirmationNumber:
+          type: string
+          description: Human-readable unique reference number for this submission.
+          examples:
+            - ANN-2025-00048291
+        status:
+          type: string
+          description: Initial processing status.
+          enum:
+            - received
+            - pending_review
+            - approved
+            - declined
+            - requires_information
+          examples:
+            - received
+        submittedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of server acceptance.
+          examples:
+            - '2025-06-15T14:30:00Z'
+        message:
+          type: ['string', 'null']
+          description: Optional human-readable next-steps or status context.
+          examples:
+            - >-
+              Your application has been received and is pending review.
+              You will be contacted within 2 business days.
+
+    # ─────────────────────────────────────────
+    # ERROR
+    # ─────────────────────────────────────────
+
+    ErrorResponse:
+      type: object
+      description: Standard error envelope for non-validation HTTP errors.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code for programmatic handling.
+          examples:
+            - PRODUCT_NOT_FOUND
+        message:
+          type: string
+          description: Human-readable description of the error.
+          examples:
+            - No application definition found for product ID 'xyz-999'.
+        details:
+          description: Optional additional diagnostic context.
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+
+    ProductSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        carrier:
+          type: string
+        productName:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ApplicationInstance:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        answers:
+          type: object
+        status:
+          type: string
+          enum:
+            - in_progress
+            - submitted
+        createdAt:
+          type: string
+        updatedAt:
+          type: string

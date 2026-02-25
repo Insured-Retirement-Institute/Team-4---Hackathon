@@ -4,10 +4,11 @@ const { getProduct } = require('../services/productStore');
 const { startEmbeddedSigning } = require('../services/docusignService');
 
 // GET /application/:productId
-router.get('/:productId', (req, res) => {
+router.get('/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
-    const product = getProduct(productId);
+    const locale = req.query.locale || 'en-US';
+    const product = await getProduct(productId);
 
     if (!product) {
       return res.status(404).json({

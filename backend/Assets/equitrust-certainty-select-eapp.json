@@ -1,0 +1,5041 @@
+{
+  "carrierId": "equitrust",
+  "carrierName": "EquiTrust Life Insurance Company",
+  "productId": "certainty-select",
+  "productName": "Certainty Select",
+  "productType": "MYGA",
+  "formNumber": "ICC19-ET-APP(08-19)",
+  "version": "1.0.0",
+  "effectiveDate": "2025-01-01",
+  "pages": [
+    {
+      "id": "page-owners",
+      "title": "Owner Information",
+      "description": "Section A \u2013 Owner and Joint Owner information for the annuity contract.",
+      "order": 1,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "ownerType",
+          "type": "radio",
+          "label": "Type of Ownership",
+          "hint": "How will this annuity be owned?",
+          "order": 1,
+          "required": true,
+          "options": [
+            {
+              "value": "individual",
+              "label": "Individual"
+            },
+            {
+              "value": "joint",
+              "label": "Joint Ownership"
+            },
+            {
+              "value": "trust",
+              "label": "Trust"
+            },
+            {
+              "value": "entity",
+              "label": "Entity"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerFirstName",
+          "type": "short_text",
+          "label": "Owner First Name",
+          "hint": "What is the owner's first name?",
+          "order": 2,
+          "required": true,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "max_length",
+              "params": {
+                "max": 50
+              }
+            }
+          ]
+        },
+        {
+          "id": "ownerMiddleName",
+          "type": "short_text",
+          "label": "Owner Middle Name",
+          "hint": "What is the owner's middle name?",
+          "order": 3,
+          "required": false,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerLastName",
+          "type": "short_text",
+          "label": "Owner Last Name",
+          "hint": "What is the owner's last name?",
+          "order": 4,
+          "required": true,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "max_length",
+              "params": {
+                "max": 50
+              }
+            }
+          ]
+        },
+        {
+          "id": "ownerGender",
+          "type": "radio",
+          "label": "Owner Gender",
+          "hint": "What is the owner's gender?",
+          "order": 5,
+          "required": true,
+          "options": [
+            {
+              "value": "male",
+              "label": "Male"
+            },
+            {
+              "value": "female",
+              "label": "Female"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerTaxId",
+          "type": "ssn",
+          "label": "Owner Social Security Number",
+          "hint": "What is the owner's Social Security Number?",
+          "order": 6,
+          "required": true,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "ssn_verification"
+            }
+          ]
+        },
+        {
+          "id": "ownerDob",
+          "type": "date",
+          "label": "Owner Date of Birth",
+          "hint": "What is the owner's date of birth?",
+          "order": 7,
+          "required": true,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "min_age",
+              "params": {
+                "years": 0
+              }
+            },
+            {
+              "rule": "max_age",
+              "params": {
+                "years": 100
+              }
+            }
+          ]
+        },
+        {
+          "id": "ownerMaritalStatus",
+          "type": "radio",
+          "label": "Owner Marital Status",
+          "hint": "What is the owner's marital status?",
+          "order": 8,
+          "required": true,
+          "options": [
+            {
+              "value": "married",
+              "label": "Married"
+            },
+            {
+              "value": "divorced",
+              "label": "Divorced"
+            },
+            {
+              "value": "separated",
+              "label": "Separated"
+            },
+            {
+              "value": "single",
+              "label": "Single"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerResidentialAddress",
+          "type": "short_text",
+          "label": "Owner Permanent Physical Address",
+          "hint": "What is the owner's permanent physical address? (No PO Box)",
+          "order": 9,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerCity",
+          "type": "short_text",
+          "label": "Owner City",
+          "hint": "What city does the owner live in?",
+          "order": 10,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerState",
+          "type": "select",
+          "label": "Owner State",
+          "hint": "What state does the owner live in?",
+          "order": 11,
+          "required": true,
+          "options": [
+            {
+              "value": "AL",
+              "label": "AL"
+            },
+            {
+              "value": "AK",
+              "label": "AK"
+            },
+            {
+              "value": "AZ",
+              "label": "AZ"
+            },
+            {
+              "value": "AR",
+              "label": "AR"
+            },
+            {
+              "value": "CA",
+              "label": "CA"
+            },
+            {
+              "value": "CO",
+              "label": "CO"
+            },
+            {
+              "value": "CT",
+              "label": "CT"
+            },
+            {
+              "value": "DE",
+              "label": "DE"
+            },
+            {
+              "value": "FL",
+              "label": "FL"
+            },
+            {
+              "value": "GA",
+              "label": "GA"
+            },
+            {
+              "value": "HI",
+              "label": "HI"
+            },
+            {
+              "value": "ID",
+              "label": "ID"
+            },
+            {
+              "value": "IL",
+              "label": "IL"
+            },
+            {
+              "value": "IN",
+              "label": "IN"
+            },
+            {
+              "value": "IA",
+              "label": "IA"
+            },
+            {
+              "value": "KS",
+              "label": "KS"
+            },
+            {
+              "value": "KY",
+              "label": "KY"
+            },
+            {
+              "value": "LA",
+              "label": "LA"
+            },
+            {
+              "value": "ME",
+              "label": "ME"
+            },
+            {
+              "value": "MD",
+              "label": "MD"
+            },
+            {
+              "value": "MA",
+              "label": "MA"
+            },
+            {
+              "value": "MI",
+              "label": "MI"
+            },
+            {
+              "value": "MN",
+              "label": "MN"
+            },
+            {
+              "value": "MS",
+              "label": "MS"
+            },
+            {
+              "value": "MO",
+              "label": "MO"
+            },
+            {
+              "value": "MT",
+              "label": "MT"
+            },
+            {
+              "value": "NE",
+              "label": "NE"
+            },
+            {
+              "value": "NV",
+              "label": "NV"
+            },
+            {
+              "value": "NH",
+              "label": "NH"
+            },
+            {
+              "value": "NJ",
+              "label": "NJ"
+            },
+            {
+              "value": "NM",
+              "label": "NM"
+            },
+            {
+              "value": "NY",
+              "label": "NY"
+            },
+            {
+              "value": "NC",
+              "label": "NC"
+            },
+            {
+              "value": "ND",
+              "label": "ND"
+            },
+            {
+              "value": "OH",
+              "label": "OH"
+            },
+            {
+              "value": "OK",
+              "label": "OK"
+            },
+            {
+              "value": "OR",
+              "label": "OR"
+            },
+            {
+              "value": "PA",
+              "label": "PA"
+            },
+            {
+              "value": "RI",
+              "label": "RI"
+            },
+            {
+              "value": "SC",
+              "label": "SC"
+            },
+            {
+              "value": "SD",
+              "label": "SD"
+            },
+            {
+              "value": "TN",
+              "label": "TN"
+            },
+            {
+              "value": "TX",
+              "label": "TX"
+            },
+            {
+              "value": "UT",
+              "label": "UT"
+            },
+            {
+              "value": "VT",
+              "label": "VT"
+            },
+            {
+              "value": "VA",
+              "label": "VA"
+            },
+            {
+              "value": "WA",
+              "label": "WA"
+            },
+            {
+              "value": "WV",
+              "label": "WV"
+            },
+            {
+              "value": "WI",
+              "label": "WI"
+            },
+            {
+              "value": "WY",
+              "label": "WY"
+            },
+            {
+              "value": "DC",
+              "label": "DC"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerZip",
+          "type": "short_text",
+          "label": "Owner Zip Code",
+          "hint": "What is the owner's zip code?",
+          "order": 12,
+          "required": true,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "pattern",
+              "params": {
+                "regex": "^\\d{5}(-\\d{4})?$"
+              }
+            }
+          ]
+        },
+        {
+          "id": "ownerMailingAddress",
+          "type": "short_text",
+          "label": "Owner Mailing Address (if different)",
+          "hint": "If different from physical address, what is the owner's mailing address?",
+          "order": 13,
+          "required": false,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerMailingCity",
+          "type": "short_text",
+          "label": "Mailing City",
+          "hint": "Mailing address city",
+          "order": 14,
+          "required": false,
+          "visibility": {
+            "field": "ownerMailingAddress",
+            "operator": "is_not_empty"
+          },
+          "validation": null
+        },
+        {
+          "id": "ownerMailingState",
+          "type": "select",
+          "label": "Mailing State",
+          "hint": "Mailing address state",
+          "order": 15,
+          "required": false,
+          "options": [
+            {
+              "value": "AL",
+              "label": "AL"
+            },
+            {
+              "value": "AK",
+              "label": "AK"
+            },
+            {
+              "value": "AZ",
+              "label": "AZ"
+            },
+            {
+              "value": "AR",
+              "label": "AR"
+            },
+            {
+              "value": "CA",
+              "label": "CA"
+            },
+            {
+              "value": "CO",
+              "label": "CO"
+            },
+            {
+              "value": "CT",
+              "label": "CT"
+            },
+            {
+              "value": "DE",
+              "label": "DE"
+            },
+            {
+              "value": "FL",
+              "label": "FL"
+            },
+            {
+              "value": "GA",
+              "label": "GA"
+            },
+            {
+              "value": "HI",
+              "label": "HI"
+            },
+            {
+              "value": "ID",
+              "label": "ID"
+            },
+            {
+              "value": "IL",
+              "label": "IL"
+            },
+            {
+              "value": "IN",
+              "label": "IN"
+            },
+            {
+              "value": "IA",
+              "label": "IA"
+            },
+            {
+              "value": "KS",
+              "label": "KS"
+            },
+            {
+              "value": "KY",
+              "label": "KY"
+            },
+            {
+              "value": "LA",
+              "label": "LA"
+            },
+            {
+              "value": "ME",
+              "label": "ME"
+            },
+            {
+              "value": "MD",
+              "label": "MD"
+            },
+            {
+              "value": "MA",
+              "label": "MA"
+            },
+            {
+              "value": "MI",
+              "label": "MI"
+            },
+            {
+              "value": "MN",
+              "label": "MN"
+            },
+            {
+              "value": "MS",
+              "label": "MS"
+            },
+            {
+              "value": "MO",
+              "label": "MO"
+            },
+            {
+              "value": "MT",
+              "label": "MT"
+            },
+            {
+              "value": "NE",
+              "label": "NE"
+            },
+            {
+              "value": "NV",
+              "label": "NV"
+            },
+            {
+              "value": "NH",
+              "label": "NH"
+            },
+            {
+              "value": "NJ",
+              "label": "NJ"
+            },
+            {
+              "value": "NM",
+              "label": "NM"
+            },
+            {
+              "value": "NY",
+              "label": "NY"
+            },
+            {
+              "value": "NC",
+              "label": "NC"
+            },
+            {
+              "value": "ND",
+              "label": "ND"
+            },
+            {
+              "value": "OH",
+              "label": "OH"
+            },
+            {
+              "value": "OK",
+              "label": "OK"
+            },
+            {
+              "value": "OR",
+              "label": "OR"
+            },
+            {
+              "value": "PA",
+              "label": "PA"
+            },
+            {
+              "value": "RI",
+              "label": "RI"
+            },
+            {
+              "value": "SC",
+              "label": "SC"
+            },
+            {
+              "value": "SD",
+              "label": "SD"
+            },
+            {
+              "value": "TN",
+              "label": "TN"
+            },
+            {
+              "value": "TX",
+              "label": "TX"
+            },
+            {
+              "value": "UT",
+              "label": "UT"
+            },
+            {
+              "value": "VT",
+              "label": "VT"
+            },
+            {
+              "value": "VA",
+              "label": "VA"
+            },
+            {
+              "value": "WA",
+              "label": "WA"
+            },
+            {
+              "value": "WV",
+              "label": "WV"
+            },
+            {
+              "value": "WI",
+              "label": "WI"
+            },
+            {
+              "value": "WY",
+              "label": "WY"
+            },
+            {
+              "value": "DC",
+              "label": "DC"
+            }
+          ],
+          "visibility": {
+            "field": "ownerMailingAddress",
+            "operator": "is_not_empty"
+          },
+          "validation": null
+        },
+        {
+          "id": "ownerMailingZip",
+          "type": "short_text",
+          "label": "Mailing Zip Code",
+          "hint": "Mailing address zip code",
+          "order": 16,
+          "required": false,
+          "visibility": {
+            "field": "ownerMailingAddress",
+            "operator": "is_not_empty"
+          },
+          "validation": [
+            {
+              "rule": "pattern",
+              "params": {
+                "regex": "^\\d{5}(-\\d{4})?$"
+              }
+            }
+          ]
+        },
+        {
+          "id": "ownerHomePhone",
+          "type": "phone",
+          "label": "Owner Home Phone Number",
+          "hint": "What is the owner's home phone number?",
+          "order": 17,
+          "required": false,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerDaytimePhone",
+          "type": "phone",
+          "label": "Owner Daytime Phone Number",
+          "hint": "What is the owner's daytime phone number?",
+          "order": 18,
+          "required": false,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerEmail",
+          "type": "email",
+          "label": "Owner E-mail Address",
+          "hint": "What is the owner's email address?",
+          "order": 19,
+          "required": false,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "hasJointOwner",
+          "type": "boolean",
+          "label": "Add a Joint Owner?",
+          "hint": "Will there be a joint owner on this contract? (Not available for Qualified Plans)",
+          "order": 20,
+          "required": true,
+          "visibility": {
+            "field": "ownerType",
+            "operator": "equals",
+            "value": "joint"
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerFirstName",
+          "type": "short_text",
+          "label": "Joint Owner First Name",
+          "hint": "What is the joint owner's first name?",
+          "order": 21,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerMiddleName",
+          "type": "short_text",
+          "label": "Joint Owner Middle Name",
+          "hint": "What is the joint owner's middle name?",
+          "order": 22,
+          "required": false,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerLastName",
+          "type": "short_text",
+          "label": "Joint Owner Last Name",
+          "hint": "What is the joint owner's last name?",
+          "order": 23,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerGender",
+          "type": "radio",
+          "label": "Joint Owner Gender",
+          "hint": "What is the joint owner's gender?",
+          "order": 24,
+          "required": true,
+          "options": [
+            {
+              "value": "male",
+              "label": "Male"
+            },
+            {
+              "value": "female",
+              "label": "Female"
+            }
+          ],
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerTaxId",
+          "type": "ssn",
+          "label": "Joint Owner Social Security Number",
+          "hint": "What is the joint owner's Social Security Number?",
+          "order": 25,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": [
+            {
+              "rule": "ssn_verification"
+            }
+          ]
+        },
+        {
+          "id": "jointOwnerDob",
+          "type": "date",
+          "label": "Joint Owner Date of Birth",
+          "hint": "What is the joint owner's date of birth?",
+          "order": 26,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerMaritalStatus",
+          "type": "radio",
+          "label": "Joint Owner Marital Status",
+          "hint": "What is the joint owner's marital status?",
+          "order": 27,
+          "required": true,
+          "options": [
+            {
+              "value": "married",
+              "label": "Married"
+            },
+            {
+              "value": "divorced",
+              "label": "Divorced"
+            },
+            {
+              "value": "separated",
+              "label": "Separated"
+            },
+            {
+              "value": "single",
+              "label": "Single"
+            }
+          ],
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerResidentialAddress",
+          "type": "short_text",
+          "label": "Joint Owner Permanent Physical Address",
+          "hint": "What is the joint owner's permanent physical address?",
+          "order": 28,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerCity",
+          "type": "short_text",
+          "label": "Joint Owner City",
+          "hint": "What city does the joint owner live in?",
+          "order": 29,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerState",
+          "type": "select",
+          "label": "Joint Owner State",
+          "hint": "What state does the joint owner live in?",
+          "order": 30,
+          "required": true,
+          "options": [
+            {
+              "value": "AL",
+              "label": "AL"
+            },
+            {
+              "value": "AK",
+              "label": "AK"
+            },
+            {
+              "value": "AZ",
+              "label": "AZ"
+            },
+            {
+              "value": "AR",
+              "label": "AR"
+            },
+            {
+              "value": "CA",
+              "label": "CA"
+            },
+            {
+              "value": "CO",
+              "label": "CO"
+            },
+            {
+              "value": "CT",
+              "label": "CT"
+            },
+            {
+              "value": "DE",
+              "label": "DE"
+            },
+            {
+              "value": "FL",
+              "label": "FL"
+            },
+            {
+              "value": "GA",
+              "label": "GA"
+            },
+            {
+              "value": "HI",
+              "label": "HI"
+            },
+            {
+              "value": "ID",
+              "label": "ID"
+            },
+            {
+              "value": "IL",
+              "label": "IL"
+            },
+            {
+              "value": "IN",
+              "label": "IN"
+            },
+            {
+              "value": "IA",
+              "label": "IA"
+            },
+            {
+              "value": "KS",
+              "label": "KS"
+            },
+            {
+              "value": "KY",
+              "label": "KY"
+            },
+            {
+              "value": "LA",
+              "label": "LA"
+            },
+            {
+              "value": "ME",
+              "label": "ME"
+            },
+            {
+              "value": "MD",
+              "label": "MD"
+            },
+            {
+              "value": "MA",
+              "label": "MA"
+            },
+            {
+              "value": "MI",
+              "label": "MI"
+            },
+            {
+              "value": "MN",
+              "label": "MN"
+            },
+            {
+              "value": "MS",
+              "label": "MS"
+            },
+            {
+              "value": "MO",
+              "label": "MO"
+            },
+            {
+              "value": "MT",
+              "label": "MT"
+            },
+            {
+              "value": "NE",
+              "label": "NE"
+            },
+            {
+              "value": "NV",
+              "label": "NV"
+            },
+            {
+              "value": "NH",
+              "label": "NH"
+            },
+            {
+              "value": "NJ",
+              "label": "NJ"
+            },
+            {
+              "value": "NM",
+              "label": "NM"
+            },
+            {
+              "value": "NY",
+              "label": "NY"
+            },
+            {
+              "value": "NC",
+              "label": "NC"
+            },
+            {
+              "value": "ND",
+              "label": "ND"
+            },
+            {
+              "value": "OH",
+              "label": "OH"
+            },
+            {
+              "value": "OK",
+              "label": "OK"
+            },
+            {
+              "value": "OR",
+              "label": "OR"
+            },
+            {
+              "value": "PA",
+              "label": "PA"
+            },
+            {
+              "value": "RI",
+              "label": "RI"
+            },
+            {
+              "value": "SC",
+              "label": "SC"
+            },
+            {
+              "value": "SD",
+              "label": "SD"
+            },
+            {
+              "value": "TN",
+              "label": "TN"
+            },
+            {
+              "value": "TX",
+              "label": "TX"
+            },
+            {
+              "value": "UT",
+              "label": "UT"
+            },
+            {
+              "value": "VT",
+              "label": "VT"
+            },
+            {
+              "value": "VA",
+              "label": "VA"
+            },
+            {
+              "value": "WA",
+              "label": "WA"
+            },
+            {
+              "value": "WV",
+              "label": "WV"
+            },
+            {
+              "value": "WI",
+              "label": "WI"
+            },
+            {
+              "value": "WY",
+              "label": "WY"
+            },
+            {
+              "value": "DC",
+              "label": "DC"
+            }
+          ],
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerZip",
+          "type": "short_text",
+          "label": "Joint Owner Zip Code",
+          "hint": "What is the joint owner's zip code?",
+          "order": 31,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": [
+            {
+              "rule": "pattern",
+              "params": {
+                "regex": "^\\d{5}(-\\d{4})?$"
+              }
+            }
+          ]
+        },
+        {
+          "id": "jointOwnerHomePhone",
+          "type": "phone",
+          "label": "Joint Owner Home Phone",
+          "hint": "What is the joint owner's home phone number?",
+          "order": 32,
+          "required": false,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerDaytimePhone",
+          "type": "phone",
+          "label": "Joint Owner Daytime Phone",
+          "hint": "What is the joint owner's daytime phone number?",
+          "order": 33,
+          "required": false,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerEmail",
+          "type": "email",
+          "label": "Joint Owner E-mail Address",
+          "hint": "What is the joint owner's email address?",
+          "order": 34,
+          "required": false,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": null
+    },
+    {
+      "id": "page-annuitants",
+      "title": "Annuitant Information",
+      "description": "Section B \u2013 Annuitant and Joint Annuitant information. If left blank, annuitant will be same as the Owner.",
+      "order": 2,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "isOwnerSameAsAnnuitant",
+          "type": "boolean",
+          "label": "Is the owner the same as the annuitant?",
+          "hint": "If the annuitant is the same person as the owner, we can pre-fill this information.",
+          "order": 1,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "annuitantFirstName",
+          "type": "short_text",
+          "label": "Annuitant First Name",
+          "hint": "What is the annuitant's first name?",
+          "order": 2,
+          "required": true,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantMiddleName",
+          "type": "short_text",
+          "label": "Annuitant Middle Name",
+          "hint": "What is the annuitant's middle name?",
+          "order": 3,
+          "required": false,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantLastName",
+          "type": "short_text",
+          "label": "Annuitant Last Name",
+          "hint": "What is the annuitant's last name?",
+          "order": 4,
+          "required": true,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantGender",
+          "type": "radio",
+          "label": "Annuitant Gender",
+          "hint": "What is the annuitant's gender?",
+          "order": 5,
+          "required": true,
+          "options": [
+            {
+              "value": "male",
+              "label": "Male"
+            },
+            {
+              "value": "female",
+              "label": "Female"
+            }
+          ],
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantTaxId",
+          "type": "ssn",
+          "label": "Annuitant Social Security Number",
+          "hint": "What is the annuitant's Social Security Number?",
+          "order": 6,
+          "required": true,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": [
+            {
+              "rule": "ssn_verification"
+            }
+          ]
+        },
+        {
+          "id": "annuitantDob",
+          "type": "date",
+          "label": "Annuitant Date of Birth",
+          "hint": "What is the annuitant's date of birth?",
+          "order": 7,
+          "required": true,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantResidentialAddress",
+          "type": "short_text",
+          "label": "Annuitant Permanent Physical Address",
+          "hint": "What is the annuitant's permanent physical address?",
+          "order": 8,
+          "required": true,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantCity",
+          "type": "short_text",
+          "label": "Annuitant City",
+          "hint": "What city does the annuitant live in?",
+          "order": 9,
+          "required": true,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantState",
+          "type": "select",
+          "label": "Annuitant State",
+          "hint": "What state does the annuitant live in?",
+          "order": 10,
+          "required": true,
+          "options": [
+            {
+              "value": "AL",
+              "label": "AL"
+            },
+            {
+              "value": "AK",
+              "label": "AK"
+            },
+            {
+              "value": "AZ",
+              "label": "AZ"
+            },
+            {
+              "value": "AR",
+              "label": "AR"
+            },
+            {
+              "value": "CA",
+              "label": "CA"
+            },
+            {
+              "value": "CO",
+              "label": "CO"
+            },
+            {
+              "value": "CT",
+              "label": "CT"
+            },
+            {
+              "value": "DE",
+              "label": "DE"
+            },
+            {
+              "value": "FL",
+              "label": "FL"
+            },
+            {
+              "value": "GA",
+              "label": "GA"
+            },
+            {
+              "value": "HI",
+              "label": "HI"
+            },
+            {
+              "value": "ID",
+              "label": "ID"
+            },
+            {
+              "value": "IL",
+              "label": "IL"
+            },
+            {
+              "value": "IN",
+              "label": "IN"
+            },
+            {
+              "value": "IA",
+              "label": "IA"
+            },
+            {
+              "value": "KS",
+              "label": "KS"
+            },
+            {
+              "value": "KY",
+              "label": "KY"
+            },
+            {
+              "value": "LA",
+              "label": "LA"
+            },
+            {
+              "value": "ME",
+              "label": "ME"
+            },
+            {
+              "value": "MD",
+              "label": "MD"
+            },
+            {
+              "value": "MA",
+              "label": "MA"
+            },
+            {
+              "value": "MI",
+              "label": "MI"
+            },
+            {
+              "value": "MN",
+              "label": "MN"
+            },
+            {
+              "value": "MS",
+              "label": "MS"
+            },
+            {
+              "value": "MO",
+              "label": "MO"
+            },
+            {
+              "value": "MT",
+              "label": "MT"
+            },
+            {
+              "value": "NE",
+              "label": "NE"
+            },
+            {
+              "value": "NV",
+              "label": "NV"
+            },
+            {
+              "value": "NH",
+              "label": "NH"
+            },
+            {
+              "value": "NJ",
+              "label": "NJ"
+            },
+            {
+              "value": "NM",
+              "label": "NM"
+            },
+            {
+              "value": "NY",
+              "label": "NY"
+            },
+            {
+              "value": "NC",
+              "label": "NC"
+            },
+            {
+              "value": "ND",
+              "label": "ND"
+            },
+            {
+              "value": "OH",
+              "label": "OH"
+            },
+            {
+              "value": "OK",
+              "label": "OK"
+            },
+            {
+              "value": "OR",
+              "label": "OR"
+            },
+            {
+              "value": "PA",
+              "label": "PA"
+            },
+            {
+              "value": "RI",
+              "label": "RI"
+            },
+            {
+              "value": "SC",
+              "label": "SC"
+            },
+            {
+              "value": "SD",
+              "label": "SD"
+            },
+            {
+              "value": "TN",
+              "label": "TN"
+            },
+            {
+              "value": "TX",
+              "label": "TX"
+            },
+            {
+              "value": "UT",
+              "label": "UT"
+            },
+            {
+              "value": "VT",
+              "label": "VT"
+            },
+            {
+              "value": "VA",
+              "label": "VA"
+            },
+            {
+              "value": "WA",
+              "label": "WA"
+            },
+            {
+              "value": "WV",
+              "label": "WV"
+            },
+            {
+              "value": "WI",
+              "label": "WI"
+            },
+            {
+              "value": "WY",
+              "label": "WY"
+            },
+            {
+              "value": "DC",
+              "label": "DC"
+            }
+          ],
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantZip",
+          "type": "short_text",
+          "label": "Annuitant Zip Code",
+          "hint": "What is the annuitant's zip code?",
+          "order": 11,
+          "required": true,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": [
+            {
+              "rule": "pattern",
+              "params": {
+                "regex": "^\\d{5}(-\\d{4})?$"
+              }
+            }
+          ]
+        },
+        {
+          "id": "annuitantHomePhone",
+          "type": "phone",
+          "label": "Annuitant Home Phone",
+          "hint": "What is the annuitant's home phone number?",
+          "order": 12,
+          "required": false,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantDaytimePhone",
+          "type": "phone",
+          "label": "Annuitant Daytime Phone",
+          "hint": "What is the annuitant's daytime phone number?",
+          "order": 13,
+          "required": false,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "annuitantEmail",
+          "type": "email",
+          "label": "Annuitant E-mail Address",
+          "hint": "What is the annuitant's email address?",
+          "order": 14,
+          "required": false,
+          "visibility": {
+            "field": "isOwnerSameAsAnnuitant",
+            "operator": "equals",
+            "value": false
+          },
+          "validation": null
+        },
+        {
+          "id": "hasJointAnnuitant",
+          "type": "boolean",
+          "label": "Add a Joint Annuitant?",
+          "hint": "Will there be a joint annuitant? (Not available for Qualified Plans)",
+          "order": 15,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantFirstName",
+          "type": "short_text",
+          "label": "Joint Annuitant First Name",
+          "hint": "What is the joint annuitant's first name?",
+          "order": 16,
+          "required": true,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantMiddleName",
+          "type": "short_text",
+          "label": "Joint Annuitant Middle Name",
+          "hint": "What is the joint annuitant's middle name?",
+          "order": 17,
+          "required": false,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantLastName",
+          "type": "short_text",
+          "label": "Joint Annuitant Last Name",
+          "hint": "What is the joint annuitant's last name?",
+          "order": 18,
+          "required": true,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantGender",
+          "type": "radio",
+          "label": "Joint Annuitant Gender",
+          "hint": "What is the joint annuitant's gender?",
+          "order": 19,
+          "required": true,
+          "options": [
+            {
+              "value": "male",
+              "label": "Male"
+            },
+            {
+              "value": "female",
+              "label": "Female"
+            }
+          ],
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantTaxId",
+          "type": "ssn",
+          "label": "Joint Annuitant Social Security Number",
+          "hint": "What is the joint annuitant's Social Security Number?",
+          "order": 20,
+          "required": true,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": [
+            {
+              "rule": "ssn_verification"
+            }
+          ]
+        },
+        {
+          "id": "jointAnnuitantDob",
+          "type": "date",
+          "label": "Joint Annuitant Date of Birth",
+          "hint": "What is the joint annuitant's date of birth?",
+          "order": 21,
+          "required": true,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantResidentialAddress",
+          "type": "short_text",
+          "label": "Joint Annuitant Permanent Physical Address",
+          "hint": "What is the joint annuitant's permanent physical address?",
+          "order": 22,
+          "required": true,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantCity",
+          "type": "short_text",
+          "label": "Joint Annuitant City",
+          "hint": "City",
+          "order": 23,
+          "required": true,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantState",
+          "type": "select",
+          "label": "Joint Annuitant State",
+          "hint": "State",
+          "order": 24,
+          "required": true,
+          "options": [
+            {
+              "value": "AL",
+              "label": "AL"
+            },
+            {
+              "value": "AK",
+              "label": "AK"
+            },
+            {
+              "value": "AZ",
+              "label": "AZ"
+            },
+            {
+              "value": "AR",
+              "label": "AR"
+            },
+            {
+              "value": "CA",
+              "label": "CA"
+            },
+            {
+              "value": "CO",
+              "label": "CO"
+            },
+            {
+              "value": "CT",
+              "label": "CT"
+            },
+            {
+              "value": "DE",
+              "label": "DE"
+            },
+            {
+              "value": "FL",
+              "label": "FL"
+            },
+            {
+              "value": "GA",
+              "label": "GA"
+            },
+            {
+              "value": "HI",
+              "label": "HI"
+            },
+            {
+              "value": "ID",
+              "label": "ID"
+            },
+            {
+              "value": "IL",
+              "label": "IL"
+            },
+            {
+              "value": "IN",
+              "label": "IN"
+            },
+            {
+              "value": "IA",
+              "label": "IA"
+            },
+            {
+              "value": "KS",
+              "label": "KS"
+            },
+            {
+              "value": "KY",
+              "label": "KY"
+            },
+            {
+              "value": "LA",
+              "label": "LA"
+            },
+            {
+              "value": "ME",
+              "label": "ME"
+            },
+            {
+              "value": "MD",
+              "label": "MD"
+            },
+            {
+              "value": "MA",
+              "label": "MA"
+            },
+            {
+              "value": "MI",
+              "label": "MI"
+            },
+            {
+              "value": "MN",
+              "label": "MN"
+            },
+            {
+              "value": "MS",
+              "label": "MS"
+            },
+            {
+              "value": "MO",
+              "label": "MO"
+            },
+            {
+              "value": "MT",
+              "label": "MT"
+            },
+            {
+              "value": "NE",
+              "label": "NE"
+            },
+            {
+              "value": "NV",
+              "label": "NV"
+            },
+            {
+              "value": "NH",
+              "label": "NH"
+            },
+            {
+              "value": "NJ",
+              "label": "NJ"
+            },
+            {
+              "value": "NM",
+              "label": "NM"
+            },
+            {
+              "value": "NY",
+              "label": "NY"
+            },
+            {
+              "value": "NC",
+              "label": "NC"
+            },
+            {
+              "value": "ND",
+              "label": "ND"
+            },
+            {
+              "value": "OH",
+              "label": "OH"
+            },
+            {
+              "value": "OK",
+              "label": "OK"
+            },
+            {
+              "value": "OR",
+              "label": "OR"
+            },
+            {
+              "value": "PA",
+              "label": "PA"
+            },
+            {
+              "value": "RI",
+              "label": "RI"
+            },
+            {
+              "value": "SC",
+              "label": "SC"
+            },
+            {
+              "value": "SD",
+              "label": "SD"
+            },
+            {
+              "value": "TN",
+              "label": "TN"
+            },
+            {
+              "value": "TX",
+              "label": "TX"
+            },
+            {
+              "value": "UT",
+              "label": "UT"
+            },
+            {
+              "value": "VT",
+              "label": "VT"
+            },
+            {
+              "value": "VA",
+              "label": "VA"
+            },
+            {
+              "value": "WA",
+              "label": "WA"
+            },
+            {
+              "value": "WV",
+              "label": "WV"
+            },
+            {
+              "value": "WI",
+              "label": "WI"
+            },
+            {
+              "value": "WY",
+              "label": "WY"
+            },
+            {
+              "value": "DC",
+              "label": "DC"
+            }
+          ],
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantZip",
+          "type": "short_text",
+          "label": "Joint Annuitant Zip Code",
+          "hint": "Zip code",
+          "order": 25,
+          "required": true,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": [
+            {
+              "rule": "pattern",
+              "params": {
+                "regex": "^\\d{5}(-\\d{4})?$"
+              }
+            }
+          ]
+        },
+        {
+          "id": "jointAnnuitantHomePhone",
+          "type": "phone",
+          "label": "Joint Annuitant Home Phone",
+          "hint": "Home phone number",
+          "order": 26,
+          "required": false,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantDaytimePhone",
+          "type": "phone",
+          "label": "Joint Annuitant Daytime Phone",
+          "hint": "Daytime phone number",
+          "order": 27,
+          "required": false,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointAnnuitantEmail",
+          "type": "email",
+          "label": "Joint Annuitant E-mail Address",
+          "hint": "Email address",
+          "order": 28,
+          "required": false,
+          "visibility": {
+            "field": "hasJointAnnuitant",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": null
+    },
+    {
+      "id": "page-beneficiaries",
+      "title": "Beneficiary Designation",
+      "description": "Section F \u2013 Death proceeds to be paid to named beneficiaries upon death of Contract Owner. Spousal continuation available only if surviving spouse is named as the sole primary beneficiary.",
+      "order": 3,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "ownerBeneficiaries",
+          "type": "repeatable_group",
+          "label": "Beneficiaries",
+          "hint": "Please add each beneficiary. Beneficiary proceeds will be split equally if no percentages are provided.",
+          "order": 1,
+          "required": true,
+          "visibility": null,
+          "validation": null,
+          "groupConfig": {
+            "minEntries": 1,
+            "maxEntries": 10,
+            "titleTemplate": "Beneficiary {index}",
+            "fields": [
+              {
+                "id": "beneType",
+                "type": "radio",
+                "label": "Beneficiary Type",
+                "hint": "Is this a primary or contingent beneficiary?",
+                "order": 1,
+                "required": true,
+                "options": [
+                  {
+                    "value": "primary",
+                    "label": "Primary Beneficiary"
+                  },
+                  {
+                    "value": "contingent",
+                    "label": "Contingent Beneficiary"
+                  }
+                ],
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "beneFirstName",
+                "type": "short_text",
+                "label": "Full Name (first-middle-last)",
+                "hint": "Beneficiary's full name",
+                "order": 2,
+                "required": true,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "beneDob",
+                "type": "date",
+                "label": "Birth Date / Trust Date",
+                "hint": "Beneficiary's date of birth or trust date",
+                "order": 3,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "beneTaxId",
+                "type": "ssn",
+                "label": "SSN/TIN",
+                "hint": "Beneficiary's Social Security Number or Tax ID",
+                "order": 4,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "benePercentage",
+                "type": "number",
+                "label": "Share %",
+                "hint": "What percentage share for this beneficiary?",
+                "order": 5,
+                "required": true,
+                "visibility": null,
+                "validation": [
+                  {
+                    "rule": "min_value",
+                    "params": {
+                      "min": 0
+                    }
+                  },
+                  {
+                    "rule": "max_value",
+                    "params": {
+                      "max": 100
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "beneStreetAddress",
+                "type": "short_text",
+                "label": "Address",
+                "hint": "Beneficiary's address",
+                "order": 6,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "beneCity",
+                "type": "short_text",
+                "label": "City",
+                "hint": "City",
+                "order": 7,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "beneState",
+                "type": "select",
+                "label": "State",
+                "hint": "State",
+                "order": 8,
+                "required": false,
+                "options": [
+                  {
+                    "value": "AL",
+                    "label": "AL"
+                  },
+                  {
+                    "value": "AK",
+                    "label": "AK"
+                  },
+                  {
+                    "value": "AZ",
+                    "label": "AZ"
+                  },
+                  {
+                    "value": "AR",
+                    "label": "AR"
+                  },
+                  {
+                    "value": "CA",
+                    "label": "CA"
+                  },
+                  {
+                    "value": "CO",
+                    "label": "CO"
+                  },
+                  {
+                    "value": "CT",
+                    "label": "CT"
+                  },
+                  {
+                    "value": "DE",
+                    "label": "DE"
+                  },
+                  {
+                    "value": "FL",
+                    "label": "FL"
+                  },
+                  {
+                    "value": "GA",
+                    "label": "GA"
+                  },
+                  {
+                    "value": "HI",
+                    "label": "HI"
+                  },
+                  {
+                    "value": "ID",
+                    "label": "ID"
+                  },
+                  {
+                    "value": "IL",
+                    "label": "IL"
+                  },
+                  {
+                    "value": "IN",
+                    "label": "IN"
+                  },
+                  {
+                    "value": "IA",
+                    "label": "IA"
+                  },
+                  {
+                    "value": "KS",
+                    "label": "KS"
+                  },
+                  {
+                    "value": "KY",
+                    "label": "KY"
+                  },
+                  {
+                    "value": "LA",
+                    "label": "LA"
+                  },
+                  {
+                    "value": "ME",
+                    "label": "ME"
+                  },
+                  {
+                    "value": "MD",
+                    "label": "MD"
+                  },
+                  {
+                    "value": "MA",
+                    "label": "MA"
+                  },
+                  {
+                    "value": "MI",
+                    "label": "MI"
+                  },
+                  {
+                    "value": "MN",
+                    "label": "MN"
+                  },
+                  {
+                    "value": "MS",
+                    "label": "MS"
+                  },
+                  {
+                    "value": "MO",
+                    "label": "MO"
+                  },
+                  {
+                    "value": "MT",
+                    "label": "MT"
+                  },
+                  {
+                    "value": "NE",
+                    "label": "NE"
+                  },
+                  {
+                    "value": "NV",
+                    "label": "NV"
+                  },
+                  {
+                    "value": "NH",
+                    "label": "NH"
+                  },
+                  {
+                    "value": "NJ",
+                    "label": "NJ"
+                  },
+                  {
+                    "value": "NM",
+                    "label": "NM"
+                  },
+                  {
+                    "value": "NY",
+                    "label": "NY"
+                  },
+                  {
+                    "value": "NC",
+                    "label": "NC"
+                  },
+                  {
+                    "value": "ND",
+                    "label": "ND"
+                  },
+                  {
+                    "value": "OH",
+                    "label": "OH"
+                  },
+                  {
+                    "value": "OK",
+                    "label": "OK"
+                  },
+                  {
+                    "value": "OR",
+                    "label": "OR"
+                  },
+                  {
+                    "value": "PA",
+                    "label": "PA"
+                  },
+                  {
+                    "value": "RI",
+                    "label": "RI"
+                  },
+                  {
+                    "value": "SC",
+                    "label": "SC"
+                  },
+                  {
+                    "value": "SD",
+                    "label": "SD"
+                  },
+                  {
+                    "value": "TN",
+                    "label": "TN"
+                  },
+                  {
+                    "value": "TX",
+                    "label": "TX"
+                  },
+                  {
+                    "value": "UT",
+                    "label": "UT"
+                  },
+                  {
+                    "value": "VT",
+                    "label": "VT"
+                  },
+                  {
+                    "value": "VA",
+                    "label": "VA"
+                  },
+                  {
+                    "value": "WA",
+                    "label": "WA"
+                  },
+                  {
+                    "value": "WV",
+                    "label": "WV"
+                  },
+                  {
+                    "value": "WI",
+                    "label": "WI"
+                  },
+                  {
+                    "value": "WY",
+                    "label": "WY"
+                  },
+                  {
+                    "value": "DC",
+                    "label": "DC"
+                  }
+                ],
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "beneZip",
+                "type": "short_text",
+                "label": "Zip",
+                "hint": "Zip code",
+                "order": 9,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "benePhone",
+                "type": "phone",
+                "label": "Phone Number",
+                "hint": "Beneficiary's phone number",
+                "order": 10,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "beneRelationship",
+                "type": "select",
+                "label": "Relationship",
+                "hint": "Relationship to owner",
+                "order": 11,
+                "required": true,
+                "options": [
+                  {
+                    "value": "spouse",
+                    "label": "Spouse"
+                  },
+                  {
+                    "value": "child",
+                    "label": "Child"
+                  },
+                  {
+                    "value": "parent",
+                    "label": "Parent"
+                  },
+                  {
+                    "value": "sibling",
+                    "label": "Sibling"
+                  },
+                  {
+                    "value": "trust",
+                    "label": "Trust"
+                  },
+                  {
+                    "value": "estate",
+                    "label": "Estate"
+                  },
+                  {
+                    "value": "charity",
+                    "label": "Charity"
+                  },
+                  {
+                    "value": "other",
+                    "label": "Other"
+                  }
+                ],
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "beneEmail",
+                "type": "email",
+                "label": "E-mail Address",
+                "hint": "Beneficiary's email",
+                "order": 12,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              }
+            ]
+          }
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": [
+        {
+          "questionId": "ownerBeneficiaries",
+          "rule": "sum_equals",
+          "field": "benePercentage",
+          "value": 100,
+          "filterField": "beneType",
+          "filterValue": "primary",
+          "message": "Primary beneficiary shares must total 100%"
+        },
+        {
+          "questionId": "ownerBeneficiaries",
+          "rule": "sum_equals",
+          "field": "benePercentage",
+          "value": 100,
+          "filterField": "beneType",
+          "filterValue": "contingent",
+          "message": "Contingent beneficiary shares must total 100% (if any contingent beneficiaries are listed)"
+        }
+      ]
+    },
+    {
+      "id": "page-product-details",
+      "title": "Product & Premium Details",
+      "description": "Sections C & D \u2013 Tax qualification status, premium payment information, and rate guarantee period selection.",
+      "order": 4,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "taxStatus",
+          "type": "radio",
+          "label": "Tax Qualification",
+          "hint": "What is the tax qualification status for this annuity?",
+          "order": 1,
+          "required": true,
+          "options": [
+            {
+              "value": "nonQualified",
+              "label": "Non-Qualified"
+            },
+            {
+              "value": "iraTransfer",
+              "label": "IRA Transfer"
+            },
+            {
+              "value": "iraRollover",
+              "label": "IRA Rollover"
+            },
+            {
+              "value": "iraContribution",
+              "label": "IRA Contribution"
+            },
+            {
+              "value": "rothIra",
+              "label": "Roth IRA"
+            },
+            {
+              "value": "rothConversion",
+              "label": "Roth Conversion"
+            },
+            {
+              "value": "inheritedIra",
+              "label": "Inherited/Stretch IRA"
+            },
+            {
+              "value": "sepIra",
+              "label": "SEP IRA"
+            },
+            {
+              "value": "simpleIra",
+              "label": "SIMPLE IRA"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "iraContributionTaxYear",
+          "type": "select",
+          "label": "IRA Contribution Tax Year",
+          "hint": "For what tax year is this IRA contribution?",
+          "order": 2,
+          "required": true,
+          "options": [
+            {
+              "value": "2024",
+              "label": "2024"
+            },
+            {
+              "value": "2025",
+              "label": "2025"
+            },
+            {
+              "value": "2026",
+              "label": "2026"
+            },
+            {
+              "value": "2027",
+              "label": "2027"
+            }
+          ],
+          "visibility": {
+            "field": "taxStatus",
+            "operator": "equals",
+            "value": "iraContribution"
+          },
+          "validation": null
+        },
+        {
+          "id": "taxStatusOther",
+          "type": "short_text",
+          "label": "Other Tax Qualification (please specify)",
+          "hint": "Please describe the tax qualification status",
+          "order": 3,
+          "required": true,
+          "visibility": {
+            "field": "taxStatus",
+            "operator": "equals",
+            "value": "other"
+          },
+          "validation": null
+        },
+        {
+          "id": "guaranteePeriod",
+          "type": "radio",
+          "label": "Rate Guarantee Period",
+          "hint": "Which rate guarantee period would you like for your Certainty Select annuity?",
+          "order": 4,
+          "required": true,
+          "options": [
+            {
+              "value": "3year",
+              "label": "3 Year"
+            },
+            {
+              "value": "5year",
+              "label": "5 Year"
+            },
+            {
+              "value": "6year",
+              "label": "6 Year"
+            },
+            {
+              "value": "8year",
+              "label": "8 Year"
+            },
+            {
+              "value": "10year",
+              "label": "10 Year"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "premiumCheckIncluded",
+          "type": "currency",
+          "label": "Check Included",
+          "hint": "Amount of check included with application",
+          "order": 5,
+          "required": false,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "min_value",
+              "params": {
+                "min": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "premiumCheckInTransit",
+          "type": "currency",
+          "label": "Check in Transit",
+          "hint": "Amount of check in transit",
+          "order": 6,
+          "required": false,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "min_value",
+              "params": {
+                "min": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "premiumExternalTransferCarrier",
+          "type": "currency",
+          "label": "External Transfer \u2013 Requested by EquiTrust",
+          "hint": "Anticipated total amount from external transfer(s) to be requested by EquiTrust",
+          "order": 7,
+          "required": false,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "min_value",
+              "params": {
+                "min": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "premiumExternalTransferProducer",
+          "type": "currency",
+          "label": "External Transfer \u2013 Requested by Producer or Owner",
+          "hint": "Anticipated total amount from external transfer(s) to be requested by the producer or owner",
+          "order": 8,
+          "required": false,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "min_value",
+              "params": {
+                "min": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "totalSinglePremium",
+          "type": "currency",
+          "label": "Total Premium",
+          "hint": "What is the total single premium amount?",
+          "order": 9,
+          "required": true,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "min_value",
+              "params": {
+                "min": 1
+              }
+            }
+          ]
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": null
+    },
+    {
+      "id": "page-financial-profile",
+      "title": "Financial Profile",
+      "description": "Financial Needs Analysis \u2013 Financial profile information to determine if the product meets your current financial needs and objectives.",
+      "order": 5,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "fnaEmploymentStatus",
+          "type": "radio",
+          "label": "Employment Status",
+          "hint": "What is the owner's current employment status?",
+          "order": 1,
+          "required": true,
+          "options": [
+            {
+              "value": "employed",
+              "label": "Employed"
+            },
+            {
+              "value": "unemployed",
+              "label": "Unemployed"
+            },
+            {
+              "value": "retired",
+              "label": "Retired"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaAnnualHouseholdIncome",
+          "type": "radio",
+          "label": "Approximate Annual Household Income",
+          "hint": "What is the owner's approximate annual household income?",
+          "order": 2,
+          "required": true,
+          "options": [
+            {
+              "value": "0-19999",
+              "label": "$0\u201319,999"
+            },
+            {
+              "value": "20000-49999",
+              "label": "$20,000\u201349,999"
+            },
+            {
+              "value": "50000-99999",
+              "label": "$50,000\u201399,999"
+            },
+            {
+              "value": "100000-149999",
+              "label": "$100,000\u2013149,999"
+            },
+            {
+              "value": "150000-199999",
+              "label": "$150,000\u2013199,999"
+            },
+            {
+              "value": "200000-249999",
+              "label": "$200,000\u2013249,999"
+            },
+            {
+              "value": "250000-499999",
+              "label": "$250,000\u2013499,999"
+            },
+            {
+              "value": "500000plus",
+              "label": "Over $500,000"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaIncomeSource",
+          "type": "multi_select",
+          "label": "Source(s) of Income",
+          "hint": "Please provide the source(s) of your income (check all that apply)",
+          "order": 3,
+          "required": true,
+          "options": [
+            {
+              "value": "wages",
+              "label": "Wages"
+            },
+            {
+              "value": "pensionPayments",
+              "label": "Pension Payments"
+            },
+            {
+              "value": "annuityPayments",
+              "label": "Guarantee Annuity Payments (Income)"
+            },
+            {
+              "value": "investments",
+              "label": "Investments"
+            },
+            {
+              "value": "socialSecurity",
+              "label": "Social Security"
+            },
+            {
+              "value": "rentalIncome",
+              "label": "Rental Income"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaIncomeSourceOther",
+          "type": "short_text",
+          "label": "Other Income Source",
+          "hint": "Please describe the other source of income",
+          "order": 4,
+          "required": true,
+          "visibility": {
+            "field": "fnaIncomeSource",
+            "operator": "contains",
+            "value": "other"
+          },
+          "validation": null
+        },
+        {
+          "id": "fnaFederalTaxBracket",
+          "type": "radio",
+          "label": "Current Federal Income Tax Bracket",
+          "hint": "What is your current federal income tax bracket?",
+          "order": 5,
+          "required": true,
+          "options": [
+            {
+              "value": "0%",
+              "label": "0%"
+            },
+            {
+              "value": "10%",
+              "label": "10%"
+            },
+            {
+              "value": "12%",
+              "label": "12%"
+            },
+            {
+              "value": "22%",
+              "label": "22%"
+            },
+            {
+              "value": "24%",
+              "label": "24%"
+            },
+            {
+              "value": "32%",
+              "label": "32%"
+            },
+            {
+              "value": "35%",
+              "label": "35%"
+            },
+            {
+              "value": "37%",
+              "label": "37%"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaAnnualHouseholdExpenses",
+          "type": "radio",
+          "label": "Approximate Annual Household Expenses",
+          "hint": "What are the owner's approximate annual household expenses?",
+          "order": 6,
+          "required": true,
+          "options": [
+            {
+              "value": "0-24999",
+              "label": "$0\u201324,999"
+            },
+            {
+              "value": "25000-49999",
+              "label": "$25,000\u201349,999"
+            },
+            {
+              "value": "50000-74999",
+              "label": "$50,000\u201374,999"
+            },
+            {
+              "value": "75000-100000",
+              "label": "$75,000\u2013100,000"
+            },
+            {
+              "value": "100000plus",
+              "label": "Over $100,000"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "isAnticipatingMaterialChanges",
+          "type": "radio",
+          "label": "Anticipated Material Changes",
+          "hint": "Do you anticipate/are you aware of potential material changes in your income or expenses during the current surrender charge period?",
+          "order": 7,
+          "required": true,
+          "options": [
+            {
+              "value": "no",
+              "label": "No"
+            },
+            {
+              "value": "yes",
+              "label": "Yes"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "materialChangesDescription",
+          "type": "long_text",
+          "label": "Please Describe Material Changes",
+          "hint": "Please describe fully the anticipated material changes",
+          "order": 8,
+          "required": true,
+          "visibility": {
+            "field": "isAnticipatingMaterialChanges",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null
+        },
+        {
+          "id": "hasReverseMortgage",
+          "type": "radio",
+          "label": "Reverse Mortgage",
+          "hint": "Do you currently have a reverse mortgage on your primary residence?",
+          "order": 9,
+          "required": true,
+          "options": [
+            {
+              "value": "no",
+              "label": "No"
+            },
+            {
+              "value": "yes",
+              "label": "Yes"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "isReverseMortgageSourceOfFunds",
+          "type": "radio",
+          "label": "Reverse Mortgage as Source of Funds",
+          "hint": "Will the source of funds for this annuity come from the reverse mortgage?",
+          "order": 10,
+          "required": true,
+          "options": [
+            {
+              "value": "no",
+              "label": "No"
+            },
+            {
+              "value": "yes",
+              "label": "Yes"
+            }
+          ],
+          "visibility": {
+            "field": "hasReverseMortgage",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null
+        },
+        {
+          "id": "fnaRiskTolerance",
+          "type": "radio",
+          "label": "Risk Tolerance",
+          "hint": "What is your risk tolerance for this annuity purchase?",
+          "order": 11,
+          "required": true,
+          "options": [
+            {
+              "value": "conservative",
+              "label": "Conservative"
+            },
+            {
+              "value": "moderate",
+              "label": "Moderate"
+            },
+            {
+              "value": "aggressive",
+              "label": "Aggressive"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaInvestmentExperience",
+          "type": "multi_select",
+          "label": "Financial Product Experience",
+          "hint": "Please indicate the financial product(s) you have current or prior experience with",
+          "order": 12,
+          "required": true,
+          "options": [
+            {
+              "value": "fixedAnnuities",
+              "label": "Fixed Annuities"
+            },
+            {
+              "value": "variableAnnuities",
+              "label": "Variable Annuities"
+            },
+            {
+              "value": "mutualFunds",
+              "label": "Mutual Funds"
+            },
+            {
+              "value": "cds",
+              "label": "CDs"
+            },
+            {
+              "value": "equitiesSecurities",
+              "label": "Equities/Securities"
+            },
+            {
+              "value": "bonds",
+              "label": "Bonds"
+            },
+            {
+              "value": "alternativeInvestments",
+              "label": "Alternative Investments"
+            },
+            {
+              "value": "lifeInsurance",
+              "label": "Life Insurance"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaCheckingSavings",
+          "type": "radio",
+          "label": "Checking/Savings (after purchase)",
+          "hint": "What is the approximate amount in checking/savings after purchase of this annuity?",
+          "order": 13,
+          "required": true,
+          "options": [
+            {
+              "value": "under5000",
+              "label": "Under $5,000"
+            },
+            {
+              "value": "5000-9999",
+              "label": "$5,000\u20139,999"
+            },
+            {
+              "value": "10000-24999",
+              "label": "$10,000\u201324,999"
+            },
+            {
+              "value": "25000-49999",
+              "label": "$25,000\u201349,999"
+            },
+            {
+              "value": "50000-99999",
+              "label": "$50,000\u201399,999"
+            },
+            {
+              "value": "100000-149999",
+              "label": "$100,000\u2013149,999"
+            },
+            {
+              "value": "150000-199999",
+              "label": "$150,000\u2013199,999"
+            },
+            {
+              "value": "200000-249999",
+              "label": "$200,000\u2013249,999"
+            },
+            {
+              "value": "250000-500000",
+              "label": "$250,000\u2013500,000"
+            },
+            {
+              "value": "500000plus",
+              "label": "Over $500,000"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaOtherLiquidAssets",
+          "type": "radio",
+          "label": "All Other Liquid Assets (after purchase)",
+          "hint": "E.g. money market funds, securities without surrender charges, out-of-surrender annuities, qualified assets (owner 59\u00bd+)",
+          "order": 14,
+          "required": true,
+          "options": [
+            {
+              "value": "under5000",
+              "label": "Under $5,000"
+            },
+            {
+              "value": "5000-9999",
+              "label": "$5,000\u20139,999"
+            },
+            {
+              "value": "10000-24999",
+              "label": "$10,000\u201324,999"
+            },
+            {
+              "value": "25000-49999",
+              "label": "$25,000\u201349,999"
+            },
+            {
+              "value": "50000-99999",
+              "label": "$50,000\u201399,999"
+            },
+            {
+              "value": "100000-149999",
+              "label": "$100,000\u2013149,999"
+            },
+            {
+              "value": "150000-199999",
+              "label": "$150,000\u2013199,999"
+            },
+            {
+              "value": "200000-249999",
+              "label": "$200,000\u2013249,999"
+            },
+            {
+              "value": "250000-500000",
+              "label": "$250,000\u2013500,000"
+            },
+            {
+              "value": "500000plus",
+              "label": "Over $500,000"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaNonLiquidAssets",
+          "type": "radio",
+          "label": "Total Non-Liquid Assets (after purchase)",
+          "hint": "E.g. real estate, cash value life insurance, annuities with surrender charges, employer retirement plans",
+          "order": 15,
+          "required": true,
+          "options": [
+            {
+              "value": "under100000",
+              "label": "Under $100,000"
+            },
+            {
+              "value": "100000-149999",
+              "label": "$100,000\u2013149,999"
+            },
+            {
+              "value": "150000-199999",
+              "label": "$150,000\u2013199,999"
+            },
+            {
+              "value": "200000-249999",
+              "label": "$200,000\u2013249,999"
+            },
+            {
+              "value": "250000-299999",
+              "label": "$250,000\u2013299,999"
+            },
+            {
+              "value": "300000-349999",
+              "label": "$300,000\u2013349,999"
+            },
+            {
+              "value": "350000-399999",
+              "label": "$350,000\u2013399,999"
+            },
+            {
+              "value": "400000-499999",
+              "label": "$400,000\u2013499,999"
+            },
+            {
+              "value": "500000-749999",
+              "label": "$500,000\u2013749,999"
+            },
+            {
+              "value": "750000-1000000",
+              "label": "$750,000\u20131 million"
+            },
+            {
+              "value": "1000000-1499999",
+              "label": "$1.0\u20131.49 million"
+            },
+            {
+              "value": "1500000-1999999",
+              "label": "$1.5\u20131.99 million"
+            },
+            {
+              "value": "2000000-2499999",
+              "label": "$2.0\u20132.49 million"
+            },
+            {
+              "value": "2500000-3000000",
+              "label": "$2.5\u20133.0 million"
+            },
+            {
+              "value": "3000000plus",
+              "label": "Over $3 million"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaTotalDebt",
+          "type": "radio",
+          "label": "Total Debt (excluding primary residence/mortgage)",
+          "hint": "E.g. credit cards, student loans, personal loans, auto loans",
+          "order": 16,
+          "required": true,
+          "options": [
+            {
+              "value": "under10000",
+              "label": "Under $10,000"
+            },
+            {
+              "value": "10000-49999",
+              "label": "$10,000\u201349,999"
+            },
+            {
+              "value": "50000-99999",
+              "label": "$50,000\u201399,999"
+            },
+            {
+              "value": "100000-249999",
+              "label": "$100,000\u2013249,999"
+            },
+            {
+              "value": "250000-399999",
+              "label": "$250,000\u2013399,999"
+            },
+            {
+              "value": "400000-649999",
+              "label": "$400,000\u2013649,999"
+            },
+            {
+              "value": "650000-750000",
+              "label": "$650,000\u2013750,000"
+            },
+            {
+              "value": "750000plus",
+              "label": "Over $750,000"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaLongestDebtLength",
+          "type": "radio",
+          "label": "Length of Longest Outstanding Debt (California Only)",
+          "hint": "California residents: please indicate the length of your longest outstanding debt.",
+          "order": 17,
+          "required": true,
+          "options": [
+            {
+              "value": "0-5years",
+              "label": "0\u20135 Years"
+            },
+            {
+              "value": "6-10years",
+              "label": "6\u201310 Years"
+            },
+            {
+              "value": "11-15years",
+              "label": "11\u201315 Years"
+            },
+            {
+              "value": "16plusYears",
+              "label": "16+ Years"
+            }
+          ],
+          "visibility": {
+            "field": "ownerState",
+            "operator": "equals",
+            "value": "CA"
+          },
+          "validation": null
+        },
+        {
+          "id": "fnaEstimatedNetWorth",
+          "type": "radio",
+          "label": "Estimated Total Net Worth",
+          "hint": "What is your estimated total net worth?",
+          "order": 18,
+          "required": true,
+          "options": [
+            {
+              "value": "under100000",
+              "label": "Under $100,000"
+            },
+            {
+              "value": "100000-149999",
+              "label": "$100,000\u2013149,999"
+            },
+            {
+              "value": "150000-199999",
+              "label": "$150,000\u2013199,999"
+            },
+            {
+              "value": "200000-249999",
+              "label": "$200,000\u2013249,999"
+            },
+            {
+              "value": "250000-299999",
+              "label": "$250,000\u2013299,999"
+            },
+            {
+              "value": "300000-349999",
+              "label": "$300,000\u2013349,999"
+            },
+            {
+              "value": "350000-399999",
+              "label": "$350,000\u2013399,999"
+            },
+            {
+              "value": "400000-499999",
+              "label": "$400,000\u2013499,999"
+            },
+            {
+              "value": "500000-749999",
+              "label": "$500,000\u2013749,999"
+            },
+            {
+              "value": "750000-1000000",
+              "label": "$750,000\u20131 million"
+            },
+            {
+              "value": "1000000-1499999",
+              "label": "$1.0\u20131.49 million"
+            },
+            {
+              "value": "1500000-1999999",
+              "label": "$1.5\u20131.99 million"
+            },
+            {
+              "value": "2000000-2499999",
+              "label": "$2.0\u20132.49 million"
+            },
+            {
+              "value": "2500000-3000000",
+              "label": "$2.5\u20133.0 million"
+            },
+            {
+              "value": "3000000plus",
+              "label": "Over $3 million"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "hasSufficientAssets",
+          "type": "radio",
+          "label": "Sufficient Assets",
+          "hint": "Do you have sufficient assets to cover future living and/or medical expenses?",
+          "order": 19,
+          "required": true,
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "insufficientAssetsExplanation",
+          "type": "long_text",
+          "label": "Please Explain",
+          "hint": "Please explain why assets are insufficient",
+          "order": 20,
+          "required": true,
+          "visibility": {
+            "field": "hasSufficientAssets",
+            "operator": "equals",
+            "value": "no"
+          },
+          "validation": null
+        },
+        {
+          "id": "fnaLiquidMonthsCoverage",
+          "type": "radio",
+          "label": "Months of Living Expenses Coverage",
+          "hint": "If you purchase this annuity, how many months of living expenses can your liquid assets cover?",
+          "order": 21,
+          "required": true,
+          "options": [
+            {
+              "value": "1-3months",
+              "label": "1\u20133 months"
+            },
+            {
+              "value": "4-6months",
+              "label": "4\u20136 months"
+            },
+            {
+              "value": "7-12months",
+              "label": "7\u201312 months"
+            },
+            {
+              "value": "13plusMonths",
+              "label": "13+ months"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": null
+    },
+    {
+      "id": "page-suitability",
+      "title": "Annuity Objectives & Additional Information",
+      "description": "Financial Needs Analysis \u2013 Annuity objectives, distribution plans, source of funds, and additional qualification questions.",
+      "order": 6,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "isAwareOfSurrenderCharges",
+          "type": "radio",
+          "label": "Surrender Charge Understanding",
+          "hint": "An annuity is a long-term contract with substantial penalties for early surrenders. Do you understand that withdrawals above the penalty-free amount will incur surrender charges, market value adjustments, and potentially a 10% tax penalty if under age 59\u00bd?",
+          "order": 1,
+          "required": true,
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaHowLongKeep",
+          "type": "radio",
+          "label": "How Long Do You Plan to Keep This Annuity?",
+          "hint": "What is your anticipated holding period for this annuity?",
+          "order": 2,
+          "required": true,
+          "options": [
+            {
+              "value": "lessThan3Years",
+              "label": "Less than 3 years"
+            },
+            {
+              "value": "4-7years",
+              "label": "4\u20137 years"
+            },
+            {
+              "value": "8-10years",
+              "label": "8\u201310 years"
+            },
+            {
+              "value": "10plusYears",
+              "label": "10+ years"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaFinancialObjectives",
+          "type": "multi_select",
+          "label": "How Will This Annuity Help Meet Your Objectives?",
+          "hint": "Check all that apply",
+          "order": 3,
+          "required": true,
+          "options": [
+            {
+              "value": "taxDeferral",
+              "label": "Tax deferral"
+            },
+            {
+              "value": "wealthAccumulation",
+              "label": "Wealth accumulation"
+            },
+            {
+              "value": "immediateIncome",
+              "label": "Immediate income"
+            },
+            {
+              "value": "contractGuarantees",
+              "label": "Contract guarantees"
+            },
+            {
+              "value": "deathBenefit",
+              "label": "Death benefit"
+            },
+            {
+              "value": "estatePlanning",
+              "label": "Estate planning"
+            },
+            {
+              "value": "marketRiskProtection",
+              "label": "Protection from market risk"
+            },
+            {
+              "value": "deferredIncome",
+              "label": "Deferred income"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaAnticipateDistributions",
+          "type": "radio",
+          "label": "Anticipated Distributions",
+          "hint": "Do you anticipate taking distributions from this annuity during the surrender charge period?",
+          "order": 4,
+          "required": true,
+          "options": [
+            {
+              "value": "confidenceIncome",
+              "label": "NA \u2013 Confidence Income"
+            },
+            {
+              "value": "none",
+              "label": "No anticipated distributions"
+            },
+            {
+              "value": "0-3years",
+              "label": "Yes \u2013 0\u20133 years from now"
+            },
+            {
+              "value": "4-7years",
+              "label": "Yes \u2013 4\u20137 years from now"
+            },
+            {
+              "value": "8-10years",
+              "label": "Yes \u2013 8\u201310 years from now"
+            },
+            {
+              "value": "10plusYears",
+              "label": "Yes \u2013 10+ years from now"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaDistributionMethod",
+          "type": "multi_select",
+          "label": "Distribution Method",
+          "hint": "How do you intend to take future distributions? (Check all that apply)",
+          "order": 5,
+          "required": true,
+          "options": [
+            {
+              "value": "annuitize",
+              "label": "Annuitize"
+            },
+            {
+              "value": "incomeRider",
+              "label": "Income Rider"
+            },
+            {
+              "value": "rmds",
+              "label": "RMDs (Qualified Plans only)"
+            },
+            {
+              "value": "penaltyFreeWithdrawals",
+              "label": "Penalty-free withdrawals"
+            },
+            {
+              "value": "ltcRider",
+              "label": "LTC Rider (Bridge Product only)"
+            },
+            {
+              "value": "lumpSum",
+              "label": "Lump Sum"
+            }
+          ],
+          "visibility": {
+            "operator": "and",
+            "conditions": [
+              {
+                "field": "fnaAnticipateDistributions",
+                "operator": "not_equals",
+                "value": "none"
+              },
+              {
+                "field": "fnaAnticipateDistributions",
+                "operator": "not_equals",
+                "value": "confidenceIncome"
+              }
+            ]
+          },
+          "validation": null
+        },
+        {
+          "id": "fnaSourceOfFunds",
+          "type": "multi_select",
+          "label": "Source of Funds",
+          "hint": "What is the source of funds for this annuity? (Check all that apply)",
+          "order": 6,
+          "required": true,
+          "options": [
+            {
+              "value": "checkingSavings",
+              "label": "Checking/Savings"
+            },
+            {
+              "value": "moneyMarket",
+              "label": "Money Market"
+            },
+            {
+              "value": "bankCd",
+              "label": "Bank CD"
+            },
+            {
+              "value": "stocksBondsMutualFunds",
+              "label": "Stocks/Bonds/Mutual Funds"
+            },
+            {
+              "value": "existingAnnuity",
+              "label": "Existing Annuity"
+            },
+            {
+              "value": "deathProceeds",
+              "label": "Death Proceeds"
+            },
+            {
+              "value": "cashValueLifeInsurance",
+              "label": "Cash Value Life Insurance"
+            },
+            {
+              "value": "retirementPension",
+              "label": "Retirement/Pension"
+            },
+            {
+              "value": "inheritanceGift",
+              "label": "Inheritance/Gift"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaSourceOfFundsOther",
+          "type": "short_text",
+          "label": "Other Source of Funds",
+          "hint": "Please describe the other source of funds",
+          "order": 7,
+          "required": true,
+          "visibility": {
+            "field": "fnaSourceOfFunds",
+            "operator": "contains",
+            "value": "other"
+          },
+          "validation": null
+        },
+        {
+          "id": "hasReplacedExchangedRecently",
+          "type": "radio",
+          "label": "Recent Replacements/Exchanges",
+          "hint": "Have you replaced or exchanged any life policy or annuity contract within the past 36 months (60 months for California or Minnesota)?",
+          "order": 8,
+          "required": true,
+          "options": [
+            {
+              "value": "no",
+              "label": "No"
+            },
+            {
+              "value": "yes",
+              "label": "Yes"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "isInNursingHome",
+          "type": "radio",
+          "label": "Nursing Home / Assisted Living",
+          "hint": "Do you or the annuitant currently reside in a nursing home or assisted living facility, or plan to enter one in the next 6 months?",
+          "order": 9,
+          "required": true,
+          "options": [
+            {
+              "value": "no",
+              "label": "No"
+            },
+            {
+              "value": "yes",
+              "label": "Yes"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "isApplyingForMeansTestedBenefits",
+          "type": "radio",
+          "label": "Means-Tested Government Benefits (California Only)",
+          "hint": "Do you intend to apply for means-tested governmental benefits, including Medi-Cal or veteran's aid and attendance benefit?",
+          "order": 10,
+          "required": true,
+          "options": [
+            {
+              "value": "no",
+              "label": "No"
+            },
+            {
+              "value": "yes",
+              "label": "Yes"
+            }
+          ],
+          "visibility": {
+            "field": "ownerState",
+            "operator": "equals",
+            "value": "CA"
+          },
+          "validation": null
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": null
+    },
+    {
+      "id": "page-replacement",
+      "title": "Existing Coverage & Replacement",
+      "description": "Section E \u2013 Existing coverage questions and Important Notice: Replacement of Life Insurance or Annuities (ET-RPL-4900).",
+      "order": 7,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "hasExistingInsurance",
+          "type": "radio",
+          "label": "Existing Life Insurance or Annuity Contracts",
+          "hint": "Do you have any existing life insurance policies or annuity contracts with EquiTrust or any other company?",
+          "order": 1,
+          "required": true,
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "isReplacement",
+          "type": "radio",
+          "label": "Replacement",
+          "hint": "Will this annuity partially or completely replace or change any existing life insurance policies or annuity contracts?",
+          "order": 2,
+          "required": true,
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "isDiscontinuingExisting",
+          "type": "radio",
+          "label": "Discontinuing Existing Policy",
+          "hint": "Are you considering discontinuing making premium payments, surrendering, forfeiting, assigning to the insurer, or otherwise terminating your existing policy or contract?",
+          "order": 3,
+          "required": true,
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
+          ],
+          "visibility": {
+            "field": "isReplacement",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null
+        },
+        {
+          "id": "isUsingExistingFunds",
+          "type": "radio",
+          "label": "Using Existing Funds",
+          "hint": "Are you considering using funds from your existing policies or contract to pay premiums due on the new policy or contract?",
+          "order": 4,
+          "required": true,
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
+          ],
+          "visibility": {
+            "field": "isReplacement",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null
+        },
+        {
+          "id": "replacementContracts",
+          "type": "repeatable_group",
+          "label": "Existing Policies Being Replaced",
+          "hint": "List each existing policy or contract being replaced",
+          "order": 5,
+          "required": true,
+          "visibility": {
+            "field": "isReplacement",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null,
+          "groupConfig": {
+            "minEntries": 1,
+            "maxEntries": 5,
+            "titleTemplate": "Replacement {index}",
+            "fields": [
+              {
+                "id": "replacementInsurerName",
+                "type": "short_text",
+                "label": "Insurer Name",
+                "hint": "Name of the existing insurer",
+                "order": 1,
+                "required": true,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "replacementPolicyNumber",
+                "type": "short_text",
+                "label": "Contract or Policy #",
+                "hint": "Existing contract or policy number",
+                "order": 2,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "replacementInsured",
+                "type": "short_text",
+                "label": "Insured or Annuitant",
+                "hint": "Name of insured or annuitant on existing policy",
+                "order": 3,
+                "required": false,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "replacementType",
+                "type": "radio",
+                "label": "Replaced or Financing?",
+                "hint": "Is this policy being replaced or used as financing?",
+                "order": 4,
+                "required": true,
+                "options": [
+                  {
+                    "value": "replaced",
+                    "label": "Replaced (R)"
+                  },
+                  {
+                    "value": "financing",
+                    "label": "Financing (F)"
+                  }
+                ],
+                "visibility": null,
+                "validation": null
+              }
+            ]
+          }
+        },
+        {
+          "id": "replacementReason",
+          "type": "long_text",
+          "label": "Reason for Replacement",
+          "hint": "The existing policy or contract is being replaced because...",
+          "order": 6,
+          "required": true,
+          "visibility": {
+            "field": "isReplacement",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null
+        },
+        {
+          "id": "isReplacementDoNotReadAloud",
+          "type": "boolean",
+          "label": "Do Not Read Notice Aloud",
+          "hint": "Check if you do not want this replacement notice read aloud.",
+          "order": 7,
+          "required": false,
+          "visibility": {
+            "field": "isReplacement",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": null
+    },
+    {
+      "id": "page-producer-disclosure",
+      "title": "Insurance Agent/Producer Disclosure for Annuities",
+      "description": "Producer disclosure form providing information about the agent, products offered, and compensation.",
+      "order": 8,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "producerDisclosureFullName",
+          "type": "short_text",
+          "label": "Producer Full Name",
+          "hint": "Full name of the insurance agent/producer",
+          "order": 1,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerDisclosurePhone",
+          "type": "phone",
+          "label": "Producer Business Telephone",
+          "hint": "Business telephone number",
+          "order": 2,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerDisclosureNpn",
+          "type": "short_text",
+          "label": "National Producer Number",
+          "hint": "Agent's National Producer Number",
+          "order": 3,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerDisclosureState",
+          "type": "select",
+          "label": "State",
+          "hint": "State where the producer is licensed",
+          "order": 4,
+          "required": true,
+          "options": [
+            {
+              "value": "AL",
+              "label": "AL"
+            },
+            {
+              "value": "AK",
+              "label": "AK"
+            },
+            {
+              "value": "AZ",
+              "label": "AZ"
+            },
+            {
+              "value": "AR",
+              "label": "AR"
+            },
+            {
+              "value": "CA",
+              "label": "CA"
+            },
+            {
+              "value": "CO",
+              "label": "CO"
+            },
+            {
+              "value": "CT",
+              "label": "CT"
+            },
+            {
+              "value": "DE",
+              "label": "DE"
+            },
+            {
+              "value": "FL",
+              "label": "FL"
+            },
+            {
+              "value": "GA",
+              "label": "GA"
+            },
+            {
+              "value": "HI",
+              "label": "HI"
+            },
+            {
+              "value": "ID",
+              "label": "ID"
+            },
+            {
+              "value": "IL",
+              "label": "IL"
+            },
+            {
+              "value": "IN",
+              "label": "IN"
+            },
+            {
+              "value": "IA",
+              "label": "IA"
+            },
+            {
+              "value": "KS",
+              "label": "KS"
+            },
+            {
+              "value": "KY",
+              "label": "KY"
+            },
+            {
+              "value": "LA",
+              "label": "LA"
+            },
+            {
+              "value": "ME",
+              "label": "ME"
+            },
+            {
+              "value": "MD",
+              "label": "MD"
+            },
+            {
+              "value": "MA",
+              "label": "MA"
+            },
+            {
+              "value": "MI",
+              "label": "MI"
+            },
+            {
+              "value": "MN",
+              "label": "MN"
+            },
+            {
+              "value": "MS",
+              "label": "MS"
+            },
+            {
+              "value": "MO",
+              "label": "MO"
+            },
+            {
+              "value": "MT",
+              "label": "MT"
+            },
+            {
+              "value": "NE",
+              "label": "NE"
+            },
+            {
+              "value": "NV",
+              "label": "NV"
+            },
+            {
+              "value": "NH",
+              "label": "NH"
+            },
+            {
+              "value": "NJ",
+              "label": "NJ"
+            },
+            {
+              "value": "NM",
+              "label": "NM"
+            },
+            {
+              "value": "NY",
+              "label": "NY"
+            },
+            {
+              "value": "NC",
+              "label": "NC"
+            },
+            {
+              "value": "ND",
+              "label": "ND"
+            },
+            {
+              "value": "OH",
+              "label": "OH"
+            },
+            {
+              "value": "OK",
+              "label": "OK"
+            },
+            {
+              "value": "OR",
+              "label": "OR"
+            },
+            {
+              "value": "PA",
+              "label": "PA"
+            },
+            {
+              "value": "RI",
+              "label": "RI"
+            },
+            {
+              "value": "SC",
+              "label": "SC"
+            },
+            {
+              "value": "SD",
+              "label": "SD"
+            },
+            {
+              "value": "TN",
+              "label": "TN"
+            },
+            {
+              "value": "TX",
+              "label": "TX"
+            },
+            {
+              "value": "UT",
+              "label": "UT"
+            },
+            {
+              "value": "VT",
+              "label": "VT"
+            },
+            {
+              "value": "VA",
+              "label": "VA"
+            },
+            {
+              "value": "WA",
+              "label": "WA"
+            },
+            {
+              "value": "WV",
+              "label": "WV"
+            },
+            {
+              "value": "WI",
+              "label": "WI"
+            },
+            {
+              "value": "WY",
+              "label": "WY"
+            },
+            {
+              "value": "DC",
+              "label": "DC"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerProductsOffered",
+          "type": "multi_select",
+          "label": "Products Offered",
+          "hint": "What products are you licensed to sell?",
+          "order": 5,
+          "required": true,
+          "options": [
+            {
+              "value": "fixedIndexedAnnuities",
+              "label": "Fixed or Fixed Indexed Annuities"
+            },
+            {
+              "value": "variableAnnuities",
+              "label": "Variable Annuities"
+            },
+            {
+              "value": "lifeInsurance",
+              "label": "Life Insurance"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerNonInsuranceProducts",
+          "type": "multi_select",
+          "label": "Non-Insurance Products Licensed to Sell",
+          "hint": "Check any non-insurance financial products you are licensed and authorized to sell",
+          "order": 6,
+          "required": false,
+          "options": [
+            {
+              "value": "mutualFunds",
+              "label": "Mutual Funds"
+            },
+            {
+              "value": "stocksBonds",
+              "label": "Stocks/Bonds"
+            },
+            {
+              "value": "cds",
+              "label": "Certificates of Deposits"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerAnnuityAuthorization",
+          "type": "radio",
+          "label": "Annuities Authorized to Sell",
+          "hint": "How many insurers are you authorized to sell annuities from?",
+          "order": 7,
+          "required": true,
+          "options": [
+            {
+              "value": "oneInsurer",
+              "label": "Annuities from One (1) Insurer"
+            },
+            {
+              "value": "twoOrMoreInsurers",
+              "label": "Annuities from Two (2) or more Insurers"
+            },
+            {
+              "value": "twoOrMorePrimary",
+              "label": "Two (2) or more Insurers, primarily sell from one"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerPrimaryInsurer",
+          "type": "short_text",
+          "label": "Primary Insurer Name",
+          "hint": "Which insurer do you primarily sell annuities from?",
+          "order": 8,
+          "required": true,
+          "visibility": {
+            "field": "producerAnnuityAuthorization",
+            "operator": "equals",
+            "value": "twoOrMorePrimary"
+          },
+          "validation": null
+        },
+        {
+          "id": "producerCompensationType",
+          "type": "radio",
+          "label": "Compensation Method",
+          "hint": "How will you be compensated for this transaction?",
+          "order": 9,
+          "required": true,
+          "options": [
+            {
+              "value": "commission",
+              "label": "Commission, usually paid by the insurance company"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerCompensationOther",
+          "type": "long_text",
+          "label": "Other Compensation Details",
+          "hint": "Please describe the other compensation arrangement",
+          "order": 10,
+          "required": true,
+          "visibility": {
+            "field": "producerCompensationType",
+            "operator": "equals",
+            "value": "other"
+          },
+          "validation": null
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": null
+    },
+    {
+      "id": "page-disclosures",
+      "title": "Disclosures & Acknowledgements",
+      "description": "Product disclosure statement, privacy notice, and applicant acknowledgements.",
+      "order": 9,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "fnaStatementOfPurchaser",
+          "type": "radio",
+          "label": "Statement of Purchaser",
+          "hint": "Please select the statement that applies to you regarding the information provided on this application.",
+          "order": 1,
+          "required": true,
+          "options": [
+            {
+              "value": "completeAccurate",
+              "label": "I have provided complete and accurate information at this time."
+            },
+            {
+              "value": "refuse",
+              "label": "I REFUSE to provide information at this time."
+            },
+            {
+              "value": "limited",
+              "label": "I have chosen to provide LIMITED information at this time."
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "fnaPurchaseRecommendation",
+          "type": "radio",
+          "label": "Purchase Recommendation",
+          "hint": "Is this purchase based on the recommendation of the agent or insurer?",
+          "order": 2,
+          "required": true,
+          "options": [
+            {
+              "value": "notBased",
+              "label": "My annuity purchase IS NOT BASED on the recommendation of this agent or the insurer."
+            },
+            {
+              "value": "isBased",
+              "label": "My annuity purchase IS BASED on the recommendation of this agent or the insurer."
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "specialInstructions",
+          "type": "long_text",
+          "label": "Special Requests, Remarks, Corrections or Endorsements",
+          "hint": "Section G \u2013 Any special requests, remarks, corrections, or endorsements?",
+          "order": 3,
+          "required": false,
+          "visibility": null,
+          "validation": null
+        }
+      ],
+      "disclosures": [
+        {
+          "id": "disclosure-certainty-select",
+          "title": "Certainty Select\u2122 Disclosure Statement",
+          "summary": "Product disclosure for the Certainty Select Single Premium Deferred Annuity, including interest crediting, liquidity features, surrender charges, and market value adjustment details.",
+          "content": {
+            "type": "text",
+            "value": "Thank you for your interest in the Certainty Select annuity. Certainty Select is a single premium, multi-year guarantee annuity that accumulates interest through an interest rate that is guaranteed for a specified period. You may cancel your annuity Contract within a certain number of days of your receipt to receive a complete refund of your premium.\n\nINTEREST CREDITING: The Accumulation Value of your annuity equals the single premium paid, less withdrawals (if applicable), accumulated at the current interest rate. The current interest rate will be guaranteed for the Rate Guarantee Period chosen by you.\n\nLIQUIDITY FEATURES: You may receive partial surrenders or periodic income payments. You may be subject to a 10% Federal penalty tax if you make withdrawals before age 59\u00bd.\n\nPenalty-Free Withdrawals: You may withdraw interest earned without a Surrender Charge or MVA.\n\nSurrender Charges: This annuity product is a long-term Contract with substantial penalties for early surrender.\n\nMarket Value Adjustment: We may make a Market Value Adjustment (MVA) on amounts withdrawn or surrendered. It may result in either an increase or a decrease.\n\nNursing Home Waiver: After the first Contract Year, you may surrender without charges if confined to a Hospital or Nursing Care Center for 90+ consecutive days.\n\nTerminal Illness Rider: You may access up to 75% of your Contract's Accumulation Value without a Surrender Charge if terminally ill.\n\nDeath Benefit: The death benefit is equal to the Accumulation Value."
+          },
+          "visibility": null,
+          "viewRequired": true,
+          "acknowledgment": {
+            "questionId": "isDisclosureStatementAcknowledged",
+            "type": "boolean",
+            "label": "I acknowledge that I have read, or have been read, this document and understand I am applying for a single premium deferred annuity. I also acknowledge that the annuity meets my financial objectives.",
+            "required": true
+          }
+        },
+        {
+          "id": "disclosure-replacement-notice",
+          "title": "Important Notice: Replacement of Life Insurance or Annuities",
+          "summary": "ET-RPL-4900 \u2013 Important considerations about the effects of replacing an existing insurance policy or annuity contract.",
+          "content": {
+            "type": "text",
+            "value": "You are contemplating the purchase of a life insurance policy or annuity contract. In some cases this purchase may involve discontinuing or changing an existing policy or contract. If so, a replacement is occurring.\n\nYou should carefully consider whether a replacement is in your best interests. You will pay acquisition costs and there may be surrender costs deducted from your policy or contract. You may be able to make changes to your existing policy or contract to meet your insurance needs at less cost.\n\nConsider: Are premiums affordable? Could they change? What surrender charges apply? What are the interest rate guarantees? What are the tax consequences?"
+          },
+          "visibility": {
+            "field": "isReplacement",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "viewRequired": true,
+          "acknowledgment": {
+            "questionId": "isReplacementNoticeAcknowledged",
+            "type": "boolean",
+            "label": "I certify that the responses herein are, to the best of my knowledge, accurate.",
+            "required": true
+          }
+        },
+        {
+          "id": "disclosure-privacy-notice",
+          "title": "Privacy Notice",
+          "summary": "ET-PRI-4905 \u2013 EquiTrust's privacy practices regarding collection, use, and sharing of personal information.",
+          "content": {
+            "type": "text",
+            "value": "This notice is required by law. It explains our information practices. Our practices apply to all current, former and future customers.\n\nInformation We Collect: We collect information from your application, authorized sources, transactions, consumer reporting agencies, and public records.\n\nThe Security of Your Information: We maintain physical, electronic, and procedural safeguards that comply with state and federal regulations.\n\nInformation We Share: We may share information with affiliates for servicing and with business partners under joint marketing agreements. We do not share medical information for marketing purposes."
+          },
+          "visibility": null,
+          "viewRequired": true,
+          "acknowledgment": {
+            "questionId": "isPrivacyNoticeAcknowledged",
+            "type": "boolean",
+            "label": "I acknowledge receipt of the Privacy Notice.",
+            "required": true
+          }
+        }
+      ],
+      "groupValidations": null
+    },
+    {
+      "id": "page-signatures",
+      "title": "Applicant Signatures",
+      "description": "Section I \u2013 Taxpayer certification and applicant signatures.",
+      "order": 10,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "isBackupWithholding",
+          "type": "boolean",
+          "label": "Backup Withholding",
+          "hint": "Cross out item 2 if you have been notified by the IRS that you are currently subject to backup withholding due to failure to report interest and dividend income.",
+          "order": 1,
+          "required": false,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "isTaxpayerCertificationAcknowledged",
+          "type": "boolean",
+          "label": "Taxpayer Certification",
+          "hint": "Under penalties of perjury, I certify that (1) my taxpayer identification number is correct, (2) I am not subject to backup withholding, (3) I am a U.S. person, and (4) I am exempt from FATCA reporting.",
+          "order": 2,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "signedAtCity",
+          "type": "short_text",
+          "label": "Signed at: City",
+          "hint": "In what city is this application being signed?",
+          "order": 3,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "signedAtState",
+          "type": "select",
+          "label": "Signed at: State",
+          "hint": "In what state is this application being signed?",
+          "order": 4,
+          "required": true,
+          "options": [
+            {
+              "value": "AL",
+              "label": "AL"
+            },
+            {
+              "value": "AK",
+              "label": "AK"
+            },
+            {
+              "value": "AZ",
+              "label": "AZ"
+            },
+            {
+              "value": "AR",
+              "label": "AR"
+            },
+            {
+              "value": "CA",
+              "label": "CA"
+            },
+            {
+              "value": "CO",
+              "label": "CO"
+            },
+            {
+              "value": "CT",
+              "label": "CT"
+            },
+            {
+              "value": "DE",
+              "label": "DE"
+            },
+            {
+              "value": "FL",
+              "label": "FL"
+            },
+            {
+              "value": "GA",
+              "label": "GA"
+            },
+            {
+              "value": "HI",
+              "label": "HI"
+            },
+            {
+              "value": "ID",
+              "label": "ID"
+            },
+            {
+              "value": "IL",
+              "label": "IL"
+            },
+            {
+              "value": "IN",
+              "label": "IN"
+            },
+            {
+              "value": "IA",
+              "label": "IA"
+            },
+            {
+              "value": "KS",
+              "label": "KS"
+            },
+            {
+              "value": "KY",
+              "label": "KY"
+            },
+            {
+              "value": "LA",
+              "label": "LA"
+            },
+            {
+              "value": "ME",
+              "label": "ME"
+            },
+            {
+              "value": "MD",
+              "label": "MD"
+            },
+            {
+              "value": "MA",
+              "label": "MA"
+            },
+            {
+              "value": "MI",
+              "label": "MI"
+            },
+            {
+              "value": "MN",
+              "label": "MN"
+            },
+            {
+              "value": "MS",
+              "label": "MS"
+            },
+            {
+              "value": "MO",
+              "label": "MO"
+            },
+            {
+              "value": "MT",
+              "label": "MT"
+            },
+            {
+              "value": "NE",
+              "label": "NE"
+            },
+            {
+              "value": "NV",
+              "label": "NV"
+            },
+            {
+              "value": "NH",
+              "label": "NH"
+            },
+            {
+              "value": "NJ",
+              "label": "NJ"
+            },
+            {
+              "value": "NM",
+              "label": "NM"
+            },
+            {
+              "value": "NY",
+              "label": "NY"
+            },
+            {
+              "value": "NC",
+              "label": "NC"
+            },
+            {
+              "value": "ND",
+              "label": "ND"
+            },
+            {
+              "value": "OH",
+              "label": "OH"
+            },
+            {
+              "value": "OK",
+              "label": "OK"
+            },
+            {
+              "value": "OR",
+              "label": "OR"
+            },
+            {
+              "value": "PA",
+              "label": "PA"
+            },
+            {
+              "value": "RI",
+              "label": "RI"
+            },
+            {
+              "value": "SC",
+              "label": "SC"
+            },
+            {
+              "value": "SD",
+              "label": "SD"
+            },
+            {
+              "value": "TN",
+              "label": "TN"
+            },
+            {
+              "value": "TX",
+              "label": "TX"
+            },
+            {
+              "value": "UT",
+              "label": "UT"
+            },
+            {
+              "value": "VT",
+              "label": "VT"
+            },
+            {
+              "value": "VA",
+              "label": "VA"
+            },
+            {
+              "value": "WA",
+              "label": "WA"
+            },
+            {
+              "value": "WV",
+              "label": "WV"
+            },
+            {
+              "value": "WI",
+              "label": "WI"
+            },
+            {
+              "value": "WY",
+              "label": "WY"
+            },
+            {
+              "value": "DC",
+              "label": "DC"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "ownerSignature",
+          "type": "signature",
+          "label": "Owner Signature",
+          "hint": "Owner/Applicant signature",
+          "order": 5,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "dateSigned",
+          "type": "date",
+          "label": "Date Signed",
+          "hint": "Date of owner signature",
+          "order": 6,
+          "required": true,
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "jointOwnerSignature",
+          "type": "signature",
+          "label": "Joint Owner Signature",
+          "hint": "Joint Owner/Applicant signature",
+          "order": 7,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        },
+        {
+          "id": "jointOwnerDateSigned",
+          "type": "date",
+          "label": "Joint Owner Date Signed",
+          "hint": "Date of joint owner signature",
+          "order": 8,
+          "required": true,
+          "visibility": {
+            "field": "hasJointOwner",
+            "operator": "equals",
+            "value": true
+          },
+          "validation": null
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": null
+    },
+    {
+      "id": "page-producer-certification",
+      "title": "Agent/Producer Certification",
+      "description": "Section J \u2013 Agent certification regarding replacement, sales materials, and suitability recommendation.",
+      "order": 11,
+      "pageType": "form",
+      "visibility": null,
+      "questions": [
+        {
+          "id": "writingProducers",
+          "type": "repeatable_group",
+          "label": "Writing Producers",
+          "hint": "List each producer/agent involved in this application",
+          "order": 1,
+          "required": true,
+          "visibility": null,
+          "validation": null,
+          "groupConfig": {
+            "minEntries": 1,
+            "maxEntries": 3,
+            "titleTemplate": "Producer {index}",
+            "fields": [
+              {
+                "id": "producerFullName",
+                "type": "short_text",
+                "label": "Agent Name",
+                "hint": "Producer's full name",
+                "order": 1,
+                "required": true,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "producerPhone",
+                "type": "phone",
+                "label": "Agent Phone #",
+                "hint": "Producer's phone number",
+                "order": 2,
+                "required": true,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "producerNumber",
+                "type": "short_text",
+                "label": "Agent #",
+                "hint": "EquiTrust agent/producer number",
+                "order": 3,
+                "required": true,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "producerCommissionPercentage",
+                "type": "number",
+                "label": "Split %",
+                "hint": "Commission split percentage",
+                "order": 4,
+                "required": true,
+                "visibility": null,
+                "validation": [
+                  {
+                    "rule": "min_value",
+                    "params": {
+                      "min": 0
+                    }
+                  },
+                  {
+                    "rule": "max_value",
+                    "params": {
+                      "max": 100
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "producerSignature",
+                "type": "signature",
+                "label": "Agent/Producer Signature",
+                "hint": "Producer's signature",
+                "order": 5,
+                "required": true,
+                "visibility": null,
+                "validation": null
+              },
+              {
+                "id": "producerDateSigned",
+                "type": "date",
+                "label": "Date",
+                "hint": "Date of producer signature",
+                "order": 6,
+                "required": true,
+                "visibility": null,
+                "validation": null
+              }
+            ]
+          }
+        },
+        {
+          "id": "producerCertIsReplacement",
+          "type": "radio",
+          "label": "Will This Plan Replace Existing Insurance?",
+          "hint": "Will this plan replace any existing life insurance or annuity?",
+          "order": 2,
+          "required": true,
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
+          ],
+          "visibility": null,
+          "validation": null
+        },
+        {
+          "id": "producerReplacementReason",
+          "type": "long_text",
+          "label": "Reason for Replacement",
+          "hint": "Please explain the reason for replacement",
+          "order": 3,
+          "required": true,
+          "visibility": {
+            "field": "producerCertIsReplacement",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null
+        },
+        {
+          "id": "producerReplacementFundsSource",
+          "type": "multi_select",
+          "label": "Source of Funds Being Replaced",
+          "hint": "Indicate the source of funds to be replaced",
+          "order": 4,
+          "required": true,
+          "options": [
+            {
+              "value": "termLife",
+              "label": "Term Life"
+            },
+            {
+              "value": "wholeLife",
+              "label": "Whole Life"
+            },
+            {
+              "value": "variableLife",
+              "label": "Variable Life"
+            },
+            {
+              "value": "fixedAnnuity",
+              "label": "Fixed Annuity"
+            },
+            {
+              "value": "variableAnnuity",
+              "label": "Variable Annuity"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
+          ],
+          "visibility": {
+            "field": "producerCertIsReplacement",
+            "operator": "equals",
+            "value": "yes"
+          },
+          "validation": null
+        },
+        {
+          "id": "producerCertRecommendationBasis",
+          "type": "long_text",
+          "label": "Basis for Recommendation",
+          "hint": "REQUIRED: The basis for my recommendation to purchase the proposed annuity(ies)",
+          "order": 5,
+          "required": true,
+          "visibility": null,
+          "validation": [
+            {
+              "rule": "min_length",
+              "params": {
+                "min": 10
+              }
+            }
+          ]
+        }
+      ],
+      "disclosures": null,
+      "groupValidations": [
+        {
+          "questionId": "writingProducers",
+          "rule": "sum_equals",
+          "field": "producerCommissionPercentage",
+          "value": 100,
+          "message": "Producer commission splits must total 100%"
+        }
+      ]
+    }
+  ],
+  "fieldSyncs": [
+    {
+      "id": "sync-owner-to-annuitant-first",
+      "fields": [
+        "ownerFirstName",
+        "annuitantFirstName"
+      ],
+      "direction": "source_to_target",
+      "condition": {
+        "field": "isOwnerSameAsAnnuitant",
+        "operator": "equals",
+        "value": true
+      }
+    },
+    {
+      "id": "sync-owner-to-annuitant-middle",
+      "fields": [
+        "ownerMiddleName",
+        "annuitantMiddleName"
+      ],
+      "direction": "source_to_target",
+      "condition": {
+        "field": "isOwnerSameAsAnnuitant",
+        "operator": "equals",
+        "value": true
+      }
+    },
+    {
+      "id": "sync-owner-to-annuitant-last",
+      "fields": [
+        "ownerLastName",
+        "annuitantLastName"
+      ],
+      "direction": "source_to_target",
+      "condition": {
+        "field": "isOwnerSameAsAnnuitant",
+        "operator": "equals",
+        "value": true
+      }
+    },
+    {
+      "id": "sync-owner-to-annuitant-taxId",
+      "fields": [
+        "ownerTaxId",
+        "annuitantTaxId"
+      ],
+      "direction": "source_to_target",
+      "condition": {
+        "field": "isOwnerSameAsAnnuitant",
+        "operator": "equals",
+        "value": true
+      }
+    },
+    {
+      "id": "sync-owner-to-annuitant-dob",
+      "fields": [
+        "ownerDob",
+        "annuitantDob"
+      ],
+      "direction": "source_to_target",
+      "condition": {
+        "field": "isOwnerSameAsAnnuitant",
+        "operator": "equals",
+        "value": true
+      }
+    },
+    {
+      "id": "sync-owner-to-annuitant-gender",
+      "fields": [
+        "ownerGender",
+        "annuitantGender"
+      ],
+      "direction": "source_to_target",
+      "condition": {
+        "field": "isOwnerSameAsAnnuitant",
+        "operator": "equals",
+        "value": true
+      }
+    }
+  ]
+}

@@ -24,9 +24,12 @@ Each service has its own `CLAUDE.md` with service-specific details.
 
 ## Key Routes
 
-- `/` — Landing page with feature overview, CTAs to wizard, AI chat, and CRM pre-fill
+- `/` — Landing page with feature overview, recent applications, CTAs to wizard, AI chat, and CRM pre-fill
 - `/prefill` — Pre-fill page: select CRM client or upload document → AI agent gathers data → start session
-- `/wizard-v2` — Dynamic form wizard (data-driven from product JSON)
+- `/wizard-v2` — Product selection → dynamic form wizard (data-driven from product JSON)
+- `/wizard-v2/:productId` — Wizard for a specific product (supports `?resume=<id>` for saved applications)
+- `/applications` — Application history: list saved/submitted applications, resume or delete
+- `/docusign/return` — DocuSign redirect handler after embedded signing
 - Widget popup available on all pages (floating chat bubble, bottom-right)
 
 ## Local Development
@@ -85,6 +88,8 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 
 **Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client`, `lookup_prior_policies`, `extract_document_fields` tools → returns `known_data` → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
 
+**Application persistence flow:** Frontend `ProductSelectionPage` fetches `GET /products` → user picks product → `POST /applications` creates DynamoDB record → wizard saves progress to localStorage via `applicationStorageService` → on submit, `POST /application/:applicationId/submit` runs 5-step pipeline (validate → transform → business rules → persist to Submissions table → mark submitted). Resume via `/wizard-v2/:productId?resume=<id>`.
+
 **State hub:** `ApplicationContext.tsx` holds `collectedFields`, `sessionId`, `phase`, and step progress shared across wizard and chat.
 
 ## Shared Conventions
@@ -102,6 +107,9 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 | ECR: ai-service | `536697244409.dkr.ecr.us-east-1.amazonaws.com/iri-ai-service` |
 | App Runner: eAppAPI | `arn:aws:apprunner:us-east-1:536697244409:service/eAppAPI/21aa6d1c0faf482784c33f92f5cbcc53` |
 | App Runner: iri-ai-service | `arn:aws:apprunner:us-east-1:536697244409:service/iri-ai-service/2953a2b8ea0b4b21bb191cae6eafdb7a` |
+| DynamoDB: Applications | Table `Applications` (id key) — application records |
+| DynamoDB: Products | Table `Products` (id key) — product catalog |
+| DynamoDB: Submissions | Table `Submissions` (id key, GSI: `applicationId-index`) — submitted applications |
 | IAM Roles | `AppRunnerECRAccessRole`, `AppRunnerInstanceRole`, `WSParticipantRole` |
 | IAM Policy | `BedrockInvokeModelAccess` |
 

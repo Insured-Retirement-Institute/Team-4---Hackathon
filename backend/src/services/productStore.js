@@ -1,5 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const { ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { docClient } = require('../config/dynamodb');
+
+const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'Products';
 
 const products = {};
 
@@ -21,11 +25,40 @@ function loadProducts() {
   console.log(`Loaded ${Object.keys(products).length} product definition(s)`);
 }
 
-function getProduct(productId) {
-  return products[productId] || null;
+async function getProduct(productId) {
+  if (products[productId]) {
+    return products[productId];
+  }
+
+  // Fallback: query DynamoDB by productId
+  try {
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: 'productId = :pid',
+        ExpressionAttributeValues: { ':pid': productId },
+      })
+    );
+
+    if (result.Items && result.Items.length > 0) {
+      const product = result.Items[0];
+      products[productId] = product;
+      return product;
+    }
+  } catch (err) {
+    console.error(`Failed to fetch product ${productId} from DynamoDB:`, err.message);
+  }
+
+  return null;
+}
+
+function addProduct(product) {
+  if (product && product.productId) {
+    products[product.productId] = product;
+  }
 }
 
 // Load on module initialization
 loadProducts();
 
-module.exports = { getProduct, loadProducts };
+module.exports = { getProduct, loadProducts, addProduct };
