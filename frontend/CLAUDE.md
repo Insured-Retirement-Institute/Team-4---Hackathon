@@ -11,7 +11,7 @@
 - `src/features/wizard-v2/WizardField.tsx` — renders any `QuestionDefinition` dynamically; already fully generic, no product-specific logic
 - `src/features/wizard-v2/WizardSidebar.tsx` — step navigation sidebar; driven by `pages[]`, `productName`, and `carrier` props
 - `src/types/application.ts` — canonical types: `ApplicationDefinition`, `PageDefinition`, `QuestionDefinition`, `AnswerMap`
-- `src/services/applicationService.ts` — `getProducts()`, `getApplication(productId)`, `validateApplication()`, `submitApplication()`
+- `src/services/apiService.ts` — `getProducts()`, `getApplication(productId)`, `validateApplication()`, `submitApplication()`
 
 ## ApplicationDefinition Shape
 Pages → Questions → `QuestionDefinition` (id, label, type, options, groupConfig, allocationConfig, …).
@@ -42,7 +42,7 @@ npm run lint     # ESLint
 | `src/context/ApplicationContext.tsx` | Shared state: `collectedFields`, `sessionId`, `phase`, step progress |
 | `src/services/aiService.ts` | AI service client: `fetchSchema()`, `createSession()`, `sendMessage()` |
 | `src/services/prefillService.ts` | Pre-fill API client: `fetchClients()`, `runPrefill()`, `runPrefillWithDocument()` |
-| `src/services/applicationService.ts` | Backend API client: `getProducts()`, `getApplication()`, `validateApplication()`, `submitApplication()` (hardcoded base URL) |
+| `src/services/apiService.ts` | Backend API client: `getProducts()`, `getApplication()`, `validateApplication()`, `submitApplication()` (hardcoded base URL) |
 | `src/services/applicationStorageService.ts` | localStorage save/resume: `listSaves()`, `saveApplication()`, `loadApplicationData()`, `markSubmitted()`, `deleteApplication()` |
 | `src/types/application.ts` | Canonical types: `ApplicationDefinition`, `PageDefinition`, `QuestionDefinition`, `AnswerMap`, visibility/validation types |
 | `src/hooks/useWidgetSync.ts` | Bridges widget.js CustomEvents ↔ React context, exports `openWidget()` |
@@ -125,6 +125,27 @@ AI chat is delivered exclusively via the embeddable widget (`public/widget.js`),
 | `VITE_AI_SERVICE_URL` | AI service base URL (default: App Runner URL in production) |
 
 For local development, set `VITE_AI_SERVICE_URL=http://localhost:8001` or update `data-api-base` on the widget script tag in `index.html`.
+
+## API Reference
+
+The canonical source of truth for the backend API is the auto-generated OpenAPI spec at:
+
+```
+backend/Assets/annuity-eapp-openapi-3.yaml
+```
+
+Before adding or changing any API call in `src/services/apiService.ts`, read this file to verify:
+- Correct HTTP method and path
+- Required vs optional request body fields and their exact names
+- Response shapes and status codes
+
+**Carrier API** (PDF generation, port 8080) is a separate service — its source is in `backend_carrier/`. Endpoints:
+- `POST /submit` — save a structured submission; returns `{ submissionId, policyNumber, received }`
+- `POST /generate-pdf/:submissionId` — populate PDF from saved submission; returns `application/pdf`
+
+The carrier API base URL (`VITE_CARRIER_URL`) is not yet wired into `apiService.ts`.
+
+---
 
 ## MUI Conventions
 
