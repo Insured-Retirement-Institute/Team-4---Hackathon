@@ -89,6 +89,7 @@ def create_session(
         steps=steps,
         callback_url=callback_url,
         model_override=model,
+        advisor_name=advisor_name,
     )
 
     # Generate greeting
@@ -209,30 +210,25 @@ async def submit_session(session_id: str) -> dict[str, Any]:
 
 def _generate_greeting(llm: LLMService, state: ConversationState, advisor_name: str | None = None) -> str:
     """Generate an initial greeting message."""
-    system_prompt = build_system_prompt(state)
-
-    name_part = f" Address the advisor as {advisor_name}." if advisor_name else ""
 
     if state.phase == SessionPhase.SPOT_CHECK:
+        system_prompt = build_system_prompt(state)
         unconfirmed = state.unconfirmed_fields()
         field_summary = ", ".join(f"{f.label}: {f.value}" for f in unconfirmed[:5])
         more = f" (and {len(unconfirmed) - 5} more)" if len(unconfirmed) > 5 else ""
+        name_part = f" Address the advisor as {advisor_name}." if advisor_name else ""
         instruction = (
             f"Generate a friendly greeting.{name_part} We have some information on file already. "
             f"Summarize this known data naturally: {field_summary}{more}. "
             "Ask if it all looks correct."
         )
-    else:
-        missing = state.missing_required()
-        instruction = (
-            f"Generate a friendly, brief greeting.{name_part} "
-            "Ask what client they'd like to work on today and how you can help. "
-            "Keep it to 1-2 sentences."
-        )
+        messages = [{"role": "user", "content": instruction}]
+        response = llm.chat(system_prompt, messages)
+        return llm.extract_text(response)
 
-    messages = [{"role": "user", "content": instruction}]
-    response = llm.chat(system_prompt, messages)
-    return llm.extract_text(response)
+    # For COLLECTING phase, return a simple hardcoded greeting
+    name = advisor_name or "there"
+    return f"Hi {name}! What client would you like to work on today?"
 
 
 def _build_llm_messages(state: ConversationState) -> list[dict[str, Any]]:

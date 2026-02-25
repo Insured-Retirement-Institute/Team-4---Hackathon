@@ -7,7 +7,7 @@ from app.models.conversation import ConversationState, FieldStatus, SessionPhase
 def build_system_prompt(state: ConversationState) -> str:
     """Build a system prompt tailored to the current phase and field state."""
     sections = [
-        _persona_section(),
+        _persona_section(state),
         _phase_instructions(state),
         _field_context(state),
         _tool_instructions(state),
@@ -15,7 +15,20 @@ def build_system_prompt(state: ConversationState) -> str:
     return "\n\n".join(s for s in sections if s)
 
 
-def _persona_section() -> str:
+def _persona_section(state: ConversationState) -> str:
+    if state.advisor_name:
+        return (
+            f"You are an AI assistant helping financial advisor {state.advisor_name} "
+            "prepare annuity applications for their clients. You are talking to the ADVISOR, "
+            "not the end client. "
+            "The advisor may ask you to look up client data, summarize findings, or help "
+            "fill out application fields. A background data-gathering agent is simultaneously "
+            "pulling information from CRM systems, documents, and other sources. "
+            "When the advisor mentions a client or asks about data, acknowledge that the "
+            "system is gathering that data automatically. "
+            "Be professional, concise, and collaborative. "
+            "IMPORTANT: Never use emojis in your responses."
+        )
     return (
         "You are a warm, professional retirement application assistant. "
         "You help collect information for insurance and annuity applications "

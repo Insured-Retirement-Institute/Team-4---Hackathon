@@ -480,6 +480,27 @@ export default function AIExperiencePage() {
                 </Typography>
               </Box>
 
+              {/* Client and product selection */}
+              <Paper sx={{ p: 3, mb: 4, borderRadius: 2, maxWidth: 600, mx: 'auto' }}>
+                <Stack spacing={2.5}>
+                  <Autocomplete
+                    options={clients}
+                    getOptionLabel={(o) => o.display_name}
+                    value={selectedClient}
+                    onChange={(_, v) => setSelectedClient(v)}
+                    renderInput={(params) => <TextField {...params} label="Select CRM Client" />}
+                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Product</InputLabel>
+                    <Select value={productId} label="Product" onChange={(e) => setProductId(e.target.value)}>
+                      {products.map((p) => (
+                        <MenuItem key={p.productId} value={p.productId}>{p.productName}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Paper>
+
               <Box sx={{ textAlign: 'center' }}>
                 <Stack direction="row" spacing={2} justifyContent="center">
                   <Button
@@ -487,6 +508,7 @@ export default function AIExperiencePage() {
                     size="large"
                     color="secondary"
                     disableElevation
+                    disabled={!selectedClient}
                     startIcon={<MicIcon />}
                     onClick={() => { setInteractionMode('voice'); handleStartVoice(); }}
                     sx={{ fontWeight: 700, px: 5, py: 2, fontSize: '1.1rem', borderRadius: 3 }}
@@ -497,6 +519,7 @@ export default function AIExperiencePage() {
                     variant="outlined"
                     size="large"
                     color="secondary"
+                    disabled={!selectedClient}
                     startIcon={<ChatIcon />}
                     onClick={() => { setInteractionMode('chat'); handleStartVoice(); }}
                     sx={{ fontWeight: 700, px: 5, py: 2, fontSize: '1.1rem', borderRadius: 3 }}
@@ -504,9 +527,11 @@ export default function AIExperiencePage() {
                     Start with Chat
                   </Button>
                 </Stack>
-                <Typography variant="body2" color="text.secondary" mt={2}>
-                  Tell the AI which client you'd like to discuss today
-                </Typography>
+                {!selectedClient && (
+                  <Typography variant="body2" color="text.secondary" mt={2}>
+                    Select a client above to get started
+                  </Typography>
+                )}
               </Box>
             </Box>
           )}
@@ -533,11 +558,9 @@ export default function AIExperiencePage() {
                   <Typography variant="subtitle2" fontWeight={700}>
                     {interactionMode === 'voice' ? 'Voice' : 'Chat'} Session — {advisorLabel}
                   </Typography>
-                  {!selectedClient && (
-                    <Typography variant="caption" color="warning.main">
-                      Tell the AI which client, or select below
-                    </Typography>
-                  )}
+                  <Typography variant="caption" color="text.secondary">
+                    Client: {selectedClient?.display_name}
+                  </Typography>
                 </Box>
                 {interactionMode === 'voice' ? (
                   <VoicePanel sessionId={voiceSessionId} />
@@ -546,35 +569,8 @@ export default function AIExperiencePage() {
                 )}
               </Paper>
 
-              {/* Client selector — shown until client is picked */}
-              {!sseStartedRef.current && (
-                <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                    Or select a CRM client to start data gathering:
-                  </Typography>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Autocomplete
-                      sx={{ flex: 1, maxWidth: 400 }}
-                      options={clients}
-                      getOptionLabel={(o) => o.display_name}
-                      value={selectedClient}
-                      onChange={(_, v) => setSelectedClient(v)}
-                      renderInput={(params) => <TextField {...params} label="Select client" size="small" />}
-                    />
-                    <FormControl sx={{ minWidth: 200 }}>
-                      <InputLabel size="small">Product</InputLabel>
-                      <Select value={productId} label="Product" size="small" onChange={(e) => setProductId(e.target.value)}>
-                        {products.map((p) => (
-                          <MenuItem key={p.productId} value={p.productId}>{p.productName}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Stack>
-                </Paper>
-              )}
-
-              {/* Agent Log + Field Accumulator — shown once SSE is running */}
-              {sseStartedRef.current && (
+              {/* Agent Log + Field Accumulator */}
+              {(
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 7 }}>
                     <Paper sx={{ bgcolor: 'grey.900', borderRadius: 2, overflow: 'hidden', height: 400, display: 'flex', flexDirection: 'column' }}>

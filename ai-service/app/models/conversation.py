@@ -56,6 +56,7 @@ class ConversationState(BaseModel):
     callback_url: str | None = None
     messages: list[Message] = Field(default_factory=list)
     model_override: str | None = None
+    advisor_name: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     submitted_at: datetime | None = None
 

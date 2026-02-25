@@ -39,7 +39,7 @@ class RetellService:
         Returns the call object with call_id and status.
         """
         missing_fields_prompt = "\n".join(
-            f"- {f['label']} (field id: {f['id']})" for f in missing_fields
+            f"- {f['label']}" for f in missing_fields
         )
 
         payload = {
