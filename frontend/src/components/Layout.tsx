@@ -14,13 +14,13 @@ import { useWidgetSync } from '../hooks/useWidgetSync';
 function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const onAppBuilderRoute = location.pathname.startsWith('/app-builder');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   // Bridge widget.js events (iri:field_updated, etc.) into ApplicationContext
   useWidgetSync();
 
   // Hide the floating assistant widget on App Builder routes.
   useEffect(() => {
-    const onAppBuilderRoute = location.pathname.startsWith('/app-builder');
     const applyWidgetVisibility = () => {
       const widgetHost = document.getElementById('iri-chat-widget');
       if (!widgetHost) return;
@@ -131,10 +131,36 @@ function Layout() {
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          ...(onAppBuilderRoute
+            ? {
+                position: 'relative',
+                backgroundImage: "url('/bg.svg')",
+                backgroundAttachment: 'fixed',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: 0,
+                  bgcolor: 'background.default',
+                  opacity: 0.9,
+                  pointerEvents: 'none',
+                },
+              }
+            : {}),
+        }}
+      >
         {/* Push content below the fixed AppBar */}
-        <Box sx={{ height: 48 }} />
-        <Outlet />
+        <Box sx={{ height: 48, position: 'relative', zIndex: 1 }} />
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   );

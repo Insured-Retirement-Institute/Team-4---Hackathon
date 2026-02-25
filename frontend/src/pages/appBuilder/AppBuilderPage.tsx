@@ -8,12 +8,17 @@ function AppBuilderPage() {
   const [progress, setProgress] = useState(33);
 
   return (
-    <Stack spacing={0}>
+    <Stack
+      spacing={0}
+      sx={{
+        minHeight: '100%',
+      }}
+    >
       <Box
         sx={{
           position: 'sticky',
           top: 48,
-          zIndex: 10,
+          zIndex: 11,
           p: 0,
           m: 0,
           px: 0,
@@ -31,7 +36,7 @@ function AppBuilderPage() {
         />
       </Box>
 
-      <Box sx={{ px: { xs: 2, md: 4 }, pt: 2, pb: { xs: 2, md: 4 } }}>
+      <Box sx={{ px: { xs: 2, md: 4 }, pt: 2, pb: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
         <AppBuilderTabs onProgressChange={setProgress} />
       </Box>
     </Stack>
