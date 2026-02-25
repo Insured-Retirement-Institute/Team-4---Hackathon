@@ -58,7 +58,28 @@ export interface QuestionDefinition {
     addLabel?: string;
     fields: QuestionDefinition[];
   };
+  visibility: null | VisibilityCondition | MultiVisibilityCondition;
+  validation?: ValidationRule[];
   allocationConfig?: AllocationConfig;
+}
+
+export interface VisibilityCondition {
+  field: string;
+  op: 'eq' | 'neq' | 'in' | 'contains' | 'gt';
+  value: string | number | boolean | string[];
+}
+
+export interface MultiVisibilityCondition {
+  /** Uppercase to match JSON schema exactly — normalised in evaluateVisibility */
+  operator: 'AND' | 'OR';
+  conditions: VisibilityCondition[];
+}
+
+export interface ValidationRule {
+  type: 'required' | 'max_length' | 'min_length' | 'pattern' | 'min' | 'max' | 'min_date' | 'max_date' | 'equals' | 'async';
+  value?: string | number;
+  description?: string;
+  serviceKey?: string;
 }
 
 export interface PageDefinition {
@@ -66,6 +87,7 @@ export interface PageDefinition {
   title: string;
   description: string | null;
   questions: QuestionDefinition[];
+  visibility: null | VisibilityCondition | MultiVisibilityCondition;
 }
 
 export interface ApplicationDefinition {

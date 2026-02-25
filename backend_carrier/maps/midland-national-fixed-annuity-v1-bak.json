@@ -1,0 +1,439 @@
+{
+  "applicationDefinitionId": "midland-national-fixed-annuity-v1",
+  "pdfFile": "midland-national-fixed-annuity-v1.pdf",
+  "version": "1.0.0",
+  "description": "Mapping from app submission payload to MNL RetireVantage® 14 PDF form fields",
+  "lastUpdated": "2025-02-24",
+  "notes": [
+    "Date fields are split into month (1), day (2), year (3) components",
+    "Phone fields are split into area code (1), prefix (2), line number (3) components",
+    "Beneficiary entries can map to multiple PDF persons (5, 6, 7, 8, 9, 10, etc.)",
+    "Person numbering: 1=Annuitant, 2=Joint Annuitant, 3=Owner, 4=Joint Owner, 5+=Beneficiaries",
+    "Transform 'split_date' converts YYYY-MM-DD to separate month/day/year fields",
+    "Transform 'split_phone' converts 10-digit phone to area code/prefix/line"
+  ],
+  "mappings": [
+    {
+      "jsonPath": "annuitant.firstName",
+      "pdfFieldName": "First Name - 22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Annuitant first name"
+    },
+    {
+      "jsonPath": "annuitant.middleInitial",
+      "pdfFieldName": "MI - 22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Annuitant middle initial"
+    },
+    {
+      "jsonPath": "annuitant.lastName",
+      "pdfFieldName": "Last Name_1 22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Annuitant last name"
+    },
+    {
+      "jsonPath": "annuitant.dateOfBirth",
+      "pdfFieldNames": {
+        "month": "Birth Date1.1 - 22651",
+        "day": "Birth Date1.2 - 22651",
+        "year": "Birth Date1.3 - 22651"
+      },
+      "fieldType": "date",
+      "required": true,
+      "description": "Annuitant date of birth",
+      "transform": "split_date:YYYY-MM-DD"
+    },
+    {
+      "jsonPath": "annuitant.gender",
+      "pdfFieldName": "Annuitant Gender - 22651",
+      "fieldType": "radio",
+      "required": true,
+      "description": "Annuitant gender",
+      "transform": "enum:male=M,female=F"
+    },
+    {
+      "jsonPath": "annuitant.usCitizen",
+      "pdfFieldName": "Annuitant Citizen - 22651",
+      "fieldType": "radio",
+      "required": true,
+      "description": "Is annuitant a US citizen?",
+      "transform": "boolean:yes=Yes,no=No"
+    },
+    {
+      "jsonPath": "annuitant.ssn.hint",
+      "pdfFieldName": "Social Security NumberTIN - 22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Last 4 digits of annuitant SSN (or full SSN if decrypted)"
+    },
+    {
+      "jsonPath": "annuitant.address.street1",
+      "pdfFieldName": "Street Address PO Boxes are not allowed1 - 22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Annuitant street address line 1"
+    },
+    {
+      "jsonPath": "annuitant.address.city",
+      "pdfFieldName": "City-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Annuitant city"
+    },
+    {
+      "jsonPath": "annuitant.address.state",
+      "pdfFieldName": "State-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Annuitant state"
+    },
+    {
+      "jsonPath": "annuitant.address.zip",
+      "pdfFieldName": "Zip-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Annuitant ZIP code"
+    },
+    {
+      "jsonPath": "annuitant.phone",
+      "pdfFieldNames": {
+        "areaCode": "Phone1.1-22651",
+        "prefix": "Phone1.2-22651",
+        "lineNumber": "Phone1.3-22651"
+      },
+      "fieldType": "phone",
+      "required": false,
+      "description": "Annuitant phone number",
+      "transform": "split_phone:10digit"
+    },
+    {
+      "jsonPath": "annuitant.email",
+      "pdfFieldName": "Email 1-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Annuitant email address"
+    },
+    {
+      "jsonPath": "jointAnnuitant.firstName",
+      "pdfFieldName": "First Name_2-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Joint annuitant first name"
+    },
+    {
+      "jsonPath": "jointAnnuitant.middleInitial",
+      "pdfFieldName": "MI_2-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Joint annuitant middle initial"
+    },
+    {
+      "jsonPath": "jointAnnuitant.lastName",
+      "pdfFieldName": "Last Name_2-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Joint annuitant last name"
+    },
+    {
+      "jsonPath": "jointAnnuitant.dateOfBirth",
+      "pdfFieldNames": {
+        "month": "Birth Date2.1-22651",
+        "day": "Birth Date2.2-22651",
+        "year": "Birth Date2.3-22651"
+      },
+      "fieldType": "date",
+      "required": false,
+      "description": "Joint annuitant date of birth",
+      "transform": "split_date:YYYY-MM-DD"
+    },
+    {
+      "jsonPath": "jointAnnuitant.gender",
+      "pdfFieldName": "JointAnnuitant Gender - 22651",
+      "fieldType": "radio",
+      "required": false,
+      "description": "Joint annuitant gender",
+      "transform": "enum:male=M,female=F"
+    },
+    {
+      "jsonPath": "jointAnnuitant.usCitizen",
+      "pdfFieldName": "JointAnnuitant Citizen - 22651",
+      "fieldType": "radio",
+      "required": false,
+      "description": "Is joint annuitant a US citizen?"
+    },
+    {
+      "jsonPath": "owner.firstName",
+      "pdfFieldName": "First Name_3-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Owner first name (if different from annuitant)"
+    },
+    {
+      "jsonPath": "owner.lastName",
+      "pdfFieldName": "Last Name_3-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Owner last name"
+    },
+    {
+      "jsonPath": "owner.gender",
+      "pdfFieldName": "Owner Gender - 22651",
+      "fieldType": "radio",
+      "required": false,
+      "description": "Owner gender"
+    },
+    {
+      "jsonPath": "jointOwner.firstName",
+      "pdfFieldName": "First Name_4-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Joint owner first name"
+    },
+    {
+      "jsonPath": "jointOwner.lastName",
+      "pdfFieldName": "Last Name_4-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Joint owner last name"
+    },
+    {
+      "jsonPath": "jointOwner.gender",
+      "pdfFieldName": "JointOwner Gender - 22651",
+      "fieldType": "radio",
+      "required": false,
+      "description": "Joint owner gender"
+    },
+    {
+      "jsonPath": "identityVerification.occupation",
+      "pdfFieldName": "d Occupation-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Annuitant occupation"
+    },
+    {
+      "jsonPath": "identityVerification.employerName",
+      "pdfFieldName": "Employer Name-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Annuitant employer name"
+    },
+    {
+      "jsonPath": "identityVerification.yearsEmployed",
+      "pdfFieldName": "Years Employed-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Years employed"
+    },
+    {
+      "jsonPath": "identityVerification.governmentId.type",
+      "pdfFieldName": "Identity1.1-22651",
+      "fieldType": "radio",
+      "required": true,
+      "description": "Type of government ID",
+      "transform": "enum:drivers_license=Drivers License,passport=Passport"
+    },
+    {
+      "jsonPath": "identityVerification.governmentId.number",
+      "pdfFieldName": "Number-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Government ID number"
+    },
+    {
+      "jsonPath": "identityVerification.governmentId.issuedBy",
+      "pdfFieldName": "c State-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "State/Country that issued ID"
+    },
+    {
+      "jsonPath": "identityVerification.governmentId.expirationDate",
+      "pdfFieldNames": {
+        "month": "Exp Date1.1-22651",
+        "day": "Exp Date1.2-22651",
+        "year": "Exp Date1.3-22651"
+      },
+      "fieldType": "date",
+      "required": true,
+      "description": "Government ID expiration date",
+      "transform": "split_date:YYYY-MM-DD"
+    },
+    {
+      "jsonPath": "product.taxStatus",
+      "pdfFieldName": "Tax Status-22651",
+      "fieldType": "checkbox",
+      "required": true,
+      "description": "Non-Qualified (checked) or Qualified (unchecked)",
+      "transform": "boolean:non_qualified=true,qualified=false"
+    },
+    {
+      "jsonPath": "funding.totalPremium",
+      "pdfFieldNames": {
+        "dollars": "Check1.1-22651",
+        "cents": "Check1.2-22651"
+      },
+      "fieldType": "currency",
+      "required": true,
+      "description": "Premium amount",
+      "transform": "split_currency"
+    },
+    {
+      "jsonPath": "funding.methods[0].type",
+      "pdfFieldName": "Check  Amount-22651",
+      "fieldType": "checkbox",
+      "required": true,
+      "description": "Funding method is check",
+      "transform": "boolean:check=true"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].firstName",
+      "pdfFieldName": "First Name_5-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Beneficiary 1 first name"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].lastName",
+      "pdfFieldName": "Last Name_5-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Beneficiary 1 last name"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].dateOfBirth",
+      "pdfFieldNames": {
+        "month": "Birthdate5.1-22651",
+        "day": "Birthdate5.2-22651",
+        "year": "Birthdate5.3-22651"
+      },
+      "fieldType": "date",
+      "required": false,
+      "description": "Beneficiary 1 date of birth",
+      "transform": "split_date:YYYY-MM-DD"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].relationship",
+      "pdfFieldName": "Relationship to Owner-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Beneficiary 1 relationship to owner"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].percentage",
+      "pdfFieldNames": {
+        "whole": "Percentage3.1-22651",
+        "decimal": "Percentage3.2-22651"
+      },
+      "fieldType": "percentage",
+      "required": false,
+      "description": "Beneficiary 1 percentage allocation",
+      "transform": "split_percentage"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].address.city",
+      "pdfFieldName": "City_6-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Beneficiary 1 city"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].address.state",
+      "pdfFieldName": "State_2-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Beneficiary 1 state"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].address.zip",
+      "pdfFieldName": "Zip Code_2-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Beneficiary 1 ZIP code"
+    },
+    {
+      "jsonPath": "ownerBeneficiaries[0].email",
+      "pdfFieldName": "Email 2-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Beneficiary 1 email"
+    },
+    {
+      "jsonPath": "agentCertification.writingAgents[0].fullName",
+      "pdfFieldName": "AgentBrokers Full Name please print-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Agent full name"
+    },
+    {
+      "jsonPath": "agentCertification.writingAgents[0].npn",
+      "pdfFieldName": "Agent Number-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "Agent NPN number"
+    },
+    {
+      "jsonPath": "agentCertification.writingAgents[0].phone",
+      "pdfFieldName": "Phone Number_7-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Agent phone number"
+    },
+    {
+      "jsonPath": "agentCertification.writingAgents[0].email",
+      "pdfFieldName": "Agents Email Address-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Agent email"
+    },
+    {
+      "jsonPath": "applicationSignatures.ownerSignatureDate",
+      "pdfFieldNames": {
+        "month": "Date Signed1.1-22651",
+        "day": "Date Signed1.2-22651",
+        "year": "Date Signed1.3-22651"
+      },
+      "fieldType": "date",
+      "required": true,
+      "description": "Owner signature date",
+      "transform": "split_date:YYYY-MM-DD"
+    },
+    {
+      "jsonPath": "applicationSignatures.signedAtCity",
+      "pdfFieldName": "Signed at City-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "City where signed"
+    },
+    {
+      "jsonPath": "applicationSignatures.signedAtState",
+      "pdfFieldName": "State_4-22651",
+      "fieldType": "text",
+      "required": true,
+      "description": "State where signed"
+    },
+    {
+      "jsonPath": "applicationSignatures.ownerEmail",
+      "pdfFieldName": "Owners Email Address-22651",
+      "fieldType": "text",
+      "required": false,
+      "description": "Owner email address"
+    },
+    {
+      "jsonPath": "agentCertification.agentAwareOfExistingInsurance",
+      "pdfFieldName": "AgentCertification1.1-22651",
+      "fieldType": "checkbox",
+      "required": true,
+      "description": "Agent aware of existing insurance"
+    },
+    {
+      "jsonPath": "agentCertification.agentBelievesReplacement",
+      "pdfFieldName": "AgentCertification1.2-22651",
+      "fieldType": "radio",
+      "required": true,
+      "description": "Is this a replacement?"
+    }
+  ]
+}

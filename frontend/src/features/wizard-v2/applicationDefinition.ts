@@ -4,6 +4,9 @@ import type {
   QuestionDefinition,
   PageDefinition,
   ApplicationDefinition,
+  VisibilityCondition,
+  MultiVisibilityCondition,
+  ValidationRule,
 } from '../../types/application';
 
 export type { QuestionType, QuestionDefinition, PageDefinition, ApplicationDefinition };
@@ -11,6 +14,18 @@ export type { QuestionType, QuestionDefinition, PageDefinition, ApplicationDefin
 interface RawOption {
   value: string;
   label: string;
+}
+
+type RawVisibility =
+  | null
+  | { field: string; op: string; value: unknown }
+  | { operator: string; conditions: Array<{ field: string; op: string; value: unknown }> };
+
+interface RawValidationRule {
+  type: string;
+  value?: string | number;
+  description?: string;
+  serviceKey?: string;
 }
 
 interface RawQuestion {
@@ -22,6 +37,8 @@ interface RawQuestion {
   required?: boolean;
   options?: RawOption[] | null;
   order?: number;
+  visibility?: RawVisibility;
+  validation?: RawValidationRule[] | null;
   groupConfig?: {
     minItems: number;
     maxItems: number;
@@ -51,6 +68,7 @@ interface RawPage {
   description?: string | null;
   order?: number;
   pageType?: 'standard' | 'disclosure';
+  visibility?: RawVisibility;
   questions?: RawQuestion[] | null;
   disclosures?: Array<{
     id: string;
@@ -72,6 +90,24 @@ interface RawApplicationDefinition {
   productId: string;
   description: string;
   pages: RawPage[];
+}
+
+const KNOWN_VALIDATION_TYPES = new Set([
+  'required', 'max_length', 'min_length', 'pattern', 'min', 'max',
+  'min_date', 'max_date', 'equals', 'async',
+]);
+
+function normalizeVisibility(raw: RawVisibility): null | VisibilityCondition | MultiVisibilityCondition {
+  if (!raw) return null;
+  return raw as VisibilityCondition | MultiVisibilityCondition;
+}
+
+function normalizeValidation(raw: RawValidationRule[] | null | undefined): ValidationRule[] | undefined {
+  if (!raw || raw.length === 0) return undefined;
+  const rules = raw
+    .filter((r) => KNOWN_VALIDATION_TYPES.has(r.type))
+    .map((r) => ({ ...r }) as ValidationRule);
+  return rules.length > 0 ? rules : undefined;
 }
 
 function normalizeQuestionType(type: string): QuestionType {
@@ -109,6 +145,8 @@ function normalizeQuestion(question: RawQuestion): QuestionDefinition {
     placeholder: question.placeholder ?? undefined,
     hint: question.hint ?? undefined,
     options: question.options ?? undefined,
+    visibility: normalizeVisibility(question.visibility ?? null),
+    validation: normalizeValidation(question.validation),
     groupConfig: question.groupConfig
       ? {
           minItems: question.groupConfig.minItems,
@@ -154,6 +192,7 @@ function normalizeApplicationDefinition(raw: RawApplicationDefinition): Applicat
       type: questionType,
       required: ack.required ?? true,
       hint: ack.hint ?? undefined,
+      visibility: null,
     };
   };
 
@@ -163,6 +202,7 @@ function normalizeApplicationDefinition(raw: RawApplicationDefinition): Applicat
       id: page.id,
       title: page.title,
       description: page.description ?? null,
+      visibility: normalizeVisibility(page.visibility ?? null),
       questions:
         page.pageType === 'disclosure'
           ? (page.disclosures ?? [])

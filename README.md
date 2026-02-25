@@ -1,12 +1,12 @@
 # Team 4 Hackathon — Annuity E-Application
 
-A monorepo containing the Express backend API and React frontend for the annuity e-application wizard.
+A monorepo containing the Express backend API, React frontend, FastAPI AI service, and carrier PDF generation service for the annuity e-application.
 
 ## Project Structure
 
 ```
-├── backend/               # Express API
-│   ├── server.js          # Entry point (port 3001 locally)
+├── backend/               # Express API (port 3001 locally)
+│   ├── server.js          # Entry point
 │   ├── src/
 │   │   ├── app.js
 │   │   ├── routes/        # application, validation, submission
@@ -18,11 +18,26 @@ A monorepo containing the Express backend API and React frontend for the annuity
 │   ├── src/
 │   │   ├── features/
 │   │   │   ├── wizard-v1/ # Annuity application wizard (v1)
-│   │   │   └── wizard-v2/ # Annuity application wizard (v2)
+│   │   │   ├── wizard-v2/ # Data-driven wizard (v2)
+│   │   │   └── ai-chat/   # AI conversational chat UI
 │   │   ├── pages/
 │   │   └── components/
 │   └── package.json
-└── package.json           # Root scripts — runs both together
+├── ai-service/            # FastAPI AI service (port 8001 locally)
+│   ├── app/
+│   │   ├── main.py        # FastAPI app, routes under /api/v1/
+│   │   ├── services/      # LLM, conversation, extraction, schema adapter
+│   │   ├── models/        # Conversation state, phases, field tracking
+│   │   └── prompts/       # Phase-aware system prompt
+│   ├── requirements.txt
+│   └── Dockerfile
+├── backend_carrier/       # Carrier PDF generation (port 8080 locally)
+│   ├── index.js           # Express app, /submit and /generate-pdf
+│   ├── pdfHelper.js       # PDF population with pdf-lib
+│   ├── forms/             # PDF templates
+│   ├── maps/              # JSON field mappings
+│   └── package.json
+└── package.json           # Root scripts — runs backend + frontend together
 ```
 
 ## Getting Started
@@ -31,6 +46,7 @@ A monorepo containing the Express backend API and React frontend for the annuity
 
 - Node.js v18+
 - npm v9+
+- Python 3.11+ (for ai-service)
 
 ### 1. Install all dependencies
 
@@ -62,6 +78,17 @@ npm run dev:frontend   # Vite with HMR
 ```
 
 > The frontend proxies `/application`, `/health`, and `/api-docs` to the backend automatically — no CORS config needed during development.
+
+### 3. Run AI service (optional)
+
+```bash
+cd ai-service
+python -m venv venv && source venv/Scripts/activate   # Windows; use venv/bin/activate on macOS/Linux
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8001
+```
+
+Set `VITE_AI_SERVICE_URL=http://localhost:8001` to connect the frontend to local AI service. Requires AWS credentials in `ai-service/.env` for Bedrock access.
 
 ---
 
@@ -177,6 +204,8 @@ docker run -d --name eappapi -p 8080:8080 eappapi
 
 ## Tech Stack
 
-- **Frontend:** React 18, TypeScript, Vite, MUI v7, React Router v6, React Hook Form
+- **Frontend:** React 19, TypeScript, Vite, MUI v7, React Router v6, React Hook Form
+- **AI Service:** Python 3.11, FastAPI, Claude Haiku 4.5 (via AWS Bedrock)
 - **Backend:** Node.js 20, Express.js, Swagger UI Express
-- **Infrastructure:** AWS App Runner + ECR
+- **Carrier PDF:** Node.js 20, Express.js, pdf-lib
+- **Infrastructure:** AWS App Runner + ECR (backend, ai-service), AWS Amplify (frontend)

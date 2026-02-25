@@ -2,12 +2,39 @@ import type { ApplicationDefinition, AnswerMap } from '../types/application';
 
 export type { ApplicationDefinition, AnswerMap };
 
-const BASE = '/application';
+const BASE = 'https://y5s8xyzi3v.us-east-1.awsapprunner.com';
+
+// ── Models ────────────────────────────────────────────────────────────────────
+
+export interface Product {
+  id: string;
+  productId: string;
+  productName: string;
+  carrier: string;
+  description: string;
+  version: string;
+  locale: string;
+  effectiveDate: string;
+  createdAt: string;
+  updatedAt: string;
+  pages: ApplicationDefinition['pages'];
+}
+
+// ── GET /products ─────────────────────────────────────────────────────────────
+
+export async function getProducts(): Promise<Product[]> {
+  const res = await fetch(`${BASE}/products`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch products: ${res.status} ${text}`);
+  }
+  return res.json();
+}
 
 // ── GET /application/:productId ───────────────────────────────────────────────
 
 export async function getApplication(productId: string, locale = 'en-US'): Promise<ApplicationDefinition> {
-  const res = await fetch(`${BASE}/${encodeURIComponent(productId)}?locale=${locale}`);
+  const res = await fetch(`${BASE}/application/${encodeURIComponent(productId)}?locale=${locale}`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Failed to fetch application: ${res.status} ${text}`);
@@ -49,7 +76,7 @@ export async function validateApplication(
   const params = new URLSearchParams({ scope });
   if (scope === 'page' && pageId) params.set('pageId', pageId);
 
-  const res = await fetch(`${BASE}/${encodeURIComponent(applicationId)}/validate?${params}`, {
+  const res = await fetch(`${BASE}/application/${encodeURIComponent(applicationId)}/validate?${params}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -93,7 +120,7 @@ export async function submitApplication(
   applicationId: string,
   body: SubmissionRequest,
 ): Promise<SubmissionResponse> {
-  const res = await fetch(`${BASE}/${encodeURIComponent(applicationId)}/submit`, {
+  const res = await fetch(`${BASE}/application/${encodeURIComponent(applicationId)}/submit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

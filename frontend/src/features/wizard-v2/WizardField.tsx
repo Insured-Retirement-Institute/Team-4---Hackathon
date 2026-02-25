@@ -20,6 +20,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { QuestionDefinition } from './applicationDefinition';
 import { useWizardV2Controller } from './formController';
+import { evaluateVisibility } from './visibility';
 
 interface WizardFieldProps {
   question: QuestionDefinition;
@@ -34,6 +35,9 @@ function formatPhoneInput(raw: string) {
 
 function WizardField({ question }: WizardFieldProps) {
   const { values, errors, setValue } = useWizardV2Controller();
+
+  if (!evaluateVisibility(question.visibility, values)) return null;
+
   const value = values[question.id];
   const error = errors[question.id];
 
@@ -67,8 +71,8 @@ function WizardField({ question }: WizardFieldProps) {
             </Typography>
           </FormLabel>
           <FormControlLabel
-            control={<Switch checked={Boolean(fieldValue)} onChange={(event) => onChange(event.target.checked)} color="success" />}
-            label={Boolean(fieldValue) ? 'Yes' : 'No'}
+            control={<Switch checked={Boolean(fieldValue)} onChange={(event) => onChange(event.target.checked)} color="secondary" />}
+            label={fieldValue ? 'Yes' : 'No'}
           />
           {fieldError && <FormHelperText>{fieldError}</FormHelperText>}
         </FormControl>
@@ -80,6 +84,7 @@ function WizardField({ question }: WizardFieldProps) {
         return (
           <TextField
             select
+            size="small"
             label={field.label}
             required={field.required}
             value={typeof fieldValue === 'string' ? fieldValue : ''}
@@ -107,7 +112,7 @@ function WizardField({ question }: WizardFieldProps) {
           </FormLabel>
           <RadioGroup row={(field.options?.length ?? 0) <= 4} value={typeof fieldValue === 'string' ? fieldValue : ''} onChange={(event) => onChange(event.target.value)}>
             {field.options?.map((option) => (
-              <FormControlLabel key={option.value} value={option.value} control={<Radio color="success" />} label={option.label} />
+              <FormControlLabel key={option.value} value={option.value} control={<Radio color="secondary" />} label={option.label} />
             ))}
           </RadioGroup>
           {fieldError && <FormHelperText>{fieldError}</FormHelperText>}
@@ -119,6 +124,7 @@ function WizardField({ question }: WizardFieldProps) {
       return (
         <TextField
           select
+          size="small"
           label={field.label}
           required={field.required}
           value={typeof fieldValue === 'string' ? fieldValue : ''}
@@ -140,6 +146,7 @@ function WizardField({ question }: WizardFieldProps) {
     return (
         <TextField
           label={field.label}
+          size="small"
           required={field.required}
           value={typeof fieldValue === 'string' ? fieldValue : ''}
           onChange={(event) =>
@@ -213,6 +220,7 @@ function WizardField({ question }: WizardFieldProps) {
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
                   <TextField
                     select
+                    size="small"
                     label="Fund"
                     value={item.fundId}
                     onChange={(event) => updateAllocation(index, 'fundId', event.target.value)}
@@ -228,6 +236,7 @@ function WizardField({ question }: WizardFieldProps) {
 
                   <TextField
                     label="Allocation %"
+                    size="small"
                     value={item.percentage}
                     onChange={(event) => updateAllocation(index, 'percentage', event.target.value)}
                     type="number"
@@ -250,7 +259,7 @@ function WizardField({ question }: WizardFieldProps) {
           })}
 
           <Box>
-            <Button variant="outlined" color="success" onClick={addAllocation}>
+            <Button variant="outlined" color="secondary" onClick={addAllocation}>
               Add Allocation
             </Button>
             <Typography
@@ -331,7 +340,7 @@ function WizardField({ question }: WizardFieldProps) {
           ))}
 
           <Box>
-            <Button variant="outlined" color="success" onClick={handleAddItem} disabled={items.length >= maxItems}>
+            <Button variant="outlined" color="secondary" onClick={handleAddItem} disabled={items.length >= maxItems}>
               {addLabel || `Add ${question.label}`}
             </Button>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
@@ -353,10 +362,10 @@ function WizardField({ question }: WizardFieldProps) {
             <Switch
               checked={Boolean(value)}
               onChange={(event) => setValue(question.id, event.target.checked)}
-              color="success"
+              color="secondary"
             />
           }
-          label={Boolean(value) ? 'Yes' : 'No'}
+          label={value ? 'Yes' : 'No'}
         />
         {error && <FormHelperText>{error}</FormHelperText>}
       </FormControl>
@@ -368,6 +377,7 @@ function WizardField({ question }: WizardFieldProps) {
       return (
         <TextField
           select
+          size="small"
           label={question.label}
           required={question.required}
           value={typeof value === 'string' ? value : ''}
@@ -398,7 +408,7 @@ function WizardField({ question }: WizardFieldProps) {
             <FormControlLabel
               key={option.value}
               value={option.value}
-              control={<Radio color="success" />}
+              control={<Radio color="secondary" />}
               label={option.label}
             />
           ))}
@@ -412,6 +422,7 @@ function WizardField({ question }: WizardFieldProps) {
     return (
       <TextField
         select
+        size="small"
         label={question.label}
         required={question.required}
         value={typeof value === 'string' ? value : ''}

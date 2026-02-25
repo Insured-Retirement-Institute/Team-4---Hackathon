@@ -1,0 +1,1632 @@
+{
+  "pdfFile": "midland-national-fixed-annuity-v1.pdf",
+  "generatedAt": "2026-02-24T18:46:04.113Z",
+  "totalFields": 325,
+  "fields": [
+    {
+      "name": "Social Security NumberTIN - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date1.1 - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date1.2 - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date1.3 - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone1.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "JointAnnuitant Gender - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "JointAnnuitant Citizen - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Address and Phone Number Same as Annuitant-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Birth Date2.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date2.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date2.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_2.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_2.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_2.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Owner Gender - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Birth Date3.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date3.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date3.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trust Date1.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trust Date1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trust Date1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_3.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_3.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_3.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "JointOwner Gender - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "First Name_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Social Security NumberTIN_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Address and Phone Number Same as Owner-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Street Address PO Boxes are not allowed1_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date4.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date4.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birth Date4.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_4.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_4.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone_4.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "OwnersBeneficiary - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary1.1 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "First Name_5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birthdate5.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birthdate5.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birthdate5.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Relationship to Owner-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Beneficiarys Mailing Address must be completed-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage3.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage3.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip Code-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "OwnersBeneficiary2 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary2.2 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "First Name_6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Social Security NumberTIN_5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birthdate6.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birthdate6.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Birthdate6.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Relationship to Owner_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Beneficiarys Mailing Address must be completed_2-2261",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage3_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip Code_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "OwnersBeneficiary3 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary3.2 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "BIrthDate7.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate7.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate7.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage3_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Social Security NumberTIN_6a-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_2a-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Email 1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Email 2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "AgentCertification1.1-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "AgentCertification1.2-22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "If yes please provide the name of the company-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Agent Number-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date Signed2.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date Signed2.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date Signed2.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Agentuse1-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "AgentBrokers Full Name please print-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone Number_7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Agents Email Address-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Agent Number_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Agentuse2-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Additional Agent Name please print-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Additional Agents Email Address-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Agentuse3-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Agent Number_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Additional Agent Name please print_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Additional Agents Email Address_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Signed at City-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date Signed1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date Signed1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date Signed1.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Owners Email Address-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Joint Owners Email Address-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Product Selection-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Tax Status-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Complete if applicable  Contribution intended for the Tax Year-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Check  Amount-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Check1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Check1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Direct Transfer  Amount-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Direct Transfer1.1 - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Direct Transfer1.2 - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "1035 Exchange -22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "1035 Exchange  Amount1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "1035 Exchange  Amount1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Qualified Rollover  Amount-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Qualified1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Qualified1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Salary reduction - 22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Salary Reduction  Amount1.1 -22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Salary Reduction  Amount1.2 -22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Transfer - 22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Replacement1.1-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Replacement2.1-22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Company Name - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Contract Number-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Identity1.1-22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Identity1.2-22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "c State-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Country-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Number-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Exp Date1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Exp Date1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Exp Date1.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "d Occupation-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Employer Name-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Years Employed-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Retired - 22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Identity2.1-22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "b State-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Country_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Identity3.2-22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Identity3.1-22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Representative Please indicate the form of ID presented-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "c State_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Country_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Number_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Exp Date_2.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Exp Date_2.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Exp Date_2.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "d Occupation_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Employer Name_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Retired 2- 22651",
+      "type": "PDFCheckBox",
+      "description": "Checkbox field"
+    },
+    {
+      "name": "Identity4.1-22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "b Stateq_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Country_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "AnnuitantsBeneficiary3.2 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Trust Date2.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trust Date2.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trust Date2.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Owner's Beneficiary Designation.page3.1 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Owner's Beneficiary Designation.Trust - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Trustee Phone Number_1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trustee Phone Number_1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trustee Phone Number_1.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date_1.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date_1.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date1.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "First Name_7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Social Security NumberTIN_6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Relationship to Owner_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Beneficiarys Mailing Address must be completed_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage3a_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage3_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip Code_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Email 3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate8.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate8.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate8.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 5.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 5.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 5.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 6.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 6.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 6.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 7.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 7.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 7.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 8.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 8.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 8.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "First Name_8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Social Security NumberTIN_7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Relationship to Annuitant_1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Beneficiarys Mailing Address must be completed_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip Code_5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Email 5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 9.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 9.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 9.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage6a - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage6b-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate9.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate9.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate9.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_9-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_9-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_10-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_10-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip Code_6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "First Name_9-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_9-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_9-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Social Security NumberTIN_8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Relationship to Annuitant_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Beneficiarys Mailing Address must be completed_5-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Email 6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage7a - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage7b-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "AnnuitantsBeneficiary1.2 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "AnnuitantsBeneficiary2.2 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "First Name_10-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_10-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_10-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Social Security NumberTIN_9-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate10.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate10.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "BIrthDate10.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Relationship to Annuitant_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 10.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 10.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Phone 10.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Beneficiarys Mailing Address must be completed_6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage8a - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage8b-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_11-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_11-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip Code_7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Email 7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip Code_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Email 4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trustee Mailing Address must be completed-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage4a-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage4b-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trustee name-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Tax ID Number-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Full name-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Full name2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Tax ID Number2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage5b-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage5a-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Annuitant's Beneficiary Designation.Trust2 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Annuitant's Beneficiary Designation.page5.1 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Trustee name2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trust Date3.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trust Date3.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trust Date3.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trustee Phone Number_2.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trustee Phone Number_2.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trustee Phone Number_2.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Trustee Mailing Address must be completed2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage9a-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage9b-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_12-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_12-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip Code_8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Email 8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Full name3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Tax ID Number3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Tax ID Number4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date_2.1-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date_2.2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Date_3.3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Representative Please indicate the form of ID presented and used to verify this owners identity Expired IDs are not acceptable - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage6-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage7-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Percentage8-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Years Employed_2 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "OwnersBeneficiary4 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary5 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary6 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary7 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary9 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary8 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "OwnersBeneficiary10 - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "First Name - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_1 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Street Address PO Boxes are not allowed1 - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "First Name_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Social Security NumberTIN_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Street Address PO Boxes are not allowed1_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "First Name_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Last Name_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "TrustCorporation Name-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Street Address PO Boxes are not allowed1_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "SSNTINEmployee ID No-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Zip_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "City_3-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Clear Form 22651",
+      "type": "PDFButton",
+      "description": "Unknown field type"
+    },
+    {
+      "name": "Annuitant Citizen - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "Annuitant Gender - 22651",
+      "type": "PDFRadioGroup",
+      "description": "Radio button group"
+    },
+    {
+      "name": "MI - 22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "MI_2-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "Full name4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_4-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    },
+    {
+      "name": "State_13-22651",
+      "type": "PDFTextField",
+      "description": "Text input field"
+    }
+  ]
+}

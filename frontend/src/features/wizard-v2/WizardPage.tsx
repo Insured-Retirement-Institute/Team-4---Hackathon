@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckIcon from '@mui/icons-material/Check';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -10,6 +12,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
@@ -18,21 +21,19 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import type { ApplicationDefinition } from '../../types/application';
 import { useApplication } from '../../context/ApplicationContext';
-import { APPLICATION_DEFINITION } from './applicationDefinition';
+import { getApplication, submitApplication, validateApplication } from '../../services/applicationService';
+import {
+  loadApplicationData,
+  markSubmitted,
+  saveApplication,
+  type SavedApplicationData,
+} from '../../services/applicationStorageService';
 import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
-
-type ValidationError = {
-  message?: string;
-};
-
-type ValidationResponse = {
-  valid?: boolean;
-  errors?: ValidationError[];
-  message?: string;
-};
+import { evaluateVisibility } from './visibility';
 
 type DocusignStartResponse = {
   signingUrl?: string;
@@ -86,7 +87,7 @@ function signatureRecord(signatureToken: string | boolean | Record<string, strin
   };
 }
 
-function buildSubmissionPayload(values: AnswerMap) {
+function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefinition) {
   const taxStatusMap: Record<string, 'non_qualified' | 'ira' | 'roth_ira' | 'sep_ira' | 'tsa_403b' | 'inherited_ira'> = {
     non_qualified: 'non_qualified',
     ira: 'ira',
@@ -99,7 +100,7 @@ function buildSubmissionPayload(values: AnswerMap) {
   const transferScope = asString(values.transfer_scope);
   const transferTiming = asString(values.transfer_timing);
   const ownerSameAsAnnuitant = asBool(values.owner_same_as_annuitant);
-  const allocationQuestion = APPLICATION_DEFINITION.pages
+  const allocationQuestion = definition.pages
     .flatMap((page) => page.questions)
     .find((question) => question.id === 'investment_allocations');
   const allocationFundsById = new Map(
@@ -131,18 +132,18 @@ function buildSubmissionPayload(values: AnswerMap) {
   return {
     envelope: {
       submissionId: typeof crypto !== 'undefined' ? crypto.randomUUID() : `sub_${Date.now()}`,
-      applicationId: `app_${APPLICATION_DEFINITION.id}`,
+      applicationId: `app_${definition.id}`,
       schemaVersion: '1.0.0',
       submittedAt: new Date().toISOString(),
-      applicationDefinitionId: APPLICATION_DEFINITION.id,
-      applicationDefinitionVersion: APPLICATION_DEFINITION.version,
+      applicationDefinitionId: definition.id,
+      applicationDefinitionVersion: definition.version,
       carrier: {
-        name: APPLICATION_DEFINITION.carrier,
+        name: definition.carrier,
         carrierId: 'fig-carrier-midland-national',
       },
       product: {
-        productId: APPLICATION_DEFINITION.productId,
-        productName: APPLICATION_DEFINITION.productName,
+        productId: definition.productId,
+        productName: definition.productName,
         formNumbers: [],
       },
       submissionMode: 'pdf_fill' as const,
@@ -171,67 +172,67 @@ function buildSubmissionPayload(values: AnswerMap) {
     },
     jointAnnuitant: asBool(values.has_joint_annuitant)
       ? {
-          firstName: asString(values.joint_annuitant_first_name),
-          middleName: asString(values.joint_annuitant_middle_initial) || null,
-          lastName: asString(values.joint_annuitant_last_name),
-          dateOfBirth: asString(values.joint_annuitant_dob),
-          gender: asString(values.joint_annuitant_gender) === 'female' ? 'female' : 'male',
-          taxId: encryptedValue(values.joint_annuitant_ssn),
-          address: {
-            street1: asString(values.joint_annuitant_street_address),
-            street2: null,
-            city: asString(values.joint_annuitant_city),
-            state: asString(values.joint_annuitant_state),
-            zip: asString(values.joint_annuitant_zip),
-          },
-          phone: asString(values.joint_annuitant_phone),
-          email: null,
-          isUsCitizen: asString(values.joint_annuitant_us_citizen) === 'yes',
-        }
+        firstName: asString(values.joint_annuitant_first_name),
+        middleName: asString(values.joint_annuitant_middle_initial) || null,
+        lastName: asString(values.joint_annuitant_last_name),
+        dateOfBirth: asString(values.joint_annuitant_dob),
+        gender: asString(values.joint_annuitant_gender) === 'female' ? 'female' : 'male',
+        taxId: encryptedValue(values.joint_annuitant_ssn),
+        address: {
+          street1: asString(values.joint_annuitant_street_address),
+          street2: null,
+          city: asString(values.joint_annuitant_city),
+          state: asString(values.joint_annuitant_state),
+          zip: asString(values.joint_annuitant_zip),
+        },
+        phone: asString(values.joint_annuitant_phone),
+        email: null,
+        isUsCitizen: asString(values.joint_annuitant_us_citizen) === 'yes',
+      }
       : null,
     owner: ownerSameAsAnnuitant
       ? { isSameAsAnnuitant: true }
       : {
-          isSameAsAnnuitant: false,
-          type: 'individual',
-          person: {
-            firstName: asString(values.owner_first_name),
-            middleName: asString(values.owner_middle_initial) || null,
-            lastName: asString(values.owner_last_name),
-            dateOfBirth: asString(values.owner_dob),
-            gender: asString(values.owner_gender) === 'female' ? 'female' : 'male',
-            taxId: encryptedValue(values.owner_ssn_tin),
-            address: {
-              street1: asString(values.owner_street_address),
-              street2: null,
-              city: asString(values.owner_city),
-              state: asString(values.owner_state),
-              zip: asString(values.owner_zip),
-            },
-            phone: asString(values.owner_phone),
-            email: asString(values.owner_email) || null,
-            isUsCitizen: asString(values.owner_citizenship_status) !== 'non_resident_alien',
+        isSameAsAnnuitant: false,
+        type: 'individual',
+        person: {
+          firstName: asString(values.owner_first_name),
+          middleName: asString(values.owner_middle_initial) || null,
+          lastName: asString(values.owner_last_name),
+          dateOfBirth: asString(values.owner_dob),
+          gender: asString(values.owner_gender) === 'female' ? 'female' : 'male',
+          taxId: encryptedValue(values.owner_ssn_tin),
+          address: {
+            street1: asString(values.owner_street_address),
+            street2: null,
+            city: asString(values.owner_city),
+            state: asString(values.owner_state),
+            zip: asString(values.owner_zip),
           },
+          phone: asString(values.owner_phone),
+          email: asString(values.owner_email) || null,
+          isUsCitizen: asString(values.owner_citizenship_status) !== 'non_resident_alien',
         },
+      },
     jointOwner: asBool(values.has_joint_owner)
       ? {
-          firstName: asString(values.joint_owner_first_name),
-          middleName: asString(values.joint_owner_middle_initial) || null,
-          lastName: asString(values.joint_owner_last_name),
-          dateOfBirth: asString(values.joint_owner_dob),
-          gender: asString(values.joint_owner_gender) === 'female' ? 'female' : 'male',
-          taxId: encryptedValue(values.joint_owner_ssn),
-          address: {
-            street1: asString(values.joint_owner_street_address),
-            street2: null,
-            city: asString(values.joint_owner_city),
-            state: asString(values.joint_owner_state),
-            zip: asString(values.joint_owner_zip),
-          },
-          phone: asString(values.joint_owner_phone),
-          email: asString(values.joint_owner_email) || null,
-          isUsCitizen: true,
-        }
+        firstName: asString(values.joint_owner_first_name),
+        middleName: asString(values.joint_owner_middle_initial) || null,
+        lastName: asString(values.joint_owner_last_name),
+        dateOfBirth: asString(values.joint_owner_dob),
+        gender: asString(values.joint_owner_gender) === 'female' ? 'female' : 'male',
+        taxId: encryptedValue(values.joint_owner_ssn),
+        address: {
+          street1: asString(values.joint_owner_street_address),
+          street2: null,
+          city: asString(values.joint_owner_city),
+          state: asString(values.joint_owner_state),
+          zip: asString(values.joint_owner_zip),
+        },
+        phone: asString(values.joint_owner_phone),
+        email: asString(values.joint_owner_email) || null,
+        isUsCitizen: true,
+      }
       : null,
     ownerBeneficiaries: [],
     annuitantBeneficiaries: [],
@@ -351,11 +352,11 @@ function buildSubmissionPayload(values: AnswerMap) {
           spouseSignatureDate: asString(values.transfer_spouse_signature_date) || null,
           tsaEmployer: asString(values.tsa_employer_signature)
             ? {
-                name: asString(values.tsa_employer_name),
-                title: asString(values.tsa_employer_title),
-                signature: signatureRecord(values.tsa_employer_signature),
-                signatureDate: asString(values.tsa_employer_signature_date),
-              }
+              name: asString(values.tsa_employer_name),
+              title: asString(values.tsa_employer_title),
+              signature: signatureRecord(values.tsa_employer_signature),
+              signatureDate: asString(values.tsa_employer_signature_date),
+            }
             : null,
         },
       },
@@ -420,7 +421,7 @@ function ReviewPanel() {
       </Typography>
 
       {pages.map((page) => (
-        <Paper key={page.id} variant="outlined" sx={{ p: 2.5, borderColor: 'success.light' }}>
+        <Paper key={page.id} variant="outlined" sx={{ p: 2.5, borderColor: 'divider' }}>
           <Typography variant="subtitle1" fontWeight="bold" color="primary.main" gutterBottom>
             {page.title}
           </Typography>
@@ -436,10 +437,10 @@ function ReviewPanel() {
               const displayValue = Array.isArray(rawValue)
                 ? `${rawValue.length} item${rawValue.length === 1 ? '' : 's'}`
                 : typeof rawValue === 'boolean'
-                ? rawValue
-                  ? 'Yes'
-                  : 'No'
-                : rawValue || 'Not provided';
+                  ? rawValue
+                    ? 'Yes'
+                    : 'No'
+                  : rawValue || 'Not provided';
 
               return (
                 <Stack
@@ -469,10 +470,16 @@ function ReviewPanel() {
   );
 }
 
-function WizardPageContent() {
-  const { pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
+interface WizardPageContentProps {
+  saveId: string;
+  initialStep: number;
+}
+
+function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
+  const navigate = useNavigate();
+  const { definition, pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
   const { collectedFields, mergeFields } = useApplication();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -484,9 +491,28 @@ function WizardPageContent() {
   const [signerName, setSignerName] = useState('');
   const [signerEmail, setSignerEmail] = useState('');
   const [signerFieldErrors, setSignerFieldErrors] = useState<{ name?: string; email?: string }>({});
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const lastAppliedRef = useRef<Record<string, string | boolean>>({});
 
-  // Continuously apply new fields from ApplicationContext (e.g. from widget chat) into wizard
+  // ── Persistence ────────────────────────────────────────────────────────────
+
+  const persistProgress = (step: number, status: 'in_progress' | 'submitted' = 'in_progress') => {
+    const entry = {
+      id: saveId,
+      productId: definition.productId,
+      productName: definition.productName,
+      carrier: definition.carrier,
+      version: definition.version,
+      lastSavedAt: new Date().toISOString(),
+      status,
+      currentStep: step,
+    };
+    const data: SavedApplicationData = { currentStep: step, values: values as Record<string, unknown> };
+    saveApplication(entry, data);
+  };
+
+  // ── AI field sync ──────────────────────────────────────────────────────────
+
   useEffect(() => {
     const newFields: Record<string, string | boolean> = {};
     for (const [key, val] of Object.entries(collectedFields)) {
@@ -500,7 +526,6 @@ function WizardPageContent() {
     }
   }, [collectedFields, bulkSetValues]);
 
-  // Sync wizard values back to ApplicationContext so AI chat can pick them up
   useEffect(() => {
     const nonEmpty: Record<string, string | boolean> = {};
     for (const [key, val] of Object.entries(values)) {
@@ -511,11 +536,12 @@ function WizardPageContent() {
       }
     }
     if (Object.keys(nonEmpty).length > 0) {
-      // Track these as already applied so we don't re-apply our own changes
       lastAppliedRef.current = { ...lastAppliedRef.current, ...nonEmpty };
       mergeFields(nonEmpty);
     }
   }, [values, mergeFields]);
+
+  // ── Step state ─────────────────────────────────────────────────────────────
 
   const isIntroStep = currentStep === 0;
   const isReviewStep = currentStep === pages.length + 1;
@@ -526,14 +552,8 @@ function WizardPageContent() {
   const sidebarStep = isIntroStep ? -1 : isReviewStep ? pages.length : currentStep - 1;
 
   const stepLabel = useMemo(() => {
-    if (isIntroStep) {
-      return 'Application Overview';
-    }
-
-    if (isReviewStep) {
-      return 'Review & Submit';
-    }
-
+    if (isIntroStep) return 'Application Overview';
+    if (isReviewStep) return 'Review & Submit';
     return currentPage?.title ?? '';
   }, [currentPage, isIntroStep, isReviewStep]);
 
@@ -551,45 +571,51 @@ function WizardPageContent() {
       return;
     }
 
+  const handleNext = () => {
+    if (!isReviewStep && currentPage && !validatePage(currentPage)) return;
     if (currentStep < totalSteps - 1) {
-      setCurrentStep((prev) => prev + 1);
+      const next = currentStep + 1;
+      setCurrentStep(next);
+      persistProgress(next);
     }
   };
 
   const handleBack = () => {
     if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
+      const prev = currentStep - 1;
+      setCurrentStep(prev);
+      persistProgress(prev);
     }
   };
+
+  const handleSidebarPageClick = (pageIndex: number) => setCurrentStep(pageIndex + 1);
+  const handleSidebarIntroClick = () => setCurrentStep(0);
+
+  // ── Exit ───────────────────────────────────────────────────────────────────
+
+  const handleExitSaveAndLeave = () => {
+    persistProgress(currentStep, 'in_progress');
+    navigate('/applications');
+  };
+
+  const handleExitDiscard = () => navigate('/applications');
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
     setSubmissionError(null);
     setShowSubmissionBanner(false);
     setIsSubmitting(true);
 
-    const submissionPayload = buildSubmissionPayload(values as AnswerMap);
-    const applicationId = `app_${APPLICATION_DEFINITION.id}`;
+    const submissionPayload = buildSubmissionPayload(values as AnswerMap, definition);
+    const applicationId = `app_${definition.id}`;
     const requestPayload = {
-      productId: APPLICATION_DEFINITION.productId,
-      answers: values,
+      productId: definition.productId,
+      answers: values as unknown as Record<string, string | number | boolean | null>,
     };
 
     try {
-      const validateResponse = await fetch(`/application/${applicationId}/validate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      const validateResult = (await validateResponse.json()) as ValidationResponse;
-      console.log(validateResult);
-
-      if (!validateResponse.ok) {
-        setSubmissionError(validateResult.message || 'Validation request failed.');
-        return;
-      }
+      const validateResult = await validateApplication(applicationId, requestPayload, 'full');
 
       if (!validateResult.valid) {
         const firstValidationMessage = validateResult.errors?.[0]?.message;
@@ -597,41 +623,19 @@ function WizardPageContent() {
         return;
       }
 
-      console.log('Submitting payload to /application/:applicationId/submit', {
-        applicationId,
-        payload: {
-          ...requestPayload,
-          metadata: {
-            submissionSource: 'web',
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-          },
+      await submitApplication(applicationId, {
+        ...requestPayload,
+        metadata: {
+          submissionSource: 'web',
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         },
       });
-
-      const submitResponse = await fetch(`/application/${applicationId}/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...requestPayload,
-          metadata: {
-            submissionSource: 'web',
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-          },
-        }),
-      });
-
-      if (!submitResponse.ok) {
-        const submitResult = (await submitResponse.json()) as ValidationResponse;
-        setSubmissionError(submitResult.message || 'Submission failed. Please try again.');
-        return;
-      }
 
       console.log('eapp_submission_payload', submissionPayload);
+      markSubmitted(saveId);
       setShowSubmissionBanner(true);
     } catch (error) {
-      setSubmissionError('Unable to reach the server. Please try again.');
+      setSubmissionError(error instanceof Error ? error.message : 'Unable to reach the server. Please try again.');
       console.error('Submission request failed:', error);
     } finally {
       setIsSubmitting(false);
@@ -756,28 +760,30 @@ const handleDocusignClick = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: 'calc(100vh - 48px)', overflow: 'hidden', bgcolor: 'background.default' }}>
       <WizardSidebar
         pages={pages}
         currentStep={sidebarStep}
+        productName={definition.productName}
+        carrier={definition.carrier}
         isPageComplete={(index) => isPageComplete(pages[index])}
         onIntroClick={handleSidebarIntroClick}
         onPageClick={handleSidebarPageClick}
       />
 
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <LinearProgress variant="determinate" value={progress} color="success" sx={{ height: 6 }} />
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <LinearProgress variant="determinate" value={progress} color="secondary" sx={{ height: 6, flexShrink: 0 }} />
 
-        <Box sx={{ p: { xs: 2, md: 4 }, flex: 1 }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, flex: 1, overflowY: 'auto' }}>
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
             {isIntroStep && (
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
-                <Chip label={APPLICATION_DEFINITION.carrier} color="success" size="small" />
-                <Chip label={`Step ${currentStep + 1} of ${totalSteps}`} variant="outlined" color="success" size="small" />
+                <Chip label={definition.carrier} color="secondary" size="small" />
+                <Chip label={`Step ${currentStep + 1} of ${totalSteps}`} variant="outlined" color="secondary" size="small" />
                 <Typography variant="caption" color="text.secondary">
                   Active section: {stepLabel}
                 </Typography>
-                <Button size="small" variant="outlined" color="success" onClick={populateWithDummyData}>
+                <Button size="small" variant="outlined" color="secondary" onClick={populateWithDummyData}>
                   Fill Dummy Data
                 </Button>
               </Stack>
@@ -804,13 +810,23 @@ const handleDocusignClick = () => {
             {isIntroStep && (
               <Paper
                 variant="outlined"
-                sx={{ p: { xs: 2.5, md: 3.5 }, borderColor: 'success.light', bgcolor: 'background.paper' }}
+                sx={{ p: { xs: 2.5, md: 3.5 }, borderColor: 'secondary.light', bgcolor: 'background.paper' }}
               >
-                <Typography variant="h4" component="h1" fontWeight="bold" color="primary.main" gutterBottom>
-                  {APPLICATION_DEFINITION.productName}
+                <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1 }}>
+                  {definition.carrier}
                 </Typography>
+                <Typography variant="h4" component="h1" fontWeight="bold" color="primary.main" gutterBottom>
+                  {definition.productName}
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+                  <Chip label={`Version ${definition.version}`} size="small" variant="outlined" />
+                  {definition.effectiveDate && (
+                    <Chip label={`Effective ${definition.effectiveDate}`} size="small" variant="outlined" />
+                  )}
+                  <Chip label={`${definition.pages.length} sections`} size="small" variant="outlined" />
+                </Stack>
                 <Typography variant="body1" color="text.secondary">
-                  {APPLICATION_DEFINITION.description}
+                  {definition.description}
                 </Typography>
               </Paper>
             )}
@@ -825,15 +841,15 @@ const handleDocusignClick = () => {
                 </Typography>
 
                 <Grid container spacing={2}>
-                  {currentPage.questions.map((question) => (
+                  {currentPage.questions.filter((q) => evaluateVisibility(q.visibility, values)).map((question) => (
                     <Grid
                       key={question.id}
                       size={{
                         xs: 12,
                         md:
                           question.type === 'long_text'
-                          || question.type === 'repeatable_group'
-                          || question.type === 'allocation_table'
+                            || question.type === 'repeatable_group'
+                            || question.type === 'allocation_table'
                             ? 12
                             : 6,
                       }}
@@ -878,9 +894,11 @@ const handleDocusignClick = () => {
         </Box>
 
         <Divider />
+
+        {/* ── Bottom navigation ────────────────────────────────────────── */}
         <Box
           sx={{
-            p: { xs: 2, md: 3 },
+            p: { xs: 2 },
             bgcolor: 'background.paper',
             position: 'sticky',
             bottom: 0,
@@ -891,18 +909,31 @@ const handleDocusignClick = () => {
         >
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Button
-                startIcon={<ArrowBackIcon />}
-                onClick={handleBack}
-                disabled={currentStep === 0}
-                color="inherit"
-              >
-                Back
-              </Button>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button
+                  startIcon={<ExitToAppIcon />}
+                  onClick={() => setExitDialogOpen(true)}
+                  color="warning"
+                  variant="outlined"
+                  size="small"
+                >
+                  Exit
+                </Button>
+              </Stack>
 
               <Stack direction="row" spacing={1.5}>
+                <Button
+                  startIcon={<ArrowBackIcon />}
+                  onClick={handleBack}
+                  disabled={currentStep === 0}
+                  color="secondary"
+                  variant="outlined"
+                  size="small"
+                >
+                  Back
+                </Button>
                 {!isReviewStep && (
-                  <Button variant="contained" color="success" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
+                  <Button variant="contained" color="secondary" size="small" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
                     {isIntroStep ? 'Start Application' : 'Save & Next'}
                   </Button>
                 )}
@@ -919,7 +950,8 @@ const handleDocusignClick = () => {
                     </Button>
                     <Button
                       variant="contained"
-                      color="success"
+                      color="secondary"
+                      size="small"
                       onClick={handleSubmit}
                       disabled={isSubmitting || !isFormComplete}
                     >
@@ -973,14 +1005,82 @@ const handleDocusignClick = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* ── Exit confirmation dialog ──────────────────────────────────── */}
+      <Dialog
+        open={exitDialogOpen}
+        onClose={() => setExitDialogOpen(false)}
+        aria-labelledby="exit-dialog-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle id="exit-dialog-title">Save your progress?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Your answers will be saved so you can continue this application later from the Applications page.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button size='small' onClick={() => setExitDialogOpen(false)}>Cancel</Button>
+          <Button size='small' onClick={handleExitDiscard} color="warning">
+            Exit without saving
+          </Button>
+          <Button size='small' onClick={handleExitSaveAndLeave} variant="contained" color="secondary">
+            Save & Exit
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
 
 function WizardPageV2() {
+  const { productId } = useParams<{ productId: string }>();
+  const [searchParams] = useSearchParams();
+  const resumeId = searchParams.get('resume');
+
+  const [definition, setDefinition] = useState<ApplicationDefinition | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Load saved resume data once at mount — no effect needed, localStorage is synchronous
+  const [initialValues] = useState<Record<string, unknown> | undefined>(() => {
+    if (!resumeId) return undefined;
+    return loadApplicationData(resumeId)?.values;
+  });
+  const [initialStep] = useState<number>(() => {
+    if (!resumeId) return 0;
+    return loadApplicationData(resumeId)?.currentStep ?? 0;
+  });
+
+  // Each save has its own UUID — stable for the lifetime of this session
+  const [saveId] = useState<string>(() => resumeId ?? crypto.randomUUID());
+
+  useEffect(() => {
+    if (!productId) return;
+
+    getApplication(decodeURIComponent(productId))
+      .then(setDefinition)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load application definition'));
+  }, [productId]);
+
+  if (loadError) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Alert severity="error">{loadError}</Alert>
+      </Box>
+    );
+  }
+
+  if (!definition) {
+    return (
+      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress color="secondary" />
+      </Box>
+    );
+  }
+
   return (
-    <WizardV2FormProvider>
-      <WizardPageContent />
+    <WizardV2FormProvider definition={definition} initialValues={initialValues}>
+      <WizardPageContent saveId={saveId} initialStep={initialStep} />
     </WizardV2FormProvider>
   );
 }

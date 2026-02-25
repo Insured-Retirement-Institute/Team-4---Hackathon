@@ -2,12 +2,16 @@
   "name": "team4-hackathon-backend",
   "version": "1.0.0",
   "description": "Annuity e-application backend API",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "create-table": "node scripts/create-table.js"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.996.0",
+    "@aws-sdk/lib-dynamodb": "^3.996.0",
+    "cors": "^2.8.6",
     "docusign-esign": "^8.6.0",
     "dotenv": "^17.3.1",
     "express": "^4.21.0",
