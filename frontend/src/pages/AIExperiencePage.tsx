@@ -25,7 +25,6 @@ import MicIcon from '@mui/icons-material/Mic';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import PhoneIcon from '@mui/icons-material/Phone';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PolicyIcon from '@mui/icons-material/Policy';
 import ReplayIcon from '@mui/icons-material/Replay';
 import SummarizeIcon from '@mui/icons-material/Summarize';
@@ -253,6 +252,7 @@ export default function AIExperiencePage() {
   const [now, setNow] = useState(Date.now());
   const logEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const sseStartedRef = useRef(false);
   const elapsed = useElapsed(stage === 'voice_active');
 
   // Voice session
@@ -337,15 +337,28 @@ export default function AIExperiencePage() {
     }
   }, []);
 
-  const handleStartVoice = useCallback(async () => {
-    if (!selectedClient) return;
+  // Start SSE prefill when client is selected during voice_active stage
+  const startSSEIfReady = useCallback((client: Client) => {
+    if (sseStartedRef.current) return;
+    sseStartedRef.current = true;
+    abortRef.current = runPrefillStream(client.client_id, advisorId, handleEvent);
+  }, [advisorId, handleEvent]);
 
+  // When client selection changes during voice_active, kick off SSE
+  useEffect(() => {
+    if (stage === 'voice_active' && selectedClient && !sseStartedRef.current) {
+      startSSEIfReady(selectedClient);
+    }
+  }, [stage, selectedClient, startSSEIfReady]);
+
+  const handleStartVoice = useCallback(async () => {
     // Reset state
     setToolLog([]);
     setGatheredFields({});
     setFinalResult(null);
     setMatchedFields([]);
     setDefinition(null);
+    sseStartedRef.current = false;
 
     // Create a voice session
     try {
@@ -358,21 +371,12 @@ export default function AIExperiencePage() {
     // Transition to voice_active
     setStage('voice_active');
 
-    // Start SSE prefill stream simultaneously
-    abortRef.current = runPrefillStream(selectedClient.client_id, advisorId, handleEvent);
+    // If client already selected, start SSE immediately
+    if (selectedClient) {
+      sseStartedRef.current = true;
+      abortRef.current = runPrefillStream(selectedClient.client_id, advisorId, handleEvent);
+    }
   }, [selectedClient, advisorId, productId, handleEvent]);
-
-  const handleRunAgent = useCallback(() => {
-    if (!selectedClient) return;
-    setStage('voice_active');
-    setToolLog([]);
-    setGatheredFields({});
-    setFinalResult(null);
-    setMatchedFields([]);
-    setDefinition(null);
-    setVoiceSessionId(null);
-    abortRef.current = runPrefillStream(selectedClient.client_id, advisorId, handleEvent);
-  }, [selectedClient, advisorId, handleEvent]);
 
   const handleStartApplication = useCallback(async () => {
     if (!finalResult?.known_data) return;
@@ -400,10 +404,10 @@ export default function AIExperiencePage() {
     setMatchedFields([]);
     setDefinition(null);
     setVoiceSessionId(null);
+    sseStartedRef.current = false;
   }, []);
 
   const handleCallFieldsExtracted = useCallback((fields: Record<string, string>) => {
-    // Merge call-extracted fields into gathered fields and final result
     setGatheredFields((prev) => ({ ...prev, ...fields }));
     setFinalResult((prev) => {
       if (!prev?.known_data) return prev;
@@ -416,7 +420,6 @@ export default function AIExperiencePage() {
   }, []);
 
   const handleCallComplete = useCallback(() => {
-    // Recompute matched fields and transition to results
     if (finalResult?.known_data && definition) {
       const merged = { ...finalResult.known_data, ...gatheredFields };
       computeMatchedFields(merged, definition);
@@ -437,7 +440,7 @@ export default function AIExperiencePage() {
             <Typography variant="h5" fontWeight={700}>AI Experience</Typography>
           </Stack>
           <Typography variant="body2" sx={{ color: 'grey.400' }}>
-            Voice-first advisor experience: speak with the AI, watch data gathering in real-time, then call the client to fill gaps.
+            Voice-first advisor experience: pick your advisor, start talking, and watch the AI gather client data in real-time.
           </Typography>
         </Container>
       </Box>
@@ -448,11 +451,11 @@ export default function AIExperiencePage() {
           {/* ── SETUP STAGE ─────────────────────────────────────────────── */}
           {stage === 'setup' && (
             <Box>
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
+              <Grid container spacing={3} justifyContent="center">
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography variant="overline" color="primary" fontWeight={700}>Advisor Profile</Typography>
+                      <Typography variant="overline" color="primary" fontWeight={700}>Who are you today?</Typography>
                       <FormControl fullWidth sx={{ mt: 1.5 }}>
                         <InputLabel>Advisor</InputLabel>
                         <Select value={advisorId} label="Advisor" onChange={(e) => setAdvisorId(e.target.value)}>
@@ -464,134 +467,124 @@ export default function AIExperiencePage() {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="overline" color="primary" fontWeight={700}>CRM Client</Typography>
-                      <Autocomplete
-                        sx={{ mt: 1.5 }}
-                        options={clients}
-                        getOptionLabel={(o) => o.display_name}
-                        value={selectedClient}
-                        onChange={(_, v) => setSelectedClient(v)}
-                        renderInput={(params) => <TextField {...params} label="Select client" />}
-                      />
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="overline" color="primary" fontWeight={700}>Product</Typography>
-                      <FormControl fullWidth sx={{ mt: 1.5 }}>
-                        <InputLabel>Product</InputLabel>
-                        <Select value={productId} label="Product" onChange={(e) => setProductId(e.target.value)}>
-                          {products.map((p) => (
-                            <MenuItem key={p.productId} value={p.productId}>{p.productName}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </CardContent>
-                  </Card>
-                </Grid>
               </Grid>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center" sx={{ mt: 5 }}>
+              <Box sx={{ textAlign: 'center', mt: 5 }}>
                 <Button
                   variant="contained"
                   size="large"
                   color="secondary"
                   disableElevation
                   startIcon={<MicIcon />}
-                  disabled={!selectedClient}
                   onClick={handleStartVoice}
-                  sx={{ fontWeight: 700, px: 6, py: 1.5, fontSize: '1.1rem' }}
+                  sx={{ fontWeight: 700, px: 6, py: 2, fontSize: '1.2rem', borderRadius: 3 }}
                 >
-                  Start with Voice
+                  Start Voice Session
                 </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  startIcon={<PlayArrowIcon />}
-                  disabled={!selectedClient}
-                  onClick={handleRunAgent}
-                  sx={{ fontWeight: 600, px: 4, py: 1.5 }}
-                >
-                  Run AI Agent
-                </Button>
-              </Stack>
-              {!selectedClient && (
-                <Typography variant="caption" display="block" color="text.secondary" mt={1} textAlign="center">
-                  Select a CRM client to get started
+                <Typography variant="body2" color="text.secondary" mt={2}>
+                  Tell the AI which client you'd like to discuss today
                 </Typography>
-              )}
+              </Box>
             </Box>
           )}
 
           {/* ── VOICE ACTIVE STAGE ──────────────────────────────────────── */}
           {stage === 'voice_active' && (
             <Box>
-              {/* Voice Panel */}
-              {voiceSessionId && (
-                <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', height: 280 }}>
-                  <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="subtitle2" fontWeight={700}>Voice Session</Typography>
-                  </Box>
-                  <VoicePanel sessionId={voiceSessionId} />
+              {/* Voice Panel — always visible */}
+              <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', height: 300 }}>
+                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Voice Session — {advisorLabel}
+                  </Typography>
+                  {!selectedClient && (
+                    <Typography variant="caption" color="warning.main">
+                      Tell the AI which client, or select below
+                    </Typography>
+                  )}
+                </Box>
+                <VoicePanel sessionId={voiceSessionId} />
+              </Paper>
+
+              {/* Client selector — shown until client is picked */}
+              {!sseStartedRef.current && (
+                <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                    Or select a CRM client to start data gathering:
+                  </Typography>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Autocomplete
+                      sx={{ flex: 1, maxWidth: 400 }}
+                      options={clients}
+                      getOptionLabel={(o) => o.display_name}
+                      value={selectedClient}
+                      onChange={(_, v) => setSelectedClient(v)}
+                      renderInput={(params) => <TextField {...params} label="Select client" size="small" />}
+                    />
+                    <FormControl sx={{ minWidth: 200 }}>
+                      <InputLabel size="small">Product</InputLabel>
+                      <Select value={productId} label="Product" size="small" onChange={(e) => setProductId(e.target.value)}>
+                        {products.map((p) => (
+                          <MenuItem key={p.productId} value={p.productId}>{p.productName}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Stack>
                 </Paper>
               )}
 
-              <Grid container spacing={3}>
-                {/* Left: Live Agent Log */}
-                <Grid size={{ xs: 12, md: 7 }}>
-                  <Paper sx={{ bgcolor: 'grey.900', borderRadius: 2, overflow: 'hidden', height: 400, display: 'flex', flexDirection: 'column' }}>
-                    <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="subtitle2" sx={{ color: 'grey.300', fontFamily: 'monospace' }}>
-                        Agent Log
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'secondary.main', fontFamily: 'monospace', fontWeight: 700 }}>
-                        {(elapsed / 1000).toFixed(1)}s elapsed
-                      </Typography>
-                    </Box>
-                    <Box sx={{ flex: 1, overflowY: 'auto', py: 1 }}>
-                      {toolLog.map((entry, i) => (
-                        <ToolLogItem key={`${entry.name}-${i}`} entry={entry} now={now} />
-                      ))}
-                      <div ref={logEndRef} />
-                    </Box>
-                  </Paper>
-                </Grid>
-
-                {/* Right: Field Accumulator */}
-                <Grid size={{ xs: 12, md: 5 }}>
-                  <Paper sx={{ bgcolor: 'grey.50', borderRadius: 2, height: 400, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="subtitle2" fontWeight={700}>Fields Gathered</Typography>
-                      <Chip label={Object.keys(gatheredFields).length} size="small" color="secondary" sx={{ fontWeight: 700 }} />
-                    </Box>
-                    <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
-                      {Object.keys(gatheredFields).length === 0 ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
-                          Waiting for agent to extract fields...
+              {/* Agent Log + Field Accumulator — shown once SSE is running */}
+              {sseStartedRef.current && (
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 7 }}>
+                    <Paper sx={{ bgcolor: 'grey.900', borderRadius: 2, overflow: 'hidden', height: 400, display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="subtitle2" sx={{ color: 'grey.300', fontFamily: 'monospace' }}>
+                          Agent Log — {selectedClient?.display_name}
                         </Typography>
-                      ) : (
-                        <Stack spacing={0.75}>
-                          {Object.entries(gatheredFields).map(([k, v]) => (
-                            <Box key={k} sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
-                              <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', minWidth: 160, flexShrink: 0 }}>
-                                {k}
-                              </Typography>
-                              <Typography variant="body2" fontWeight={600} sx={{ wordBreak: 'break-word' }}>
-                                {String(v).slice(0, 60)}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Stack>
-                      )}
-                    </Box>
-                  </Paper>
+                        <Typography variant="caption" sx={{ color: 'secondary.main', fontFamily: 'monospace', fontWeight: 700 }}>
+                          {(elapsed / 1000).toFixed(1)}s elapsed
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, overflowY: 'auto', py: 1 }}>
+                        {toolLog.map((entry, i) => (
+                          <ToolLogItem key={`${entry.name}-${i}`} entry={entry} now={now} />
+                        ))}
+                        <div ref={logEndRef} />
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, md: 5 }}>
+                    <Paper sx={{ bgcolor: 'grey.50', borderRadius: 2, height: 400, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="subtitle2" fontWeight={700}>Fields Gathered</Typography>
+                        <Chip label={Object.keys(gatheredFields).length} size="small" color="secondary" sx={{ fontWeight: 700 }} />
+                      </Box>
+                      <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+                        {Object.keys(gatheredFields).length === 0 ? (
+                          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
+                            Waiting for agent to extract fields...
+                          </Typography>
+                        ) : (
+                          <Stack spacing={0.75}>
+                            {Object.entries(gatheredFields).map(([k, v]) => (
+                              <Box key={k} sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
+                                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', minWidth: 160, flexShrink: 0 }}>
+                                  {k}
+                                </Typography>
+                                <Typography variant="body2" fontWeight={600} sx={{ wordBreak: 'break-word' }}>
+                                  {String(v).slice(0, 60)}
+                                </Typography>
+                              </Box>
+                            ))}
+                          </Stack>
+                        )}
+                      </Box>
+                    </Paper>
+                  </Grid>
                 </Grid>
-              </Grid>
+              )}
             </Box>
           )}
 
@@ -646,10 +639,8 @@ export default function AIExperiencePage() {
                 </Grid>
               </Paper>
 
-              {/* Field matching table */}
               <FieldMatchingTable matchedFields={matchedFields} products={products} productId={productId} />
 
-              {/* Actions */}
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
                 {missingFields.length > 0 && (
                   <Button
@@ -691,7 +682,6 @@ export default function AIExperiencePage() {
           {/* ── CLIENT CALL STAGE ───────────────────────────────────────── */}
           {stage === 'client_call' && finalResult && (
             <Box>
-              {/* Retell Call Panel */}
               <Paper sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
                 <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
                   <Typography variant="subtitle1" fontWeight={700}>
@@ -711,10 +701,8 @@ export default function AIExperiencePage() {
                 />
               </Paper>
 
-              {/* Field matching table (updates live) */}
               <FieldMatchingTable matchedFields={matchedFields} products={products} productId={productId} />
 
-              {/* Collapsed voice panel */}
               {voiceSessionId && (
                 <Paper sx={{ borderRadius: 2, overflow: 'hidden', height: 120 }}>
                   <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -729,7 +717,6 @@ export default function AIExperiencePage() {
           {/* ── RESULTS STAGE ───────────────────────────────────────────── */}
           {stage === 'results' && finalResult && (
             <Box>
-              {/* Summary bar */}
               <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
                 <Grid container spacing={3} alignItems="center">
                   <Grid size={{ xs: 12, sm: 3 }}>
@@ -767,10 +754,8 @@ export default function AIExperiencePage() {
                 </Grid>
               </Paper>
 
-              {/* Field matching table */}
               <FieldMatchingTable matchedFields={matchedFields} products={products} productId={productId} />
 
-              {/* Actions */}
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
                 <Button
                   variant="contained"

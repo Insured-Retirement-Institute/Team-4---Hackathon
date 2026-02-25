@@ -41,12 +41,17 @@ npm run lint     # ESLint
 |------|---------|
 | `src/context/ApplicationContext.tsx` | Shared state: `collectedFields`, `sessionId`, `phase`, step progress |
 | `src/services/aiService.ts` | AI service client: `fetchSchema()`, `createSession()`, `sendMessage()` |
-| `src/services/prefillService.ts` | Pre-fill API client: `fetchClients()`, `runPrefill()`, `runPrefillWithDocument()` |
+| `src/services/prefillService.ts` | Pre-fill API client: `fetchClients()`, `runPrefill()`, `runPrefillWithDocument()`, `runPrefillStream()` (SSE) |
 | `src/services/apiService.ts` | Backend API client: `getProducts()`, `getApplication()`, `validateApplication()`, `submitApplication()` (hardcoded base URL) |
 | `src/services/applicationStorageService.ts` | localStorage save/resume: `listSaves()`, `saveApplication()`, `loadApplicationData()`, `markSubmitted()`, `deleteApplication()` |
 | `src/types/application.ts` | Canonical types: `ApplicationDefinition`, `PageDefinition`, `QuestionDefinition`, `AnswerMap`, visibility/validation types |
 | `src/hooks/useWidgetSync.ts` | Bridges widget.js CustomEvents ↔ React context, exports `openWidget()` |
 | `src/pages/PrefillPage.tsx` | CRM client selector + doc upload → agent results → session start |
+| `src/pages/AIExperiencePage.tsx` | Voice-first AI Experience: 5-stage state machine (setup → voice_active → gap_review → client_call → results) |
+| `src/hooks/useVoiceConnection.ts` | Nova Sonic voice WebSocket hook: getUserMedia, AudioContext, PCM encode/decode, transcript/field events |
+| `src/components/VoicePanel.tsx` | Mic button with pulse animation, status label, scrolling role-colored transcript |
+| `src/components/RetellCallPanel.tsx` | Retell outbound call UI: initiate, poll status, live transcript, extracted field display |
+| `src/services/retellService.ts` | Retell API client: `initiateCall()`, `getCallStatus()` |
 | `src/pages/ApplicationHistoryPage.tsx` | Lists saved/submitted applications from localStorage with resume and delete |
 | `src/pages/DocusignReturnPage.tsx` | DocuSign redirect handler after embedded signing |
 | `src/features/wizard-v2/WizardPage.tsx` | Dynamic wizard with bidirectional field sync and save/resume |
@@ -103,6 +108,29 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 - `fetchClients()` — `GET /api/v1/prefill/clients`
 - `runPrefill(clientId)` — `POST /api/v1/prefill`
 - `runPrefillWithDocument(file, clientId?)` — `POST /api/v1/prefill/document` (multipart FormData)
+- `runPrefillStream(clientId, advisorId, onEvent)` — `POST /api/v1/prefill/stream` (SSE consumer, returns `AbortController`)
+
+## AI Experience Page
+
+`src/pages/AIExperiencePage.tsx` — voice-first advisor workflow with five-stage state machine (`setup` → `voice_active` → `gap_review` → `client_call` → `results`):
+
+1. **Setup stage**: Three selector cards — advisor profile, CRM client, product. Two buttons: "Start with Voice" (creates session + opens Nova Sonic + starts SSE) and "Run AI Agent" (SSE-only fallback).
+2. **Voice active stage**: VoicePanel (mic + transcript) at top. Below: agent log (dark terminal, SSE tool calls) + field accumulator (gathered fields). Voice and SSE run simultaneously. Auto-transitions to gap_review on `agent_complete`.
+3. **Gap review stage**: Compact VoicePanel (still connected). Summary bar (fields found, time, sources, suitability). Field matching table (filled vs missing, grouped by page). Actions: "Call Client to Fill Gaps", "Start Application", "Open in Wizard".
+4. **Client call stage**: RetellCallPanel (initiate call, poll status, live transcript, extracted fields). Field matching table updates when call completes. Collapsed VoicePanel available. Auto-transitions to results on call completion.
+5. **Results stage**: Summary bar + field matching table + actions: "Start Application", "Open in Wizard", "Call Client Again" (if fields still missing), "Run Again".
+
+**Voice integration**: `useVoiceConnection` hook manages WebSocket to `/api/v1/sessions/{id}/voice`, getUserMedia (mic capture at 16kHz PCM mono), AudioContext playback (24kHz). Dispatches `iri:field_updated` CustomEvents on `field_update` messages. `VoicePanel` component renders mic button with CSS pulse animation, connection status, and scrolling transcript. Supports `compact` mode.
+
+**Retell call integration**: `retellService.ts` API client calls `POST /api/v1/retell/calls` (initiate) and `GET /api/v1/retell/calls/{id}` (poll). `RetellCallPanel` component handles the full call lifecycle: idle → ringing → in-progress (with duration timer + live transcript) → ended (transcript accordion + extracted field chips). Polls every 3s. On completion, extracted fields merge into `gatheredFields` + `finalResult.known_data`.
+
+**Tool display metadata**: `TOOL_META` maps tool names to human-readable labels and MUI icons (e.g., `lookup_crm_client` → "CRM Client Lookup" with `PersonSearchIcon`).
+
+**SSE event protocol** (`StreamEvent` type):
+- `agent_start` — `{type, message, timestamp}`
+- `tool_start` — `{type, name, description, iteration, timestamp}`
+- `tool_result` — `{type, name, fields_extracted, duration_ms, iteration, timestamp}`
+- `agent_complete` — `{type, known_data, sources_used, fields_found, summary, total_duration_ms, timestamp}`
 
 ## Application History
 
