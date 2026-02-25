@@ -1,0 +1,72 @@
+"""Pre-fill agent endpoints: client list, CRM prefill, and document prefill."""
+
+from __future__ import annotations
+
+import base64
+import logging
+from typing import Any
+
+from fastapi import APIRouter, File, Form, UploadFile
+from pydantic import BaseModel
+
+from app.services.datasources.mock_redtail import MockRedtailCRM
+from app.services.prefill_agent import run_prefill_agent
+
+logger = logging.getLogger(__name__)
+router = APIRouter(tags=["prefill"])
+
+
+# ── Request / Response models ───────────────────────────────────────────────
+
+class PrefillRequest(BaseModel):
+    client_id: str
+
+
+class PrefillResponse(BaseModel):
+    known_data: dict[str, Any]
+    sources_used: list[str]
+    fields_found: int
+    summary: str
+
+
+class ClientInfo(BaseModel):
+    client_id: str
+    display_name: str
+
+
+# ── Endpoints ───────────────────────────────────────────────────────────────
+
+@router.get("/prefill/clients", response_model=list[ClientInfo])
+async def list_clients():
+    """Return list of CRM clients for the dropdown selector."""
+    return MockRedtailCRM.list_clients()
+
+
+@router.post("/prefill", response_model=PrefillResponse)
+async def run_prefill(req: PrefillRequest):
+    """Run the pre-fill agent for a selected CRM client."""
+    logger.info("Prefill requested for client_id=%s", req.client_id)
+    result = await run_prefill_agent(client_id=req.client_id)
+    return PrefillResponse(**result)
+
+
+@router.post("/prefill/document", response_model=PrefillResponse)
+async def run_prefill_with_document(
+    file: UploadFile = File(...),
+    client_id: str | None = Form(default=None),
+):
+    """Run the pre-fill agent with an uploaded document (and optional client_id)."""
+    logger.info("Prefill with document requested: filename=%s, client_id=%s", file.filename, client_id)
+
+    file_bytes = await file.read()
+    doc_base64 = base64.b64encode(file_bytes).decode("utf-8")
+
+    # Determine media type from upload
+    media_type = file.content_type or "image/png"
+
+    result = await run_prefill_agent(
+        client_id=client_id,
+        document_base64=doc_base64,
+        document_media_type=media_type,
+    )
+    return PrefillResponse(**result)

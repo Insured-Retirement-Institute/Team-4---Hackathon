@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.routes import chat, demo, health, sessions
+from app.routes import chat, demo, health, prefill, sessions
 
 app = FastAPI(
     title="IRI AI Conversation Service",
@@ -25,6 +25,7 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(sessions.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(demo.router, prefix="/api/v1")
+app.include_router(prefill.router, prefix="/api/v1")
 
 # Serve static files
 STATIC_DIR = Path(__file__).parent / "static"
