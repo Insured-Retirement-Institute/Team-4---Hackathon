@@ -300,7 +300,7 @@ export default function HomePage() {
           />
         </Box>
 
-        <Container maxWidth="md" sx={{ position: 'relative', textAlign: 'center' }}>
+        <Container maxWidth="lg" sx={{ position: 'relative', textAlign: 'center' }}>
           <Chip
             icon={<AutoAwesomeIcon sx={{ fontSize: '14px !important' }} />}
             label="Hackathon Demo — Annuity Application Modernization"
@@ -471,7 +471,7 @@ export default function HomePage() {
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <Box sx={{ py: { xs: 8, md: 10 }, px: 3, bgcolor: 'background.default', textAlign: 'center' }}>
-        <Container maxWidth="sm">
+        <Container maxWidth="md">
           <Typography variant="h4" fontWeight={700} mb={1.5}>
             See it in action
           </Typography>
