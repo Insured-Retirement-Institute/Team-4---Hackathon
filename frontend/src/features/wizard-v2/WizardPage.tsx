@@ -490,7 +490,9 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   const [signerEmail, setSignerEmail] = useState('');
   const [signerFieldErrors, setSignerFieldErrors] = useState<{ name?: string; email?: string }>({});
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [isRedirectingToDocusign, setIsRedirectingToDocusign] = useState(false);
   const lastAppliedRef = useRef<Record<string, string | boolean>>({});
+  const isBusyWithDocusign = isDocusignLoading || isRedirectingToDocusign;
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
@@ -561,7 +563,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   );
 
   const shouldShowDocusignStatus = Boolean(
-    isDocusignLoading || docusignError,
+    isDocusignLoading || isRedirectingToDocusign || docusignError,
   );
 
   const handleNext = () => {
@@ -640,6 +642,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
   ) => {
     setDocusignError(null);
     setIsDocusignLoading(true);
+    setIsRedirectingToDocusign(false);
 
     const applicationId = `app_${definition.id}`;
 
@@ -659,18 +662,22 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
 
       if (!response.ok) {
         setDocusignError(result.error || result.message || 'DocuSign request failed. Please try again.');
+        setIsRedirectingToDocusign(false);
         return;
       }
 
       if (!result.signingUrl) {
         setDocusignError('DocuSign did not return a signing URL.');
+        setIsRedirectingToDocusign(false);
         return;
       }
 
+      setIsRedirectingToDocusign(true);
       window.location.assign(result.signingUrl);
     } catch (error) {
       console.error('DocuSign request failed:', error);
       setDocusignError('Unable to reach the DocuSign service. Please try again.');
+      setIsRedirectingToDocusign(false);
     } finally {
       setIsDocusignLoading(false);
     }
@@ -838,6 +845,11 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
                     Starting DocuSign session...
                   </Alert>
                 )}
+                {isRedirectingToDocusign && (
+                  <Alert severity="info" icon={<CircularProgress size={16} color="inherit" />}>
+                    Redirecting you to DocuSign...
+                  </Alert>
+                )}
                 {docusignError && <Alert severity="error">{docusignError}</Alert>}
               </Stack>
             )}
@@ -876,7 +888,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
                 <Button
                   startIcon={<ArrowBackIcon />}
                   onClick={handleBack}
-                  disabled={currentStep === 0}
+                  disabled={isSubmitting || !isFormComplete}
                   color="secondary"
                   variant="outlined"
                   size="small"
@@ -895,7 +907,7 @@ function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
                       color="secondary"
                       size="small"
                       onClick={handleSubmit}
-                      disabled={isSubmitting || !isFormComplete}
+                      disabled={isSubmitting || isBusyWithDocusign || !isFormComplete}
                     >
                       {isSubmitting ? 'Submitting...' : 'Submit Application'}
                     </Button>
