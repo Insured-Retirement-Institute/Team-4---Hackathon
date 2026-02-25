@@ -35,6 +35,7 @@ def create_session(
     known_data: dict[str, Any] | None = None,
     callback_url: str | None = None,
     model: str | None = None,
+    advisor_name: str | None = None,
 ) -> tuple[ConversationState, str]:
     """Create a new conversation session.
 
@@ -43,6 +44,7 @@ def create_session(
         known_data: Pre-populated field values (unconfirmed).
         callback_url: URL to POST final data to on submit.
         model: Optional LLM model override.
+        advisor_name: Name of the advisor (used in greeting).
 
     Returns (state, greeting_message).
     """
@@ -91,7 +93,7 @@ def create_session(
 
     # Generate greeting
     llm = LLMService(model=model)
-    greeting = _generate_greeting(llm, state)
+    greeting = _generate_greeting(llm, state, advisor_name=advisor_name)
 
     state.messages.append(Message(role=Role.ASSISTANT, content=greeting))
     _sessions[session_id] = state
@@ -205,25 +207,27 @@ async def submit_session(session_id: str) -> dict[str, Any]:
     }
 
 
-def _generate_greeting(llm: LLMService, state: ConversationState) -> str:
+def _generate_greeting(llm: LLMService, state: ConversationState, advisor_name: str | None = None) -> str:
     """Generate an initial greeting message."""
     system_prompt = build_system_prompt(state)
+
+    name_part = f" Address the advisor as {advisor_name}." if advisor_name else ""
 
     if state.phase == SessionPhase.SPOT_CHECK:
         unconfirmed = state.unconfirmed_fields()
         field_summary = ", ".join(f"{f.label}: {f.value}" for f in unconfirmed[:5])
         more = f" (and {len(unconfirmed) - 5} more)" if len(unconfirmed) > 5 else ""
         instruction = (
-            "Generate a friendly greeting. We have some information on file already. "
+            f"Generate a friendly greeting.{name_part} We have some information on file already. "
             f"Summarize this known data naturally: {field_summary}{more}. "
             "Ask if it all looks correct."
         )
     else:
         missing = state.missing_required()
         instruction = (
-            "Generate a friendly greeting. We need to collect information for an application. "
-            f"There are {len(missing)} fields to fill out. "
-            "Start by asking about the first few fields."
+            f"Generate a friendly, brief greeting.{name_part} "
+            "Ask what client they'd like to work on today and how you can help. "
+            "Keep it to 1-2 sentences."
         )
 
     messages = [{"role": "user", "content": instruction}]

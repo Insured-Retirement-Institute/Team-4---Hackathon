@@ -33,12 +33,15 @@ async function fetchSchema(): Promise<unknown[]> {
   return res.json();
 }
 
-export async function createSession(productId = 'midland-fixed-annuity-001', knownData?: Record<string, string>): Promise<SessionResponse> {
+export async function createSession(productId = 'midland-fixed-annuity-001', knownData?: Record<string, string>, advisorName?: string): Promise<SessionResponse> {
   const questions = await fetchSchema();
 
   const body: Record<string, unknown> = { questions, product_id: productId };
   if (knownData && Object.keys(knownData).length > 0) {
     body.known_data = knownData;
+  }
+  if (advisorName) {
+    body.advisor_name = advisorName;
   }
 
   const res = await fetch(`${AI_SERVICE_BASE}/api/v1/sessions`, {

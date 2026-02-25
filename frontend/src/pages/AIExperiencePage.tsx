@@ -288,6 +288,16 @@ export default function AIExperiencePage() {
 
   // Compute matched fields whenever we have results + definition
   const computeMatchedFields = useCallback((knownData: Record<string, string>, def: ApplicationDefinition) => {
+    // Build a lookup that maps both camelCase and snake_case keys to values
+    const camelToSnake = (s: string) => s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+    const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    const lookup: Record<string, string> = {};
+    for (const [k, v] of Object.entries(knownData)) {
+      lookup[k] = v;
+      lookup[snakeToCamel(k)] = v;
+      lookup[camelToSnake(k)] = v;
+    }
+
     const allQuestions = def.pages.flatMap((p) =>
       p.questions.map((q) => ({ ...q, pageTitle: p.title })),
     );
@@ -295,8 +305,8 @@ export default function AIExperiencePage() {
       id: q.id,
       label: q.label,
       pageTitle: q.pageTitle,
-      value: knownData[q.id] ?? null,
-      filled: q.id in knownData,
+      value: lookup[q.id] ?? null,
+      filled: q.id in lookup,
     }));
     setMatchedFields(matched);
   }, []);
@@ -366,7 +376,7 @@ export default function AIExperiencePage() {
 
     // Create a session (used for both voice and chat)
     try {
-      const session = await createSession(productId);
+      const session = await createSession(productId, undefined, ADVISOR_NAME);
       setVoiceSessionId(session.session_id);
       setChatGreeting(session.greeting || '');
     } catch (err) {
@@ -387,10 +397,16 @@ export default function AIExperiencePage() {
     if (!finalResult?.known_data) return;
     setStartingSession(true);
     try {
-      const session = await createSession(productId, finalResult.known_data as Record<string, string>);
+      // Normalize snake_case keys to camelCase so they match application definition question IDs
+      const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+      const normalized: Record<string, string> = {};
+      for (const [k, v] of Object.entries(finalResult.known_data as Record<string, string>)) {
+        normalized[snakeToCamel(k)] = v;
+      }
+      const session = await createSession(productId, normalized, ADVISOR_NAME);
       setSessionId(session.session_id);
       setPhase('SPOT_CHECK');
-      mergeFields(finalResult.known_data as Record<string, string>);
+      mergeFields(normalized);
       navigate('/');
       setTimeout(() => openWidget(), 300);
     } catch (err) {

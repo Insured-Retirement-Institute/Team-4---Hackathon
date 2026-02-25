@@ -49,6 +49,7 @@ async def create_session_endpoint(req: CreateSessionRequest):
             known_data=req.known_data,
             callback_url=req.callback_url,
             model=req.model,
+            advisor_name=req.advisor_name,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

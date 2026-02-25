@@ -30,6 +30,7 @@ class CreateSessionRequest(BaseModel):
     known_data: dict[str, Any] = Field(default_factory=dict)
     callback_url: str | None = None
     model: str | None = None
+    advisor_name: str | None = None
 
 
 class SendMessageRequest(BaseModel):
