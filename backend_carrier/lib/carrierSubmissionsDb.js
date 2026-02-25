@@ -1,4 +1,4 @@
-const { PutCommand, GetCommand, QueryCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
+const { PutCommand, GetCommand, QueryCommand, DeleteCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
 const { ddb } = require("./dynamo.js");
 
 const DDB_TABLE_NAME="CarrierSubmissions";
@@ -38,4 +38,21 @@ async function queryByPk(submissionId) {
   return res.Items ?? [];
 }
 
-module.exports = { saveSubmission, getSubmission, deleteSubmission, queryByPk };
+// List (scan) submissions with optional pagination
+async function listSubmissions({ limit = 100, exclusiveStartKey } = {}) {
+  const params = {
+    TableName: TABLE,
+    Limit: limit,
+  };
+  if (exclusiveStartKey) {
+    params.ExclusiveStartKey = exclusiveStartKey;
+  }
+
+  const res = await ddb.send(new ScanCommand(params));
+  return {
+    items: res.Items ?? [],
+    lastEvaluatedKey: res.LastEvaluatedKey
+  };
+}
+
+module.exports = { saveSubmission, getSubmission, deleteSubmission, queryByPk, listSubmissions };

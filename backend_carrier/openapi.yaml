@@ -151,6 +151,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /submissions:
+    get:
+      summary: List submissions
+      description: Returns a paginated list of submission metadata. Supports `limit` and `startKey` (base64-encoded JSON) for pagination.
+      operationId: listSubmissions
+      tags:
+        - Submissions
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to return
+          schema:
+            type: integer
+            default: 100
+        - name: startKey
+          in: query
+          required: false
+          description: Base64-encoded JSON start key for pagination
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionListResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to list submissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /applications/{submissionId}/pdf:
     get:
       summary: Generate a PDF from a saved application submission
@@ -355,6 +396,38 @@ components:
           description: List of available mapping files (when mapping not found)
       required:
         - error
+
+    SubmissionListItem:
+      type: object
+      description: Minimal submission metadata
+      properties:
+        submissionId:
+          type: string
+          description: Unique submission identifier
+        applicationId:
+          type: string
+          description: Application identifier
+        policyNumber:
+          type: string
+          description: Policy number GUID if available
+        received:
+          type: string
+          format: date-time
+          description: When submission was received
+
+    SubmissionListResponse:
+      type: object
+      description: Paginated list of submission metadata
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubmissionListItem'
+        nextToken:
+          type: string
+          description: Base64-encoded pagination token to retrieve the next page
+      required:
+        - items
 
 tags:
   - name: Health
