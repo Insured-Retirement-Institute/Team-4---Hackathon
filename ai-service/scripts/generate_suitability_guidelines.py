@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Generate carrier suitability guidelines and upload to S3.
 
+Each carrier gets product parameters + the shared suitability decision prompt.
+The decision prompt is evaluated by an LLM at runtime (see s3_suitability.py).
+
 Usage:
     cd ai-service
     source venv/Scripts/activate
@@ -22,195 +25,88 @@ from app.config import settings
 
 BUCKET = settings.s3_statements_bucket
 
+# Load the shared suitability decision prompt
+_PROMPT_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "data", "suitability", "suitability-decision-prompt.md"
+)
+with open(_PROMPT_PATH, "r", encoding="utf-8") as f:
+    SUITABILITY_DECISION_PROMPT = f.read()
+
+SUITABILITY_FIELDS_REQUIRED = [
+    "owner_name", "owner_dob", "owner_age", "owner_ssn",
+    "annual_household_income", "annual_household_expenses",
+    "total_net_worth", "liquid_net_worth", "has_emergency_funds",
+    "expected_hold_years", "total_premium",
+    "signed_at_state", "is_replacement", "nursing_home_status",
+]
+
 CARRIERS = {
-    "midland-national": {
-        "carrier_id": "midland-national",
-        "carrier_name": "Midland National Life Insurance Company",
-        "product_id": "midland-fixed-annuity-001",
-        "product_name": "Fixed Annuity Application",
-        "suitability_criteria": {
-            "age": {
-                "min": 18,
-                "max": 85,
-                "weight": 15,
-                "description": "Applicant must be between 18 and 85 years old at issue.",
-            },
-            "annual_income": {
-                "min": 25000,
-                "weight": 10,
-                "description": "Minimum annual household income of $25,000.",
-            },
-            "net_worth": {
-                "min": 50000,
-                "weight": 10,
-                "description": "Minimum net worth of $50,000 excluding primary residence.",
-            },
-            "risk_tolerance": {
-                "acceptable": ["conservative", "moderate"],
-                "weight": 15,
-                "description": "Fixed annuities are suitable for conservative to moderate risk profiles.",
-            },
-            "investment_objective": {
-                "acceptable": ["preservation", "accumulation", "income"],
-                "weight": 10,
-                "description": "Product supports capital preservation, steady accumulation, and income generation.",
-            },
-            "time_horizon": {
-                "acceptable": ["5_to_10_years", "10_plus_years"],
-                "weight": 15,
-                "description": "Surrender period is 7 years; recommended holding period is 5+ years.",
-            },
-            "source_of_funds": {
-                "acceptable": ["savings", "retirement_rollover", "investment_portfolio", "inheritance"],
-                "weight": 5,
-                "description": "Funds must come from legitimate, documented sources.",
-            },
-            "liquidity": {
-                "min_liquid_after_purchase": 25000,
-                "weight": 10,
-                "description": "Client should retain at least $25,000 in liquid assets after purchase.",
-            },
-            "existing_annuities": {
-                "max_total_annuity_pct_of_net_worth": 60,
-                "weight": 10,
-                "description": "Total annuity holdings should not exceed 60% of net worth.",
-            },
-        },
-        "surrender_schedule": "7-year: 7%, 6%, 5%, 4%, 3%, 2%, 1%",
-        "minimum_premium": 10000,
-        "maximum_issue_age": 85,
-        "scoring": {
-            "excellent": {"min": 85, "label": "Excellent Fit"},
-            "good": {"min": 70, "label": "Good Fit"},
-            "fair": {"min": 50, "label": "Fair Fit — Review Recommended"},
-            "poor": {"min": 0, "label": "Poor Fit — Not Recommended"},
-        },
-    },
     "aspida": {
         "carrier_id": "aspida",
         "carrier_name": "Aspida Life Insurance Company",
         "product_id": "aspida-myga-001",
-        "product_name": "Multi-Year Guaranteed Annuity (MYGA)",
-        "suitability_criteria": {
-            "age": {
-                "min": 18,
-                "max": 90,
-                "weight": 15,
-                "description": "Applicant must be between 18 and 90 years old at issue.",
-            },
-            "annual_income": {
-                "min": 20000,
-                "weight": 10,
-                "description": "Minimum annual household income of $20,000.",
-            },
-            "net_worth": {
-                "min": 40000,
-                "weight": 10,
-                "description": "Minimum net worth of $40,000 excluding primary residence.",
-            },
-            "risk_tolerance": {
-                "acceptable": ["conservative", "moderate"],
-                "weight": 15,
-                "description": "MYGAs are suitable for conservative to moderate risk profiles seeking guaranteed rates.",
-            },
-            "investment_objective": {
-                "acceptable": ["preservation", "accumulation"],
-                "weight": 10,
-                "description": "Product is designed for capital preservation and steady accumulation at a guaranteed rate.",
-            },
-            "time_horizon": {
-                "acceptable": ["3_to_5_years", "5_to_10_years", "10_plus_years"],
-                "weight": 15,
-                "description": "MYGA terms range from 3-10 years; client should match term to time horizon.",
-            },
-            "source_of_funds": {
-                "acceptable": ["savings", "retirement_rollover", "investment_portfolio", "cd_transfer", "inheritance"],
-                "weight": 5,
-                "description": "Common source is CD transfers or retirement rollovers seeking better guaranteed rates.",
-            },
-            "liquidity": {
-                "min_liquid_after_purchase": 20000,
-                "weight": 10,
-                "description": "Client should retain at least $20,000 in liquid assets after purchase.",
-            },
-            "existing_annuities": {
-                "max_total_annuity_pct_of_net_worth": 65,
-                "weight": 10,
-                "description": "Total annuity holdings should not exceed 65% of net worth.",
+        "product_name": "SynergyChoice MYGA",
+        "product_parameters": {
+            "productMaxIssueAge": 90,
+            "withdrawalChargePeriodYears": 7,
+            "guaranteedRatePct": 5.25,
+            "minPremium": 5000,
+            "guaranteePeriods": [3, 5, 7, 10],
+            "surrenderSchedule7yr": "9%, 8%, 7%, 6%, 5%, 4%, 2%",
+            "freeWithdrawalPct": 10,
+            "currentRates": {
+                "3yr": "4.50%",
+                "5yr": "5.00%",
+                "7yr": "5.25%",
+                "10yr": "5.10%",
             },
         },
-        "surrender_schedule": "5-year: 8%, 7%, 6%, 4%, 2%",
-        "minimum_premium": 5000,
-        "maximum_issue_age": 90,
-        "scoring": {
-            "excellent": {"min": 85, "label": "Excellent Fit"},
-            "good": {"min": 70, "label": "Good Fit"},
-            "fair": {"min": 50, "label": "Fair Fit — Review Recommended"},
-            "poor": {"min": 0, "label": "Poor Fit — Not Recommended"},
+        "suitability_decision_prompt": SUITABILITY_DECISION_PROMPT,
+        "suitability_fields_required": SUITABILITY_FIELDS_REQUIRED,
+    },
+    "midland-national": {
+        "carrier_id": "midland-national",
+        "carrier_name": "Midland National Life Insurance Company",
+        "product_id": "midland-fixed-annuity-001",
+        "product_name": "Innovator Choice 14 Fixed Index Annuity",
+        "product_parameters": {
+            "productMaxIssueAge": 85,
+            "withdrawalChargePeriodYears": 14,
+            "guaranteedRatePct": 1.10,
+            "minPremium": 10000,
+            "guaranteePeriods": [14],
+            "surrenderSchedule14yr": "12%, 12%, 11%, 10%, 10%, 9%, 8%, 7%, 6%, 5%, 4%, 3%, 2%, 1%",
+            "freeWithdrawalPct": 10,
+            "premiumBonusPct": 8,
+            "indexStrategies": [
+                "S&P 500 Annual Point-to-Point with Cap",
+                "S&P 500 Monthly Average",
+                "Fixed Account",
+            ],
         },
+        "suitability_decision_prompt": SUITABILITY_DECISION_PROMPT,
+        "suitability_fields_required": SUITABILITY_FIELDS_REQUIRED,
     },
     "equitrust": {
         "carrier_id": "equitrust",
         "carrier_name": "EquiTrust Life Insurance Company",
         "product_id": "certainty-select",
         "product_name": "Certainty Select Fixed Annuity",
-        "suitability_criteria": {
-            "age": {
-                "min": 18,
-                "max": 85,
-                "weight": 15,
-                "description": "Applicant must be between 18 and 85 years old at issue.",
-            },
-            "annual_income": {
-                "min": 25000,
-                "weight": 10,
-                "description": "Minimum annual household income of $25,000.",
-            },
-            "net_worth": {
-                "min": 50000,
-                "weight": 10,
-                "description": "Minimum net worth of $50,000 excluding primary residence.",
-            },
-            "risk_tolerance": {
-                "acceptable": ["conservative", "moderate", "moderately_aggressive"],
-                "weight": 15,
-                "description": "Certainty Select supports conservative through moderately aggressive profiles with its index options.",
-            },
-            "investment_objective": {
-                "acceptable": ["preservation", "accumulation", "income", "growth"],
-                "weight": 10,
-                "description": "Versatile product supporting multiple objectives through allocation flexibility.",
-            },
-            "time_horizon": {
-                "acceptable": ["5_to_10_years", "10_plus_years"],
-                "weight": 15,
-                "description": "Surrender period is 7 years; index strategies benefit from longer holding periods.",
-            },
-            "source_of_funds": {
-                "acceptable": ["savings", "retirement_rollover", "investment_portfolio", "inheritance"],
-                "weight": 5,
-                "description": "Funds must come from legitimate, documented sources.",
-            },
-            "liquidity": {
-                "min_liquid_after_purchase": 30000,
-                "weight": 10,
-                "description": "Client should retain at least $30,000 in liquid assets after purchase.",
-            },
-            "existing_annuities": {
-                "max_total_annuity_pct_of_net_worth": 55,
-                "weight": 10,
-                "description": "Total annuity holdings should not exceed 55% of net worth.",
+        "product_parameters": {
+            "productMaxIssueAge": 85,
+            "withdrawalChargePeriodYears": 7,
+            "guaranteedRatePct": 4.75,
+            "minPremium": 15000,
+            "guaranteePeriods": [5, 7],
+            "surrenderSchedule7yr": "8%, 7%, 6%, 5%, 4%, 3%, 2%",
+            "freeWithdrawalPct": 10,
+            "currentRates": {
+                "5yr": "4.50%",
+                "7yr": "4.75%",
             },
         },
-        "surrender_schedule": "7-year: 8%, 7%, 6%, 5%, 4%, 3%, 2%",
-        "minimum_premium": 15000,
-        "maximum_issue_age": 85,
-        "scoring": {
-            "excellent": {"min": 85, "label": "Excellent Fit"},
-            "good": {"min": 70, "label": "Good Fit"},
-            "fair": {"min": 50, "label": "Fair Fit — Review Recommended"},
-            "poor": {"min": 0, "label": "Poor Fit — Not Recommended"},
-        },
+        "suitability_decision_prompt": SUITABILITY_DECISION_PROMPT,
+        "suitability_fields_required": SUITABILITY_FIELDS_REQUIRED,
     },
 }
 

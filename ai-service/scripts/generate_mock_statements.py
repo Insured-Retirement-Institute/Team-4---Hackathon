@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """Generate realistic annual statement PDFs and upload to S3.
 
+Generates two statement formats:
+- **MNL format** (Midland National Innovator Choice 14): gold/brown branding,
+  Statement Period Summary, Inception Summary, per-account detail, index performance.
+- **Aspida MYGA format** (SynergyChoice MYGA): pink/navy branding, contract details,
+  contract values summary, financial activity detail.
+
+Client IDs use Redtail CRM IDs (101-104) so the prefill agent finds them.
+
 Usage:
     cd ai-service
     source venv/Scripts/activate
@@ -13,7 +21,6 @@ import io
 import os
 import sys
 
-# Allow running from ai-service/ directory
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import boto3
@@ -35,271 +42,341 @@ from app.config import settings
 
 BUCKET = settings.s3_statements_bucket
 
+# ── Color schemes ────────────────────────────────────────────────────────────
+
+MNL_NAVY = colors.HexColor("#1a2e4a")
+MNL_GOLD = colors.HexColor("#8b7028")
+MNL_LIGHT_BG = colors.HexColor("#f5f0e5")
+MNL_HEADER_BG = colors.HexColor("#2c4a1e")  # dark green accent
+
+ASPIDA_NAVY = colors.HexColor("#1b2a4a")
+ASPIDA_PINK = colors.HexColor("#c41e7a")
+ASPIDA_LIGHT_BG = colors.HexColor("#f0e8f0")
+
+# ── Client data (CRM IDs 101-104) ───────────────────────────────────────────
+
 CLIENTS = {
-    "client_001": {
+    "101": {
+        "format": "mnl",
         "name": "John Smith",
+        "joint_owner": "Margaret Smith",
         "address": "123 Oak Lane, Hartford, CT 06103",
-        "contract_number": "MN-2019-78432",
-        "product": "Midland National Guarantee Plus Fixed Annuity",
-        "issue_date": "April 15, 2019",
-        "beginning_balance": "$120,625.00",
-        "premiums_received": "$0.00",
-        "total_premiums_paid": "$100,000.00",
-        "interest_credited": "$4,375.00",
-        "withdrawals": "$0.00",
-        "ending_balance": "$125,000.00",
-        "accumulated_value": "$125,000.00",
-        "surrender_value": "$121,250.00",
-        "death_benefit": "$125,000.00",
-        "guaranteed_minimum": "$108,500.00",
-        "current_rate": "3.50%",
-        "guaranteed_rate": "1.50%",
-        "beneficiary_name": "Sarah Smith",
-        "beneficiary_relationship": "Spouse",
-        "beneficiary_share": "100%",
-    },
-    "client_002": {
-        "name": "Maria Garcia",
-        "address": "456 Maple Drive, Boston, MA 02101",
-        "contract_number": "MN-2020-91256",
-        "product": "Midland National Guarantee Plus Fixed Annuity",
-        "issue_date": "January 10, 2020",
-        "beginning_balance": "$240,000.00",
-        "premiums_received": "$0.00",
-        "total_premiums_paid": "$200,000.00",
-        "interest_credited": "$10,000.00",
-        "withdrawals": "$0.00",
-        "ending_balance": "$250,000.00",
-        "accumulated_value": "$250,000.00",
-        "surrender_value": "$245,000.00",
-        "death_benefit": "$250,000.00",
-        "guaranteed_minimum": "$218,000.00",
-        "current_rate": "4.00%",
-        "guaranteed_rate": "1.75%",
-        "beneficiary_name": "Carlos Garcia",
-        "beneficiary_relationship": "Spouse",
-        "beneficiary_share": "100%",
-    },
-    "client_003": {
-        "name": "Robert Chen",
-        "address": "789 Elm Street, New York, NY 10001",
-        "contract_number": "MN-2021-34789",
-        "product": "Midland National Guarantee Plus Fixed Annuity",
-        "issue_date": "June 1, 2021",
-        "beginning_balance": "$477,500.00",
-        "premiums_received": "$0.00",
-        "total_premiums_paid": "$400,000.00",
-        "interest_credited": "$22,500.00",
-        "withdrawals": "$0.00",
-        "ending_balance": "$500,000.00",
-        "accumulated_value": "$500,000.00",
-        "surrender_value": "$487,500.00",
-        "death_benefit": "$500,000.00",
-        "guaranteed_minimum": "$424,000.00",
-        "current_rate": "4.50%",
-        "guaranteed_rate": "2.00%",
-        "beneficiary_name": "Linda Chen",
-        "beneficiary_relationship": "Spouse",
-        "beneficiary_share": "100%",
-    },
-    "client_004": {
-        "name": "Patricia Williams",
-        "address": "1010 Pine Avenue, Chicago, IL 60601",
-        "contract_number": "MN-2018-56123",
-        "product": "Midland National Guarantee Plus Fixed Annuity",
-        "issue_date": "September 22, 2018",
-        "beginning_balance": "$82,450.00",
-        "premiums_received": "$0.00",
+        "contract_number": "8500000101",
+        "product": "Midland National Innovator Choice 14",
+        "issue_date": "March 15, 2022",
+        "statement_year": "2024",
+        "agent_name": "Michael Reynolds",
+        "agent_number": "MR-44501",
+        # Statement Period Summary
+        "beginning_accumulation": "$78,125.00",
+        "premiums": "$0.00",
+        "premium_bonus": "$0.00",
+        "partial_surrenders": "$0.00",
+        "interest_index_credits": "$4,225.00",
+        "ending_accumulation": "$82,350.00",
+        # Statement Inception Summary
         "total_premiums_paid": "$75,000.00",
-        "interest_credited": "$2,550.00",
-        "withdrawals": "$0.00",
-        "ending_balance": "$85,000.00",
-        "accumulated_value": "$85,000.00",
-        "surrender_value": "$83,300.00",
-        "death_benefit": "$85,000.00",
-        "guaranteed_minimum": "$81,750.00",
-        "current_rate": "3.00%",
-        "guaranteed_rate": "1.25%",
-        "beneficiary_name": "James Williams",
-        "beneficiary_relationship": "Son",
-        "beneficiary_share": "100%",
+        "total_premium_bonus": "$6,000.00",
+        "total_withdrawals": "$0.00",
+        "outstanding_loan": "$0.00",
+        "surrender_value": "$68,371.50",
+        "death_benefit": "$82,350.00",
+        # Account detail
+        "fixed_account_balance": "$25,000.00",
+        "fixed_rate": "1.10%",
+        "index_account_1_name": "S&P 500 Annual PtP w/ Cap",
+        "index_account_1_balance": "$35,000.00",
+        "index_account_1_cap": "7.00%",
+        "index_account_1_credit": "5.20%",
+        "index_account_2_name": "S&P 500 Monthly Average",
+        "index_account_2_balance": "$22,350.00",
+        "index_account_2_cap": "4.50%",
+        "index_account_2_credit": "3.10%",
+        "s3_year": "2024",
+    },
+    "102": {
+        "format": "aspida",
+        "name": "Maria Garcia",
+        "joint_owner": None,
+        "address": "456 Maple Drive, Boston, MA 02101",
+        "contract_number": "AFMYA0000102",
+        "product": "SynergyChoice MYGA 5",
+        "plan_type": "Multi-Year Guaranteed Annuity — 5 Year",
+        "issue_date": "June 1, 2023",
+        "statement_year": "2024",
+        "agent_name": "Michael Reynolds",
+        "agent_number": "MR-44501",
+        # Contract Details
+        "death_benefit_type": "Contract Value",
+        "guaranteed_rate": "5.00%",
+        "guaranteed_until": "May 31, 2028",
+        "withdrawal_charge_end": "May 31, 2028",
+        "one_year_rate": "5.00%",
+        "min_guaranteed_rate": "1.00%",
+        "email": "m.garcia@email.com",
+        # Contract Values Summary
+        "total_premium_payment": "$200,000.00",
+        "beginning_contract_value": "$200,000.00",
+        "total_withdrawals": "$0.00",
+        "interest_credited": "$10,000.00",
+        "ending_contract_value": "$210,000.00",
+        "cash_surrender_value": "$193,200.00",
+        "death_benefit_value": "$210,000.00",
+        # Financial Activity Detail
+        "activity": [
+            ("06/01/2023", "Premium Receipt", "$200,000.00"),
+            ("12/31/2023", "Fixed Interest Credit", "$5,000.00"),
+            ("06/30/2024", "Fixed Interest Credit", "$5,000.00"),
+            ("12/31/2024", "Ending Contract Value", "$210,000.00"),
+        ],
+        "s3_year": "2024",
+    },
+    "103": {
+        "format": "mnl",
+        "name": "Robert Chen",
+        "joint_owner": "Linda Chen",
+        "address": "789 Elm Street, New York, NY 10001",
+        "contract_number": "8500000103",
+        "product": "Midland National Innovator Choice 14",
+        "issue_date": "January 10, 2021",
+        "statement_year": "2024",
+        "agent_name": "Sarah Chen",
+        "agent_number": "SC-22103",
+        # Statement Period Summary
+        "beginning_accumulation": "$155,625.00",
+        "premiums": "$0.00",
+        "premium_bonus": "$0.00",
+        "partial_surrenders": "$0.00",
+        "interest_index_credits": "$7,875.00",
+        "ending_accumulation": "$163,500.00",
+        # Statement Inception Summary
+        "total_premiums_paid": "$150,000.00",
+        "total_premium_bonus": "$12,000.00",
+        "total_withdrawals": "$0.00",
+        "outstanding_loan": "$0.00",
+        "surrender_value": "$143,880.00",
+        "death_benefit": "$163,500.00",
+        # Account detail
+        "fixed_account_balance": "$50,000.00",
+        "fixed_rate": "1.10%",
+        "index_account_1_name": "S&P 500 Annual PtP w/ Cap",
+        "index_account_1_balance": "$70,000.00",
+        "index_account_1_cap": "7.00%",
+        "index_account_1_credit": "5.20%",
+        "index_account_2_name": "S&P 500 Monthly Average",
+        "index_account_2_balance": "$43,500.00",
+        "index_account_2_cap": "4.50%",
+        "index_account_2_credit": "3.10%",
+        "s3_year": "2024",
+    },
+    "104": {
+        "format": "mnl",
+        "name": "Patricia Williams",
+        "joint_owner": None,
+        "address": "1010 Pine Avenue, Chicago, IL 60601",
+        "contract_number": "MN-2023-00104",
+        "product": "Midland National Guarantee Plus",
+        "issue_date": "September 22, 2023",
+        "statement_year": "2024",
+        "agent_name": "David Martinez",
+        "agent_number": "DM-33204",
+        # Statement Period Summary (simpler fixed product)
+        "beginning_accumulation": "$87,975.00",
+        "premiums": "$0.00",
+        "premium_bonus": "$0.00",
+        "partial_surrenders": "$0.00",
+        "interest_index_credits": "$3,400.00",
+        "ending_accumulation": "$91,375.00",
+        # Statement Inception Summary
+        "total_premiums_paid": "$85,000.00",
+        "total_premium_bonus": "$0.00",
+        "total_withdrawals": "$0.00",
+        "outstanding_loan": "$0.00",
+        "surrender_value": "$84,461.25",
+        "death_benefit": "$91,375.00",
+        # Account detail — fixed only
+        "fixed_account_balance": "$91,375.00",
+        "fixed_rate": "3.50%",
+        "index_account_1_name": None,
+        "index_account_1_balance": None,
+        "index_account_1_cap": None,
+        "index_account_1_credit": None,
+        "index_account_2_name": None,
+        "index_account_2_balance": None,
+        "index_account_2_cap": None,
+        "index_account_2_credit": None,
+        "s3_year": "2024",
     },
 }
 
 
-def _build_pdf(client_id: str, data: dict) -> bytes:
-    """Generate a single annual statement PDF and return as bytes."""
+# ── MNL Format PDF ───────────────────────────────────────────────────────────
+
+def _build_mnl_pdf(client_id: str, data: dict) -> bytes:
+    """Generate an MNL Innovator Choice / Guarantee Plus annual statement."""
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
-        buf,
-        pagesize=letter,
-        topMargin=0.5 * inch,
-        bottomMargin=0.5 * inch,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
+        buf, pagesize=letter,
+        topMargin=0.5 * inch, bottomMargin=0.5 * inch,
+        leftMargin=0.75 * inch, rightMargin=0.75 * inch,
     )
 
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
-        "StatementTitle",
-        parent=styles["Title"],
-        fontSize=16,
-        textColor=colors.HexColor("#1a3c6e"),
-        spaceAfter=4,
+        "MNLTitle", parent=styles["Title"],
+        fontSize=15, textColor=MNL_NAVY, spaceAfter=2,
     )
     subtitle_style = ParagraphStyle(
-        "StatementSubtitle",
-        parent=styles["Normal"],
-        fontSize=11,
-        textColor=colors.HexColor("#333333"),
-        spaceAfter=2,
+        "MNLSubtitle", parent=styles["Normal"],
+        fontSize=11, textColor=MNL_GOLD, spaceAfter=2,
     )
     section_style = ParagraphStyle(
-        "SectionHeader",
-        parent=styles["Heading2"],
-        fontSize=12,
-        textColor=colors.HexColor("#1a3c6e"),
-        spaceBefore=14,
-        spaceAfter=6,
-        borderWidth=0,
-    )
-    body = ParagraphStyle(
-        "BodyText2",
-        parent=styles["Normal"],
-        fontSize=10,
-        leading=14,
+        "MNLSection", parent=styles["Heading2"],
+        fontSize=11, textColor=MNL_NAVY, spaceBefore=12, spaceAfter=4,
     )
     fine_print = ParagraphStyle(
-        "FinePrint",
-        parent=styles["Normal"],
-        fontSize=7,
-        textColor=colors.grey,
-        leading=9,
+        "MNLFine", parent=styles["Normal"],
+        fontSize=7, textColor=colors.grey, leading=9,
     )
+
+    tbl_style_base = [
+        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 8),
+        ("FONT", (0, 1), (-1, -1), "Helvetica", 8),
+        ("BACKGROUND", (0, 0), (-1, 0), MNL_LIGHT_BG),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+        ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ]
 
     elements: list = []
 
     # Header
-    elements.append(Paragraph("Midland National Life Insurance Company", title_style))
-    elements.append(Paragraph("Annual Statement &mdash; Year Ending December 31, 2024", subtitle_style))
-    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#1a3c6e")))
-    elements.append(Spacer(1, 12))
+    elements.append(Paragraph("MIDLAND NATIONAL LIFE INSURANCE COMPANY", title_style))
+    elements.append(Paragraph(
+        f"Annual Statement &mdash; Year Ending December 31, {data['statement_year']}", subtitle_style
+    ))
+    elements.append(HRFlowable(width="100%", thickness=2, color=MNL_GOLD))
+    elements.append(Spacer(1, 8))
 
-    # Policy holder info
-    elements.append(Paragraph("Policy Holder Information", section_style))
-    info_data = [
-        ["Contract Owner:", data["name"]],
+    # Contract info
+    joint_line = f"  |  Joint Owner: {data['joint_owner']}" if data.get("joint_owner") else ""
+    info_rows = [
+        ["Contract Owner:", f"{data['name']}{joint_line}"],
         ["Mailing Address:", data["address"]],
         ["Contract Number:", data["contract_number"]],
         ["Product:", data["product"]],
         ["Issue Date:", data["issue_date"]],
+        ["Agent:", f"{data['agent_name']} ({data['agent_number']})"],
     ]
-    info_table = Table(info_data, colWidths=[1.8 * inch, 4.5 * inch])
+    info_table = Table(info_rows, colWidths=[1.6 * inch, 4.7 * inch])
     info_table.setStyle(TableStyle([
-        ("FONT", (0, 0), (0, -1), "Helvetica-Bold", 9),
-        ("FONT", (1, 0), (1, -1), "Helvetica", 9),
-        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#333333")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("FONT", (0, 0), (0, -1), "Helvetica-Bold", 8),
+        ("FONT", (1, 0), (1, -1), "Helvetica", 8),
+        ("TEXTCOLOR", (0, 0), (-1, -1), MNL_NAVY),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
     ]))
     elements.append(info_table)
 
-    # Account summary
-    elements.append(Paragraph("Account Activity Summary", section_style))
-    activity_data = [
+    # Statement Period Summary
+    elements.append(Paragraph("Statement Period Summary", section_style))
+    period_rows = [
         ["", "Amount"],
-        ["Beginning Balance (01/01/2024)", data["beginning_balance"]],
-        ["Premiums Received", data["premiums_received"]],
-        ["Interest Credited", data["interest_credited"]],
-        ["Withdrawals", data["withdrawals"]],
-        ["Ending Balance (12/31/2024)", data["ending_balance"]],
+        [f"Beginning Accumulation Value (01/01/{data['statement_year']})", data["beginning_accumulation"]],
+        ["Premiums", data["premiums"]],
+        ["Premium Bonus", data["premium_bonus"]],
+        ["Partial Surrenders", data["partial_surrenders"]],
+        ["Interest & Index Credits", data["interest_index_credits"]],
+        [f"Ending Accumulation Value (12/31/{data['statement_year']})", data["ending_accumulation"]],
     ]
-    activity_table = Table(activity_data, colWidths=[4 * inch, 2 * inch])
-    activity_table.setStyle(TableStyle([
-        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 9),
-        ("FONT", (0, 1), (-1, -1), "Helvetica", 9),
-        ("FONT", (0, -1), (-1, -1), "Helvetica-Bold", 9),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eef5")),
-        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#e8eef5")),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
-        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    period_table = Table(period_rows, colWidths=[4.2 * inch, 2 * inch])
+    period_table.setStyle(TableStyle(tbl_style_base + [
+        ("FONT", (0, -1), (-1, -1), "Helvetica-Bold", 8),
+        ("BACKGROUND", (0, -1), (-1, -1), MNL_LIGHT_BG),
     ]))
-    elements.append(activity_table)
+    elements.append(period_table)
 
-    # Contract values
-    elements.append(Paragraph("Contract Values as of December 31, 2024", section_style))
-    values_data = [
-        ["Accumulated Value", data["accumulated_value"]],
+    # Statement Inception Summary
+    elements.append(Paragraph("Statement Inception Summary (Lifetime)", section_style))
+    inception_rows = [
+        ["", "Amount"],
+        ["Total Premiums Paid", data["total_premiums_paid"]],
+        ["Total Premium Bonus", data["total_premium_bonus"]],
+        ["Total Withdrawals", data["total_withdrawals"]],
+        ["Outstanding Loan", data["outstanding_loan"]],
         ["Surrender Value", data["surrender_value"]],
         ["Death Benefit", data["death_benefit"]],
-        ["Guaranteed Minimum Value", data["guaranteed_minimum"]],
     ]
-    values_table = Table(values_data, colWidths=[4 * inch, 2 * inch])
-    values_table.setStyle(TableStyle([
-        ("FONT", (0, 0), (-1, -1), "Helvetica", 9),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
-        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    elements.append(values_table)
+    inception_table = Table(inception_rows, colWidths=[4.2 * inch, 2 * inch])
+    inception_table.setStyle(TableStyle(tbl_style_base))
+    elements.append(inception_table)
 
-    # Interest rates
-    elements.append(Paragraph("Interest Rate Information", section_style))
-    rate_data = [
-        ["Current Credited Rate", data["current_rate"]],
-        ["Guaranteed Minimum Rate", data["guaranteed_rate"]],
-    ]
-    rate_table = Table(rate_data, colWidths=[4 * inch, 2 * inch])
-    rate_table.setStyle(TableStyle([
-        ("FONT", (0, 0), (-1, -1), "Helvetica", 9),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
-        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    elements.append(rate_table)
+    # Statement Period Information (per-account detail)
+    elements.append(Paragraph("Statement Period Information by Account", section_style))
 
-    # Beneficiary
-    elements.append(Paragraph("Beneficiary Designation", section_style))
-    ben_data = [
-        ["Type", "Name", "Relationship", "Share"],
-        ["Primary", data["beneficiary_name"], data["beneficiary_relationship"], data["beneficiary_share"]],
-    ]
-    ben_table = Table(ben_data, colWidths=[1 * inch, 2.5 * inch, 1.5 * inch, 1 * inch])
-    ben_table.setStyle(TableStyle([
-        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 9),
-        ("FONT", (0, 1), (-1, -1), "Helvetica", 9),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eef5")),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    elements.append(ben_table)
+    acct_header = ["Account", "Beginning", "Premiums", "Interest/Credits", "Ending"]
+    acct_rows = [acct_header]
+    acct_rows.append([
+        "Fixed Account",
+        data["fixed_account_balance"],
+        "$0.00",
+        f"@ {data['fixed_rate']}",
+        data["fixed_account_balance"],
+    ])
+    if data.get("index_account_1_name"):
+        acct_rows.append([
+            data["index_account_1_name"],
+            "—",
+            "$0.00",
+            f"{data['index_account_1_credit']} credited",
+            data["index_account_1_balance"],
+        ])
+    if data.get("index_account_2_name"):
+        acct_rows.append([
+            data["index_account_2_name"],
+            "—",
+            "$0.00",
+            f"{data['index_account_2_credit']} credited",
+            data["index_account_2_balance"],
+        ])
 
-    # Total premiums paid
-    elements.append(Spacer(1, 10))
-    elements.append(Paragraph(
-        f"<b>Total Premiums Paid to Date:</b> {data['total_premiums_paid']}",
-        body,
-    ))
+    acct_table = Table(acct_rows, colWidths=[2 * inch, 1.1 * inch, 0.9 * inch, 1.2 * inch, 1.1 * inch])
+    acct_table.setStyle(TableStyle(tbl_style_base))
+    elements.append(acct_table)
+
+    # Index Performance (if applicable)
+    if data.get("index_account_1_name"):
+        elements.append(Paragraph("Interest &amp; Index Performance", section_style))
+        perf_header = ["Account", "Cap Rate", "Credit %"]
+        perf_rows = [perf_header]
+        perf_rows.append([
+            data["index_account_1_name"],
+            data["index_account_1_cap"],
+            data["index_account_1_credit"],
+        ])
+        if data.get("index_account_2_name"):
+            perf_rows.append([
+                data["index_account_2_name"],
+                data["index_account_2_cap"],
+                data["index_account_2_credit"],
+            ])
+        perf_table = Table(perf_rows, colWidths=[2.5 * inch, 1.5 * inch, 1.5 * inch])
+        perf_table.setStyle(TableStyle(tbl_style_base))
+        elements.append(perf_table)
 
     # Footer
-    elements.append(Spacer(1, 20))
+    elements.append(Spacer(1, 16))
     elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey))
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 4))
     elements.append(Paragraph(
         "This statement is provided for informational purposes only and does not constitute "
         "a contract or amendment to your existing contract. Please refer to your contract for "
         "guaranteed values and benefits. Midland National Life Insurance Company is a subsidiary "
-        "of Sammons Financial Group. Products and features may not be available in all states. "
-        "Contract Form Series: MN-FA-2018.",
+        "of Sammons Financial Group. Products and features may not be available in all states.",
         fine_print,
     ))
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 3))
     elements.append(Paragraph(
         "Midland National Life Insurance Company &bull; Administrative Office: "
         "One Sammons Plaza, Sioux Falls, SD 57193 &bull; (800) 733-1110 &bull; "
@@ -311,6 +388,143 @@ def _build_pdf(client_id: str, data: dict) -> bytes:
     return buf.getvalue()
 
 
+# ── Aspida MYGA Format PDF ──────────────────────────────────────────────────
+
+def _build_aspida_pdf(client_id: str, data: dict) -> bytes:
+    """Generate an Aspida SynergyChoice MYGA annual statement."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=letter,
+        topMargin=0.5 * inch, bottomMargin=0.5 * inch,
+        leftMargin=0.75 * inch, rightMargin=0.75 * inch,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "AspidaTitle", parent=styles["Title"],
+        fontSize=15, textColor=ASPIDA_NAVY, spaceAfter=2,
+    )
+    subtitle_style = ParagraphStyle(
+        "AspidaSubtitle", parent=styles["Normal"],
+        fontSize=11, textColor=ASPIDA_PINK, spaceAfter=2,
+    )
+    section_style = ParagraphStyle(
+        "AspidaSection", parent=styles["Heading2"],
+        fontSize=11, textColor=ASPIDA_NAVY, spaceBefore=12, spaceAfter=4,
+    )
+    fine_print = ParagraphStyle(
+        "AspidaFine", parent=styles["Normal"],
+        fontSize=7, textColor=colors.grey, leading=9,
+    )
+
+    tbl_style_base = [
+        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 8),
+        ("FONT", (0, 1), (-1, -1), "Helvetica", 8),
+        ("BACKGROUND", (0, 0), (-1, 0), ASPIDA_LIGHT_BG),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+        ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ]
+
+    elements: list = []
+
+    # Header
+    elements.append(Paragraph("ASPIDA LIFE INSURANCE COMPANY", title_style))
+    elements.append(Paragraph(
+        f"Annual Contract Statement &mdash; Year Ending December 31, {data['statement_year']}",
+        subtitle_style,
+    ))
+    elements.append(HRFlowable(width="100%", thickness=2, color=ASPIDA_PINK))
+    elements.append(Spacer(1, 8))
+
+    # Contract Details
+    elements.append(Paragraph("Contract Details", section_style))
+    joint_line = data.get("joint_owner") or "N/A"
+    detail_rows = [
+        ["Product:", data["product"]],
+        ["Plan Type:", data.get("plan_type", data["product"])],
+        ["Contract Number:", data["contract_number"]],
+        ["Owner:", data["name"]],
+        ["Joint Owner:", joint_line],
+        ["Annuitant:", data["name"]],
+        ["Death Benefit:", data.get("death_benefit_type", "Contract Value")],
+        ["Issue Date:", data["issue_date"]],
+        ["Guaranteed Interest Rate:", f"{data['guaranteed_rate']} until {data['guaranteed_until']}"],
+        ["Withdrawal Charge End Date:", data["withdrawal_charge_end"]],
+        ["1-Year Guaranteed Interest Rate:", data["one_year_rate"]],
+        ["Minimum Guaranteed Rate:", data["min_guaranteed_rate"]],
+        ["Email:", data.get("email", "")],
+    ]
+    detail_table = Table(detail_rows, colWidths=[2.5 * inch, 3.8 * inch])
+    detail_table.setStyle(TableStyle([
+        ("FONT", (0, 0), (0, -1), "Helvetica-Bold", 8),
+        ("FONT", (1, 0), (1, -1), "Helvetica", 8),
+        ("TEXTCOLOR", (0, 0), (-1, -1), ASPIDA_NAVY),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#dddddd")),
+    ]))
+    elements.append(detail_table)
+
+    # Contract Values Summary
+    elements.append(Paragraph("Contract Values Summary", section_style))
+    values_rows = [
+        ["", "Amount"],
+        ["Total Premium Payment", data["total_premium_payment"]],
+        [f"Beginning Contract Value (01/01/{data['statement_year']})", data["beginning_contract_value"]],
+        ["Total Withdrawals", data["total_withdrawals"]],
+        ["Interest Credited", data["interest_credited"]],
+        [f"Ending Contract Value (12/31/{data['statement_year']})", data["ending_contract_value"]],
+        ["Cash Surrender Value", data["cash_surrender_value"]],
+        ["Death Benefit Value", data["death_benefit_value"]],
+    ]
+    values_table = Table(values_rows, colWidths=[4.2 * inch, 2 * inch])
+    values_table.setStyle(TableStyle(tbl_style_base + [
+        ("FONT", (0, -3), (-1, -1), "Helvetica-Bold", 8),
+    ]))
+    elements.append(values_table)
+
+    # Financial Activity Detail
+    elements.append(Paragraph("Financial Activity Detail", section_style))
+    activity_header = ["Date", "Transaction", "Amount"]
+    activity_rows = [activity_header] + [list(row) for row in data.get("activity", [])]
+    activity_table = Table(activity_rows, colWidths=[1.5 * inch, 3 * inch, 1.8 * inch])
+    activity_table.setStyle(TableStyle(tbl_style_base))
+    elements.append(activity_table)
+
+    # Agent info
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph(
+        f"<b>Servicing Agent:</b> {data['agent_name']} ({data['agent_number']})",
+        ParagraphStyle("AgentInfo", parent=styles["Normal"], fontSize=9, textColor=ASPIDA_NAVY),
+    ))
+
+    # Footer
+    elements.append(Spacer(1, 16))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey))
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph(
+        "This statement is provided for informational purposes only and does not constitute "
+        "a contract or amendment to your existing contract. Please refer to your contract for "
+        "guaranteed values and benefits. Aspida Life Insurance Company is a subsidiary of "
+        "Global Atlantic Financial Group. Products and features may not be available in all states.",
+        fine_print,
+    ))
+    elements.append(Spacer(1, 3))
+    elements.append(Paragraph(
+        "Aspida Life Insurance Company &bull; Administrative Office: "
+        "200 Park Avenue, Suite 1700, New York, NY 10166 &bull; (844) 427-7432 &bull; "
+        "www.aspida.com",
+        fine_print,
+    ))
+
+    doc.build(elements)
+    return buf.getvalue()
+
+
+# ── Upload helpers ───────────────────────────────────────────────────────────
+
 def _ensure_bucket(s3_client) -> None:
     """Create the S3 bucket if it doesn't already exist."""
     try:
@@ -320,6 +534,24 @@ def _ensure_bucket(s3_client) -> None:
         print(f"Creating bucket '{BUCKET}'...")
         s3_client.create_bucket(Bucket=BUCKET)
         print(f"Bucket '{BUCKET}' created.")
+
+
+def _upload_real_pdfs(s3_client) -> None:
+    """Upload real carrier PDFs as additional reference statements if they exist."""
+    real_dir = os.path.join(os.path.dirname(__file__), "..", "data", "real-statements")
+    uploads = [
+        ("Sullivan_MYGA7_AnnualStatement_2027.pdf", "statements/102/2027-annual-statement.pdf"),
+        ("MNLDummyStatement.pdf", "statements/101/2025-annual-statement.pdf"),
+    ]
+    for filename, s3_key in uploads:
+        filepath = os.path.join(real_dir, filename)
+        if os.path.exists(filepath):
+            with open(filepath, "rb") as f:
+                pdf_bytes = f.read()
+            s3_client.put_object(Bucket=BUCKET, Key=s3_key, Body=pdf_bytes, ContentType="application/pdf")
+            print(f"Uploaded real PDF: {s3_key} ({len(pdf_bytes):,} bytes)")
+        else:
+            print(f"Skipping {filename} (not found at {filepath})")
 
 
 def main() -> None:
@@ -336,10 +568,17 @@ def main() -> None:
     _ensure_bucket(s3)
 
     for client_id, data in CLIENTS.items():
-        pdf_bytes = _build_pdf(client_id, data)
-        key = f"statements/{client_id}/2024-annual-statement.pdf"
+        if data["format"] == "aspida":
+            pdf_bytes = _build_aspida_pdf(client_id, data)
+        else:
+            pdf_bytes = _build_mnl_pdf(client_id, data)
+
+        key = f"statements/{client_id}/{data['s3_year']}-annual-statement.pdf"
         s3.put_object(Bucket=BUCKET, Key=key, Body=pdf_bytes, ContentType="application/pdf")
-        print(f"Uploaded {key} ({len(pdf_bytes):,} bytes)")
+        print(f"Uploaded {key} ({len(pdf_bytes):,} bytes) [{data['format'].upper()} format]")
+
+    # Upload real PDFs if available
+    _upload_real_pdfs(s3)
 
     print(f"\nDone! {len(CLIENTS)} statements uploaded to s3://{BUCKET}/statements/")
 
