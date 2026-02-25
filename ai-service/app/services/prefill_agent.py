@@ -9,6 +9,9 @@ from typing import Any
 
 from app.services.datasources.mock_redtail import MockRedtailCRM
 from app.services.datasources.mock_policy import MockPolicySystem
+from app.services.datasources.s3_statements import S3StatementStore
+from app.services.datasources.s3_advisor_prefs import S3AdvisorPrefsStore
+from app.services.datasources.s3_suitability import S3SuitabilityStore
 from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
@@ -53,6 +56,25 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "lookup_annual_statements",
+        "description": (
+            "Look up a client's most recent annual statement from the document store (S3). "
+            "Returns the PDF which contains contract values, interest rates, balances, and "
+            "beneficiary info. After receiving the document, analyze it and call extract_document_fields."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "description": "The client identifier (e.g. 'client_001').",
+                },
+            },
+            "required": ["client_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "extract_document_fields",
         "description": (
             "Extract application fields from an uploaded document (image or PDF). "
@@ -72,6 +94,54 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
                 },
             },
             "required": ["analysis", "extracted_fields"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_advisor_preferences",
+        "description": (
+            "Retrieve an advisor's preference profile including their investment philosophy, "
+            "preferred carriers, allocation strategy, and suitability thresholds. Use this to "
+            "understand how the advisor typically recommends products and allocations."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "advisor_id": {
+                    "type": "string",
+                    "description": "The advisor identifier (e.g. 'advisor_001').",
+                },
+            },
+            "required": ["advisor_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_carrier_suitability",
+        "description": (
+            "Evaluate a client's suitability for a specific carrier's product. Compares the "
+            "client's gathered data (age, income, net worth, risk tolerance, etc.) against the "
+            "carrier's suitability guidelines and returns a weighted score with detailed breakdown. "
+            "Valid carrier IDs: 'midland-national', 'aspida', 'equitrust'."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "carrier_id": {
+                    "type": "string",
+                    "description": "The carrier identifier: 'midland-national', 'aspida', or 'equitrust'.",
+                },
+                "client_data": {
+                    "type": "object",
+                    "description": (
+                        "Client data gathered so far. Include any available fields: age, annual_income, "
+                        "net_worth, risk_tolerance, investment_objective, time_horizon, source_of_funds, "
+                        "liquid_net_worth, premium_amount."
+                    ),
+                    "additionalProperties": {},
+                },
+            },
+            "required": ["carrier_id", "client_data"],
             "additionalProperties": False,
         },
     },
@@ -118,12 +188,23 @@ before the application begins. This saves the advisor time by pre-populating fie
 Available data sources:
 - CRM (Redtail): Client personal info — name, DOB, SSN, gender, contact, address
 - Prior Policies: Suitability data — income, net worth, risk tolerance, investment details
+- Annual Statements (S3 Document Store): Contract values, interest rates, balances, beneficiary info
+- Advisor Preferences: Advisor's investment philosophy, preferred carriers, allocation strategy
+- Carrier Suitability: Carrier-specific suitability guidelines with weighted scoring
 
 Workflow:
 1. If a client_id is provided, call lookup_crm_client to get their CRM profile
 2. Then call lookup_prior_policies to get their suitability/financial data
-3. If a document is attached, call extract_document_fields to pull data from it
-4. Once all sources are exhausted, call report_prefill_results with the combined data
+3. Then call lookup_annual_statements to retrieve the latest annual statement PDF
+4. If a PDF is returned, analyze it and call extract_document_fields with the extracted values
+5. If a document is attached by the user, also call extract_document_fields for it
+6. If an advisor_id is provided, call get_advisor_preferences to understand the advisor's approach
+7. Call get_carrier_suitability for the most relevant carrier(s) based on advisor preferences \
+and client profile. Pass gathered client data (age, annual_income, net_worth, risk_tolerance, \
+investment_objective, time_horizon, source_of_funds, liquid_net_worth) to get a suitability score.
+8. Once all sources are exhausted, call report_prefill_results with the combined data. \
+Include suitability_score, suitability_rating, advisor_name, advisor_philosophy, and \
+recommended_allocation_strategy in the known_data if available.
 
 Always gather from ALL available sources before reporting results. \
 Combine data from multiple sources — CRM fields and policy fields together. \
@@ -134,10 +215,13 @@ Never fabricate data. Only report what the sources actually return."""
 
 _crm = MockRedtailCRM()
 _policy = MockPolicySystem()
+_statements = S3StatementStore()
+_advisor_prefs = S3AdvisorPrefsStore()
+_suitability = S3SuitabilityStore()
 
 
-async def _execute_tool(name: str, input_data: dict[str, Any]) -> str:
-    """Execute a pre-fill tool and return the JSON result string."""
+async def _execute_tool(name: str, input_data: dict[str, Any]) -> str | list[dict[str, Any]]:
+    """Execute a pre-fill tool and return JSON string or list of content blocks."""
     if name == "lookup_crm_client":
         result = await _crm.query(input_data)
         if not result:
@@ -149,6 +233,45 @@ async def _execute_tool(name: str, input_data: dict[str, Any]) -> str:
         if not result:
             return json.dumps({"error": "No prior policy data found for this client."})
         return json.dumps(result)
+
+    elif name == "lookup_annual_statements":
+        result = _statements.fetch_latest_statement(input_data.get("client_id", ""))
+        if not result:
+            return json.dumps({"error": "No annual statements found for this client."})
+        return [
+            {
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": result["media_type"],
+                    "data": result["pdf_base64"],
+                },
+            },
+            {
+                "type": "text",
+                "text": (
+                    f"Found {result['filename']}. Analyze this annual statement and call "
+                    "extract_document_fields with all values you can identify (contract number, "
+                    "balances, interest rates, beneficiary info, etc.)."
+                ),
+            },
+        ]
+
+    elif name == "get_advisor_preferences":
+        advisor_id = input_data.get("advisor_id", "")
+        result = _advisor_prefs.fetch_advisor_profile(advisor_id)
+        if not result:
+            return json.dumps({"error": f"No advisor profile found for '{advisor_id}'."})
+        return json.dumps(result)
+
+    elif name == "get_carrier_suitability":
+        carrier_id = input_data.get("carrier_id", "")
+        client_data = input_data.get("client_data", {})
+        guidelines = _suitability.fetch_guidelines(carrier_id)
+        if not guidelines:
+            return json.dumps({"error": f"No suitability guidelines found for carrier '{carrier_id}'."})
+        evaluation = S3SuitabilityStore.evaluate_suitability(guidelines, client_data)
+        return json.dumps(evaluation)
 
     elif name == "extract_document_fields":
         # The LLM already did the extraction via vision — just echo it back
@@ -167,6 +290,7 @@ async def run_prefill_agent(
     client_id: str | None = None,
     document_base64: str | None = None,
     document_media_type: str | None = None,
+    advisor_id: str | None = None,
 ) -> dict[str, Any]:
     """Run the pre-fill agent to gather data from available sources.
 
@@ -180,6 +304,8 @@ async def run_prefill_agent(
     instruction_parts = ["Please gather all available pre-fill data."]
     if client_id:
         instruction_parts.append(f"Client ID: {client_id}")
+    if advisor_id:
+        instruction_parts.append(f"Advisor ID: {advisor_id}")
     if document_base64:
         instruction_parts.append("A document has been uploaded — please extract any relevant fields from it.")
         content_blocks.append({
@@ -195,7 +321,7 @@ async def run_prefill_agent(
 
     messages: list[dict[str, Any]] = [{"role": "user", "content": content_blocks}]
 
-    max_iterations = 5
+    max_iterations = 10
     for i in range(max_iterations):
         logger.info("Prefill agent iteration %d/%d", i + 1, max_iterations)
 
@@ -221,11 +347,16 @@ async def run_prefill_agent(
         terminal_result = None
 
         for call in tool_calls:
-            result_str = await _execute_tool(call["name"], call["input"])
+            result = await _execute_tool(call["name"], call["input"])
+            # Content can be a string (JSON) or a list of content blocks (e.g. document + text)
+            if isinstance(result, list):
+                content = result
+            else:
+                content = result
             tool_results.append({
                 "type": "tool_result",
                 "tool_use_id": call["id"],
-                "content": result_str,
+                "content": content,
             })
 
             if call["name"] == "report_prefill_results":
