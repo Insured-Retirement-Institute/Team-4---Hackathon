@@ -4,6 +4,7 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import AppBuilderPanel from './AppBuilder/AppBuilderPanel';
 
 function SettingsPage() {
   const [activeTab, setActiveTab] = useState(0);
@@ -17,21 +18,19 @@ function SettingsPage() {
           variant="scrollable"
           scrollButtons="auto"
         >
-          <Tab label="Carriers & Vendors" />
           <Tab label="App Builder" />
+          <Tab label="Carriers & Vendors" />
           <Tab label="AI Agent Guidelilnes" />
         </Tabs>
       </Box>
 
       <Box sx={{ pt: 2 }}>
         {activeTab === 0 && (
-          <Typography variant="body1" color="text.secondary">
-            Manage carrier and vendor configuration settings.
-          </Typography>
+          <AppBuilderPanel />
         )}
         {activeTab === 1 && (
           <Typography variant="body1" color="text.secondary">
-            Configure product and application-level settings.
+            Manage carrier and vendor configuration settings.
           </Typography>
         )}
         {activeTab === 2 && (
