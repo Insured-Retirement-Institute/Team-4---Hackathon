@@ -1,0 +1,365 @@
+openapi: 3.0.0
+info:
+  title: App Submission API
+  description: API for submitting applications and generating PDFs from saved submissions
+  version: 1.0.0
+  contact:
+    name: API Support
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://iz2b4jzga7.us-east-1.awsapprunner.com
+    description: Production server (placeholder)
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Check if the API is running and healthy
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /applications/submit:
+    post:
+      summary: Submit an application
+      description: Saves an application submission to local storage. Generates a unique submissionId and returns it along with a policy number. Creates two files - raw submission and metadata. Returns 409 if application already exists.
+      operationId: submitApplication
+      tags:
+        - Submissions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmissionRequest'
+      responses:
+        '200':
+          description: Submission saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionResponse'
+        '400':
+          description: Invalid submission format or missing applicationId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: An application with this applicationId already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to save submission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{submissionId}:
+    get:
+      summary: Retrieve a submission
+      description: Retrieves a previously saved application submission by submissionId, including both metadata and submission data
+      operationId: getSubmission
+      tags:
+        - Submissions
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          description: The submission ID to retrieve
+          schema:
+            type: string
+            format: uuid
+            example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Submission retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionRetrievalResponse'
+        '400':
+          description: Invalid request - missing or invalid submissionId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to retrieve submission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Delete a submission
+      description: Deletes a previously saved application submission by submissionId, removing both the submission data and metadata files
+      operationId: deleteSubmission
+      tags:
+        - Submissions
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          description: The submission ID to delete
+          schema:
+            type: string
+            format: uuid
+            example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Submission deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteSubmissionResponse'
+        '400':
+          description: Invalid request - missing or invalid submissionId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to delete submission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{submissionId}/pdf:
+    get:
+      summary: Generate a PDF from a saved application submission
+      description: Loads the application submission data, fills a PDF template with the data, and returns the populated PDF
+      operationId: generatePdf
+      tags:
+        - PDF Generation
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          description: The submission ID to load and convert to PDF
+          schema:
+            type: string
+            example: sub_02k8jy3n5p9r4s8t2u1v
+      responses:
+        '200':
+          description: PDF generated successfully
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid request - missing or invalid submissionId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Submission file, PDF template, or mapping file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to generate PDF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      description: Health check response
+      properties:
+        status:
+          type: string
+          description: Status of the API
+          example: ok
+        message:
+          type: string
+          description: Information message
+          example: Carrier API is running
+      required:
+        - status
+        - message
+
+    SubmissionRequest:
+      type: object
+      description: Application submission request payload
+      required:
+        - envelope
+      properties:
+        envelope:
+          type: object
+          description: Submission envelope containing metadata and configuration
+          required:
+            - applicationId
+          properties:
+            applicationId:
+              type: string
+              description: Unique application identifier
+              example: app_02k8jy3n5p9r4s8t2u1v
+            applicationDefinitionId:
+              type: string
+              description: ID that maps to the PDF template and field mapping
+              example: midland-national-fixed-annuity-v1
+          additionalProperties: true
+        applicantData:
+          type: object
+          description: Form field data for the application
+          additionalProperties: true
+          example:
+            firstName: John
+            lastName: Doe
+            email: john.doe@example.com
+            dateOfBirth: '1970-01-01'
+
+    SubmissionResponse:
+      type: object
+      description: Successful submission response
+      properties:
+        submissionId:
+          type: string
+          description: Generated unique submission identifier (GUID)
+          example: 550e8400-e29b-41d4-a716-446655440000
+          format: uuid
+        applicationId:
+          type: string
+          description: The application identifier from the request
+          example: app_02k8jy3n5p9r4s8t2u1v
+        policyNumber:
+          type: string
+          description: Generated GUID for policy
+          example: 550e8400-e29b-41d4-a716-446655440001
+          format: uuid
+        received:
+          type: string
+          description: ISO 8601 timestamp when submission was received
+          format: date-time
+          example: '2025-02-25T14:30:00.000Z'
+      required:
+        - submissionId
+        - applicationId
+        - policyNumber
+        - received
+
+    SubmissionRetrievalResponse:
+      type: object
+      description: Submission retrieval response containing submission metadata and complete submission data
+      properties:
+        submission:
+          type: object
+          description: Submission metadata including IDs and timestamps
+          properties:
+            submissionId:
+              type: string
+              description: Unique submission identifier
+              format: uuid
+            applicationId:
+              type: string
+              description: Application identifier
+            policyNumber:
+              type: string
+              description: Generated policy number GUID
+              format: uuid
+            received:
+              type: string
+              description: ISO 8601 timestamp when submission was received
+              format: date-time
+          required:
+            - submissionId
+            - applicationId
+            - policyNumber
+            - received
+        data:
+          type: object
+          description: Complete submission data including envelope and applicant data
+          properties:
+            envelope:
+              type: object
+              description: Submission envelope
+              additionalProperties: true
+            applicantData:
+              type: object
+              description: Applicant form data
+              additionalProperties: true
+          additionalProperties: true
+      required:
+        - submission
+        - data
+
+    DeleteSubmissionResponse:
+      type: object
+      description: Successful deletion response
+      properties:
+        message:
+          type: string
+          description: Success message
+          example: Submission deleted successfully
+        submissionId:
+          type: string
+          description: The submission ID that was deleted
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      required:
+        - message
+        - submissionId
+
+    ErrorResponse:
+      type: object
+      description: Error response
+      properties:
+        error:
+          type: string
+          description: Error type/category
+          example: Invalid submission format
+        details:
+          type: string
+          description: Detailed error message
+          example: Missing envelope.submissionId
+        expectedPath:
+          type: string
+          description: Expected file path (for file-related errors)
+        availableMappings:
+          type: array
+          items:
+            type: string
+          description: List of available mapping files (when mapping not found)
+      required:
+        - error
+
+tags:
+  - name: Health
+    description: API health and status
+  - name: Submissions
+    description: Application submission endpoints
+  - name: PDF Generation
+    description: PDF generation from saved submissions

@@ -4,67 +4,20 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const router = express.Router();
 
-/**
- * @swagger
- * /submit:
- *   post:
- *     summary: Submit an application
- *     description: Saves an application submission to local storage. Creates two files - raw submission and metadata. Returns 409 if submission already exists.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - envelope
- *             properties:
- *               envelope:
- *                 type: object
- *                 required:
- *                   - submissionId
- *                 properties:
- *                   submissionId:
- *                     type: string
- *                     description: Unique submission identifier
- *                     example: sub_02k8jy3n5p9r4s8t2u1v
- *     responses:
- *       200:
- *         description: Submission saved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 submissionId:
- *                   type: string
- *                 policyNumber:
- *                   type: string
- *                   description: Generated GUID for policy
- *                 received:
- *                   type: string
- *                   format: date-time
- *                   description: ISO timestamp when submission was received
- *       400:
- *         description: Invalid submission format or missing submissionId
- *       409:
- *         description: A submission with this submissionId already exists
- *       500:
- *         description: Failed to save submission
- */
-router.post('/submit', (req, res) => {
+router.post('/applications/submit', (req, res) => {
   try {
     const submission = req.body;
 
-    // Validate that submissionId exists in the envelope
-    if (!submission || !submission.envelope || !submission.envelope.submissionId) {
+    // Validate that applicationId exists in the envelope
+    if (!submission || !submission.envelope || !submission.envelope.applicationId) {
       return res.status(400).json({
         error: 'Invalid submission format',
-        details: 'Missing envelope.submissionId'
+        details: 'Missing envelope.applicationId'
       });
     }
 
-    const submissionId = submission.envelope.submissionId;
+    const applicationId = submission.envelope.applicationId;
+    const submissionId = randomUUID();
     const policyNumber = randomUUID();
     const receivedTimestamp = new Date().toISOString();
     const appsDir = path.join(__dirname, '..', 'apps');
@@ -88,17 +41,19 @@ router.post('/submit', (req, res) => {
 
     // Create metadata object
     const metadata = {
-      policyNumber: policyNumber,
       submissionId: submissionId,
+      applicationId: applicationId,
+      policyNumber: policyNumber,
       received: receivedTimestamp
     };
 
-    // Save the metadata to a file named with the policyNumber GUID
+    // Save the metadata to a file named with the submissionId
     const metadataFilePath = path.join(appsDir, `${submissionId}_POLICY.json`);
     fs.writeFileSync(metadataFilePath, JSON.stringify(metadata, null, 2), 'utf-8');
 
     res.json({
       submissionId: submissionId,
+      applicationId: applicationId,
       policyNumber: policyNumber,
       received: receivedTimestamp,
     });
