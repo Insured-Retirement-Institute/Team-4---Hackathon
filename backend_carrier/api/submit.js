@@ -1,10 +1,9 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const { randomUUID } = require('crypto');
+const { saveSubmission } = require('../lib/carrierSubmissionsDb.js');
 const router = express.Router();
 
-router.post('/applications/submit', (req, res) => {
+router.post('/applications/submit', async (req, res) => {
   try {
     const submission = req.body;
 
@@ -20,36 +19,27 @@ router.post('/applications/submit', (req, res) => {
     const submissionId = randomUUID();
     const policyNumber = randomUUID();
     const receivedTimestamp = new Date().toISOString();
-    const appsDir = path.join(__dirname, '..', 'apps');
-    
-    // Create /apps directory if it doesn't exist
-    if (!fs.existsSync(appsDir)) {
-      fs.mkdirSync(appsDir, { recursive: true });
-    }
 
-    // Check if a submission with this submissionId already exists
-    const submissionFilePath = path.join(appsDir, `${submissionId}_SUB.json`);
-    if (fs.existsSync(submissionFilePath)) {
-      return res.status(409).json({
-        error: 'Conflict',
-        details: `A submission with submissionId "${submissionId}" already exists`
+    // Save to DynamoDB
+    try {
+      // Create the DynamoDB item with metadata and submission data
+      const ddbItem = {
+        submissionId: submissionId,
+        applicationId: applicationId,
+        policyNumber: policyNumber,
+        received: receivedTimestamp,
+        submission: submission,
+        createdAt: new Date().getTime()
+      };
+      
+      await saveSubmission(ddbItem);
+    } catch (ddbError) {
+      console.error('Error saving submission to DynamoDB:', ddbError);
+      return res.status(500).json({
+        error: 'Failed to save submission',
+        details: ddbError.message
       });
     }
-
-    // Save the raw submission to a file
-    fs.writeFileSync(submissionFilePath, JSON.stringify(submission, null, 2), 'utf-8');
-
-    // Create metadata object
-    const metadata = {
-      submissionId: submissionId,
-      applicationId: applicationId,
-      policyNumber: policyNumber,
-      received: receivedTimestamp
-    };
-
-    // Save the metadata to a file named with the submissionId
-    const metadataFilePath = path.join(appsDir, `${submissionId}_POLICY.json`);
-    fs.writeFileSync(metadataFilePath, JSON.stringify(metadata, null, 2), 'utf-8');
 
     res.json({
       submissionId: submissionId,

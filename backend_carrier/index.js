@@ -41,21 +41,23 @@ app.use((req, res) => {
     error: 'Not found',
     availableEndpoints: [
       'GET /health',
-      'POST /submit (save application submission)',
-      'GET /submit/:submissionId (retrieve saved submission)',
-      'POST /generate-pdf/:submissionId (generate PDF from saved submission)',
+      'POST /applications/submit (save application submission)',
+      'GET /applications/:submissionId (retrieve saved submission)',
+      'DELETE /applications/:submissionId (delete saved submission)',
+      'GET /applications/:submissionId/pdf (PDF from saved submission)',
       'GET /api-docs (Swagger UI documentation)'
     ]
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`App Submission API listening on port ${PORT}`);
+  console.log(`Carrier API listening on port ${PORT}`);
   console.log(`\nAvailable endpoints:`);
   console.log(`  GET  /health`);
-  console.log(`  POST /submit`);
-  console.log(`  GET  /submit/:submissionId`);
-  console.log(`  POST /generate-pdf/:submissionId`);
+  console.log(`  POST /applications/submit`);
+  console.log(`  GET  /applications/:submissionId`);
+  console.log(`  DELETE  /applications/:submissionId`);
+  console.log(`  GET /applications/:submissionId/pdf`);
   console.log(`\nAPI Documentation:`);
   console.log(`  GET  /api-docs (Swagger UI)`);
 });
