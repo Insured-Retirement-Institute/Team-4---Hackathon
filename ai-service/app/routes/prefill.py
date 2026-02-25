@@ -48,7 +48,7 @@ async def list_clients():
 @router.post("/prefill", response_model=PrefillResponse)
 async def run_prefill(req: PrefillRequest):
     """Run the pre-fill agent for a selected CRM client."""
-    advisor_id = req.advisor_id or "advisor_001"
+    advisor_id = req.advisor_id or "advisor_002"
     logger.info("Prefill requested for client_id=%s, advisor_id=%s", req.client_id, advisor_id)
     result = await run_prefill_agent(client_id=req.client_id, advisor_id=advisor_id)
     return PrefillResponse(**result)
@@ -57,7 +57,7 @@ async def run_prefill(req: PrefillRequest):
 @router.post("/prefill/stream")
 async def run_prefill_stream(req: PrefillRequest):
     """Run the pre-fill agent with real-time SSE streaming of tool calls."""
-    advisor_id = req.advisor_id or "advisor_001"
+    advisor_id = req.advisor_id or "advisor_002"
     logger.info("Prefill stream requested for client_id=%s, advisor_id=%s", req.client_id, advisor_id)
 
     async def event_generator():

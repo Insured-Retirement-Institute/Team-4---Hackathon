@@ -245,29 +245,40 @@ class RedtailCRM(DataSource):
             logger.error("Redtail: failed to fetch family for %d: %s", contact_id, exc)
             return []
 
-        # Redtail family response is typically {"family_members": [...]} or similar
-        members_raw = data.get("family_members", data.get("family", []))
+        # Redtail API returns: {"contact_family": {"members": [...]}}
+        family = data.get("contact_family", {})
+        members_raw = family.get("members", [])
         if not members_raw:
             return []
 
         members: list[dict[str, Any]] = []
         for m in members_raw:
+            # Skip the contact themselves (they appear in their own family list)
+            member_cid = m.get("contact_id")
+            if member_cid == contact_id:
+                continue
+
+            rel_name = m.get("relationship_name")
+            # If HOH member has no explicit relationship, infer "spouse" (HOH is typically the spouse)
+            if not rel_name and m.get("hoh"):
+                rel_name = "Spouse"
+            rel_name = rel_name or "Other"
+
             member: dict[str, Any] = {
-                "relationship": m.get("relationship", m.get("type", "unknown")).lower(),
+                "relationship": rel_name.lower(),
                 "first_name": m.get("first_name", ""),
                 "last_name": m.get("last_name", ""),
             }
 
-            # If the family member has their own contact_id, fetch their full record
-            member_contact_id = m.get("contact_id") or m.get("related_contact_id")
-            if member_contact_id:
+            # Fetch full contact record for this family member
+            if member_cid:
                 try:
-                    member_contact_id = int(member_contact_id)
+                    member_cid = int(member_cid)
                     contact_data, addr_data, phone_data, email_data = await asyncio.gather(
-                        self.client.get_contact(member_contact_id),
-                        self.client.get_addresses(member_contact_id),
-                        self.client.get_phones(member_contact_id),
-                        self.client.get_emails(member_contact_id),
+                        self.client.get_contact(member_cid),
+                        self.client.get_addresses(member_cid),
+                        self.client.get_phones(member_cid),
+                        self.client.get_emails(member_cid),
                         return_exceptions=True,
                     )
 
