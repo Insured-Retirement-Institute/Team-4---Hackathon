@@ -99,6 +99,28 @@ async function updateApplicationCarrierData(id, carrierData) {
   return result.Attributes;
 }
 
+async function updateApplicationSuitabilityDecision(id, suitabilityDecision) {
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { id },
+      UpdateExpression:
+        'SET #suitabilityDecision = :suitabilityDecision, #updatedAt = :updatedAt',
+      ExpressionAttributeNames: {
+        '#suitabilityDecision': 'suitabilityDecision',
+        '#updatedAt': 'updatedAt',
+      },
+      ExpressionAttributeValues: {
+        ':suitabilityDecision': suitabilityDecision,
+        ':updatedAt': new Date().toISOString(),
+      },
+      ConditionExpression: 'attribute_exists(id)',
+      ReturnValues: 'ALL_NEW',
+    })
+  );
+  return result.Attributes;
+}
+
 async function getAllApplications() {
   const result = await docClient.send(new ScanCommand({ TableName: TABLE_NAME }));
   return result.Items || [];
@@ -111,4 +133,5 @@ module.exports = {
   updateApplicationAnswers,
   updateApplicationStatus,
   updateApplicationCarrierData,
+  updateApplicationSuitabilityDecision,
 };

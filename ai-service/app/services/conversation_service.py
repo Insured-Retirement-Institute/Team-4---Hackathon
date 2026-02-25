@@ -1,6 +1,7 @@
 """Main orchestrator: session management, turn handling, and phase transitions."""
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -18,6 +19,8 @@ from app.prompts.system_prompt import build_system_prompt
 from app.services.eapp_client import submit_to_eapp
 from app.services.extraction_service import build_tools_for_phase
 from app.services.llm_service import LLMService
+from app.services.prefill_agent import _execute_tool as execute_prefill_tool
+from app.services.retell_service import retell_service
 from app.services.validation_service import validate_field
 
 logger = logging.getLogger(__name__)
@@ -35,6 +38,8 @@ def create_session(
     known_data: dict[str, Any] | None = None,
     callback_url: str | None = None,
     model: str | None = None,
+    advisor_name: str | None = None,
+    client_context: dict[str, Any] | None = None,
 ) -> tuple[ConversationState, str]:
     """Create a new conversation session.
 
@@ -43,6 +48,7 @@ def create_session(
         known_data: Pre-populated field values (unconfirmed).
         callback_url: URL to POST final data to on submit.
         model: Optional LLM model override.
+        advisor_name: Name of the advisor (used in greeting).
 
     Returns (state, greeting_message).
     """
@@ -87,11 +93,13 @@ def create_session(
         steps=steps,
         callback_url=callback_url,
         model_override=model,
+        advisor_name=advisor_name,
+        client_context=client_context,
     )
 
     # Generate greeting
     llm = LLMService(model=model)
-    greeting = _generate_greeting(llm, state)
+    greeting = _generate_greeting(llm, state, advisor_name=advisor_name)
 
     state.messages.append(Message(role=Role.ASSISTANT, content=greeting))
     _sessions[session_id] = state
@@ -102,8 +110,8 @@ def create_session(
 async def handle_message(
     session_id: str,
     user_message: str,
-) -> tuple[str, list[dict[str, Any]]]:
-    """Process a user message and return (reply, updated_fields).
+) -> tuple[str, list[dict[str, Any]], list[dict[str, str]]]:
+    """Process a user message and return (reply, updated_fields, tool_calls_info).
 
     Orchestrates: prompt build -> tool generation -> LLM call -> tool handling ->
     validation -> phase transition -> return reply.
@@ -123,33 +131,88 @@ async def handle_message(
     tools = build_tools_for_phase(state)
     llm_messages = _build_llm_messages(state)
 
-    response = llm.chat(system_prompt, llm_messages, tools=tools or None)
+    # Advisor-mode: don't force tools, let LLM decide
+    force_tool = not bool(state.advisor_name)
+    response = llm.chat(system_prompt, llm_messages, tools=tools or None, force_tool=force_tool if tools else False)
 
     # Process tool calls
     updated_fields: list[dict[str, Any]] = []
     tool_calls = llm.extract_tool_calls(response)
 
     if tool_calls:
-        tool_results = process_tool_calls(tool_calls, state)
-        updated_fields = tool_results.get("updated_fields", [])
+        # Separate advisor tools from field extraction/confirmation tools
+        ADVISOR_TOOL_NAMES = {
+            "lookup_crm_client", "lookup_family_members", "lookup_crm_notes",
+            "lookup_prior_policies", "lookup_annual_statements", "extract_document_fields",
+            "get_advisor_preferences", "get_carrier_suitability", "call_client",
+        }
+
+        advisor_tool_calls = [tc for tc in tool_calls if tc["name"] in ADVISOR_TOOL_NAMES]
+        field_tool_calls = [tc for tc in tool_calls if tc["name"] not in ADVISOR_TOOL_NAMES]
+
+        # Process field extraction/confirmation tools
+        tool_results: dict[str, Any] = {}
+        if field_tool_calls:
+            field_results = process_tool_calls(field_tool_calls, state)
+            updated_fields = field_results.get("updated_fields", [])
+            tool_results.update(field_results)
+
+        # Process advisor tools (async)
+        for tc in advisor_tool_calls:
+            try:
+                if tc["name"] == "call_client":
+                    # Initiate Retell call
+                    call_input = tc.get("input", {})
+                    missing = [{"id": f, "label": f} for f in call_input.get("missing_fields", [])]
+                    call_result = await retell_service.create_outbound_call(
+                        to_number=call_input.get("phone_number", ""),
+                        missing_fields=missing,
+                        client_name=call_input.get("client_name", ""),
+                        advisor_name=state.advisor_name or "",
+                    )
+                    tool_results[tc["id"]] = json.dumps({
+                        "status": "call_initiated",
+                        "call_id": call_result.get("call_id", ""),
+                        "message": f"Call initiated to {call_input.get('client_name', 'client')}. "
+                                   "The AI agent will collect the missing information.",
+                    })
+                else:
+                    result = await execute_prefill_tool(tc["name"], tc.get("input", {}))
+                    tool_results[tc["id"]] = result if isinstance(result, str) else json.dumps(result)
+            except Exception as e:
+                logger.exception("Advisor tool %s failed", tc["name"])
+                tool_results[tc["id"]] = json.dumps({"error": str(e)})
 
         # Follow-up LLM call with tool results for natural language response
         follow_up_messages = llm_messages.copy()
         follow_up_messages.append({"role": "assistant", "content": response.content})
+
+        # Combine all tool results into one user message
+        tool_result_blocks = []
         for tc in tool_calls:
-            follow_up_messages.append({
-                "role": "user",
-                "content": [{
+            result_content = tool_results.get(tc["id"], "OK")
+            if isinstance(result_content, list):
+                # Document content blocks (images/PDFs)
+                tool_result_blocks.append({
                     "type": "tool_result",
                     "tool_use_id": tc["id"],
-                    "content": str(tool_results.get(tc["id"], "OK")),
-                }],
-            })
+                    "content": result_content,
+                })
+            else:
+                tool_result_blocks.append({
+                    "type": "tool_result",
+                    "tool_use_id": tc["id"],
+                    "content": str(result_content),
+                })
+        follow_up_messages.append({"role": "user", "content": tool_result_blocks})
 
         follow_up = llm.chat(system_prompt, follow_up_messages, tools=tools or None, force_tool=False)
         reply_text = llm.extract_text(follow_up)
     else:
         reply_text = llm.extract_text(response)
+
+    # Build tool call info for frontend
+    tool_calls_info = [{"name": tc["name"]} for tc in tool_calls] if tool_calls else []
 
     # Phase transitions
     maybe_advance_phase(state)
@@ -160,7 +223,7 @@ async def handle_message(
         extracted_fields={uf["field_id"]: uf.get("value") for uf in updated_fields} or None,
     ))
 
-    return reply_text, updated_fields
+    return reply_text, updated_fields, tool_calls_info
 
 
 async def submit_session(session_id: str) -> dict[str, Any]:
@@ -205,30 +268,34 @@ async def submit_session(session_id: str) -> dict[str, Any]:
     }
 
 
-def _generate_greeting(llm: LLMService, state: ConversationState) -> str:
+def _generate_greeting(llm: LLMService, state: ConversationState, advisor_name: str | None = None) -> str:
     """Generate an initial greeting message."""
-    system_prompt = build_system_prompt(state)
 
     if state.phase == SessionPhase.SPOT_CHECK:
+        system_prompt = build_system_prompt(state)
         unconfirmed = state.unconfirmed_fields()
         field_summary = ", ".join(f"{f.label}: {f.value}" for f in unconfirmed[:5])
         more = f" (and {len(unconfirmed) - 5} more)" if len(unconfirmed) > 5 else ""
+        name_part = f" Address the advisor as {advisor_name}." if advisor_name else ""
         instruction = (
-            "Generate a friendly greeting. We have some information on file already. "
+            f"Generate a friendly greeting.{name_part} We have some information on file already. "
             f"Summarize this known data naturally: {field_summary}{more}. "
             "Ask if it all looks correct."
         )
-    else:
-        missing = state.missing_required()
-        instruction = (
-            "Generate a friendly greeting. We need to collect information for an application. "
-            f"There are {len(missing)} fields to fill out. "
-            "Start by asking about the first few fields."
-        )
+        messages = [{"role": "user", "content": instruction}]
+        response = llm.chat(system_prompt, messages)
+        return llm.extract_text(response)
 
-    messages = [{"role": "user", "content": instruction}]
-    response = llm.chat(system_prompt, messages)
-    return llm.extract_text(response)
+    # For COLLECTING phase, return a greeting
+    name = advisor_name or "there"
+    if state.client_context:
+        client_name = state.client_context.get("display_name", "your client")
+        return (
+            f"Hi {name}! I see you've selected {client_name}. "
+            f"I'll pull up their information right away. Just say the word and "
+            f"I'll search the CRM, review their documents, and check their policies."
+        )
+    return f"Hi {name}! What client would you like to work on today?"
 
 
 def _build_llm_messages(state: ConversationState) -> list[dict[str, Any]]:

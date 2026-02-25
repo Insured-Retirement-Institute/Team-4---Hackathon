@@ -10,6 +10,7 @@ from app.models.api_contracts import (
     FieldSummaryResponse,
     MessageResponse,
     SendMessageRequest,
+    ToolCallInfo,
 )
 from app.services.conversation_service import get_session, handle_message
 
@@ -25,7 +26,7 @@ async def send_message(session_id: str, req: SendMessageRequest):
         raise HTTPException(status_code=404, detail="Session not found")
 
     try:
-        reply, updated_fields = await handle_message(session_id, req.message)
+        reply, updated_fields, tool_calls_info = await handle_message(session_id, req.message)
     except Exception as e:
         logger.exception("Error handling message")
         raise HTTPException(status_code=500, detail=str(e))
@@ -53,4 +54,5 @@ async def send_message(session_id: str, req: SendMessageRequest):
             collected=summary.get("collected", 0),
         ),
         complete=state.phase in ("complete", "submitted"),
+        tool_calls=[ToolCallInfo(name=tc["name"]) for tc in tool_calls_info],
     )

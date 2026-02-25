@@ -30,6 +30,8 @@ class CreateSessionRequest(BaseModel):
     known_data: dict[str, Any] = Field(default_factory=dict)
     callback_url: str | None = None
     model: str | None = None
+    advisor_name: str | None = None
+    client_context: dict[str, Any] | None = None  # {client_id, display_name}
 
 
 class SendMessageRequest(BaseModel):
@@ -60,12 +62,18 @@ class SessionResponse(BaseModel):
     fields: list[FieldResponse] = Field(default_factory=list)
 
 
+class ToolCallInfo(BaseModel):
+    name: str
+    result_summary: str | None = None
+
+
 class MessageResponse(BaseModel):
     reply: str
     phase: str
     updated_fields: list[FieldResponse] = Field(default_factory=list)
     field_summary: FieldSummaryResponse
     complete: bool = False
+    tool_calls: list[ToolCallInfo] = Field(default_factory=list)
 
 
 class SubmitResponse(BaseModel):

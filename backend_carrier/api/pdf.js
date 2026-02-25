@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { populatePDFWithMapping } = require('../lib/pdfHelper');
+const { getSubmission } = require('../lib/carrierSubmissionsDb.js');
 const router = express.Router();
 
 router.get('/applications/:submissionId/pdf', async (req, res) => {
@@ -16,31 +17,20 @@ router.get('/applications/:submissionId/pdf', async (req, res) => {
       });
     }
 
-    // Load the submission data from /apps folder
-    const appsDir = path.join(__dirname, '..', 'apps');
-    const submissionFilePath = path.join(appsDir, `${submissionId}_SUB.json`);
+    // Load the submission data from DynamoDB
+    const ddbItem = await getSubmission(submissionId);
 
-    if (!fs.existsSync(submissionFilePath)) {
+    if (!ddbItem) {
       return res.status(404).json({
         error: 'Submission not found',
-        details: `No submission found with submissionId: ${submissionId}`,
-        expectedPath: submissionFilePath
+        details: `No submission found with submissionId: ${submissionId}`
       });
     }
 
-    const submissionFile = fs.readFileSync(submissionFilePath, 'utf-8');
-    const submission = JSON.parse(submissionFile);
+    const submission = ddbItem.submission;
 
-    // Extract applicationDefinitionId from the submission envelope
-    if (!submission || !submission.envelope || !submission.envelope.applicationDefinitionId) {
-      return res.status(400).json({
-        error: 'Invalid submission data',
-        details: 'Submission does not contain envelope.applicationDefinitionId'
-      });
-    }
-
-    //const applicationDefinitionId = submission.envelope.applicationDefinitionId;
-    let applicationDefinitionId = "midland-national-fixed-annuity-v1"; // TODO: hardcoded for testing
+    // We only have one form pdf mapped, so just hard code for now (this would normally come from the submission)
+    const applicationDefinitionId = "midland-national-fixed-annuity-v1";
 
     // Build path to PDF template in /forms folder
     const formsDir = path.join(__dirname, '..', 'forms');
@@ -91,17 +81,6 @@ router.get('/applications/:submissionId/pdf', async (req, res) => {
 
     // Populate the PDF using the mapping file
     const populatedPdfBuffer = await populatePDFWithMapping(pdfBuffer, submission, mapping);
-
-    // Save the PDF to /pdfs folder
-    const pdfsDir = path.join(__dirname, '..', 'pdfs');
-    if (!fs.existsSync(pdfsDir)) {
-      fs.mkdirSync(pdfsDir, { recursive: true });
-    }
-    const pdfFilePath = path.join(pdfsDir, `${submissionId}.pdf`);
-    fs.writeFileSync(pdfFilePath, populatedPdfBuffer);
-
-    // Convert to base64
-    const pdfBase64 = populatedPdfBuffer.toString('base64');
 
     res.contentType('application/pdf');
     res.send(populatedPdfBuffer);

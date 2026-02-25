@@ -35,7 +35,7 @@ function ApprovedDistributorsPanel({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+      <Typography variant="h4" sx={{ fontWeight: 700, color: '#1f1f1f' }}>
         Approved Distributors
       </Typography>
       <Typography variant="body2" color="text.secondary">
@@ -60,24 +60,25 @@ function ApprovedDistributorsPanel({
                   variant="outlined"
                   sx={{
                     borderWidth: 2,
-                    borderColor: selected ? 'primary.main' : 'divider',
-                    bgcolor: selected ? 'rgba(58,157,247,0.08)' : '#fff',
+                    borderColor: selected ? '#3a9df7' : 'divider',
+                    bgcolor: selected ? 'rgba(58,157,247,0.12)' : '#fff',
+                    boxShadow: selected ? '0 0 0 1px #3a9df7 inset' : 'none',
                   }}
                 >
                   <CardActionArea onClick={() => onToggleDistributor(distributor.distributorId)}>
                     <CardContent sx={{ py: 1.5 }}>
                       <Stack spacing={0.5}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Typography variant="caption" color={selected ? 'primary.main' : 'text.secondary'}>
+                          <Typography variant="caption" color={selected ? '#3a9df7' : 'text.secondary'}>
                             Distributor
                           </Typography>
-                          {selected ? <CheckCircleIcon sx={{ fontSize: 16, color: 'primary.main' }} /> : null}
+                          {selected ? <CheckCircleIcon sx={{ fontSize: 16, color: '#3a9df7' }} /> : null}
                         </Stack>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: selected ? 'primary.main' : 'text.primary' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: selected ? '#3a9df7' : 'text.primary' }}>
                           {distributor.name}
                         </Typography>
                         <Box>
-                          <Typography variant="caption" color={selected ? 'primary.main' : 'text.secondary'}>
+                          <Typography variant="caption" color={selected ? '#3a9df7' : 'text.secondary'}>
                             {distributor.distributorId}
                           </Typography>
                         </Box>

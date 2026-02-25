@@ -21,13 +21,16 @@ function yesNoToBool(val) {
 
 function buildAddress(source, prefix) {
   return {
-    street1: source[`${prefix}_street_address`] || '',
-    street2: source[`${prefix}_address_2`] || null,
-    city: source[`${prefix}_city`] || '',
-    state: source[`${prefix}_state`] || '',
-    zip: source[`${prefix}_zip`] || '',
+    street1: source[`${prefix}_street_address`] || source[`${prefix}ResidentialAddress`] || '',
+    street2: source[`${prefix}_address_2`] || source[`${prefix}MailingAddress`] || null,
+    city: source[`${prefix}_city`] || source[`${prefix}City`] || '',
+    state: source[`${prefix}_state`] || source[`${prefix}State`] || '',
+    zip: source[`${prefix}_zip`] || source[`${prefix}Zip`] || '',
   };
 }
+
+// Capitalize first letter helper for camelCase field lookups
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 function buildSignatureRecord(signatureValue) {
   if (!signatureValue) return null;
@@ -49,17 +52,23 @@ function buildSignatureRecord(signatureValue) {
 }
 
 function buildPersonParty(source, prefix) {
+  // camelCase prefix: "annuitant" → "annuitantFirstName"; snake_case: "annuitant" → "annuitant_first_name"
+  const cc = prefix.replace(/_([a-z])/g, (_, c) => c.toUpperCase()); // snake to camelCase base
   return {
-    firstName: source[`${prefix}_first_name`] || '',
-    middleName: source[`${prefix}_middle_initial`] || null,
-    lastName: source[`${prefix}_last_name`] || '',
-    dateOfBirth: source[`${prefix}_dob`] || '',
-    gender: source[`${prefix}_gender`] || '',
-    taxId: encryptSSN(source[`${prefix}_ssn`]),
+    firstName: source[`${prefix}_first_name`] || source[`${cc}FirstName`] || '',
+    middleName: source[`${prefix}_middle_initial`] || source[`${cc}MiddleName`] || null,
+    lastName: source[`${prefix}_last_name`] || source[`${cc}LastName`] || '',
+    dateOfBirth: source[`${prefix}_dob`] || source[`${cc}Dob`] || '',
+    gender: source[`${prefix}_gender`] || source[`${cc}Gender`] || '',
+    taxId: encryptSSN(source[`${prefix}_ssn`] || source[`${cc}TaxId`]),
     address: buildAddress(source, prefix),
-    phone: source[`${prefix}_phone`] || '',
-    email: source[`${prefix}_email`] || null,
-    isUsCitizen: yesNoToBool(source[`${prefix}_us_citizen`]) === true,
+    phone: source[`${prefix}_phone`] || source[`${cc}Phone`] || source[`${cc}HomePhone`] || '',
+    email: source[`${prefix}_email`] || source[`${cc}Email`] || null,
+    isUsCitizen: source[`${prefix}_us_citizen`] !== undefined
+      ? yesNoToBool(source[`${prefix}_us_citizen`]) === true
+      : source[`${cc}NonResidentAlien`] !== undefined
+        ? yesNoToBool(source[`${cc}NonResidentAlien`]) !== true
+        : false,
   };
 }
 
@@ -97,25 +106,41 @@ function buildAnnuitant(answers) {
 }
 
 function buildJointAnnuitant(answers) {
-  if (yesNoToBool(answers.has_joint_annuitant) !== true) return null;
+  if (yesNoToBool(answers.has_joint_annuitant ?? answers.hasJointAnnuitant) !== true) return null;
 
   const party = buildPersonParty(answers, 'joint_annuitant');
 
   // If address is same as annuitant, copy it
   if (yesNoToBool(answers.joint_annuitant_address_same) === true) {
     party.address = buildAddress(answers, 'annuitant');
-    if (!party.phone) party.phone = answers.annuitant_phone || '';
+    if (!party.phone) party.phone = answers.annuitant_phone || answers.annuitantPhone || '';
   }
 
   return party;
 }
 
 function buildOwner(answers) {
-  if (yesNoToBool(answers.owner_same_as_annuitant) === true) {
+  // Midland snake_case: owner_same_as_annuitant
+  // EquiTrust camelCase: isOwnerSameAsAnnuitant
+  if (
+    yesNoToBool(answers.owner_same_as_annuitant) === true ||
+    yesNoToBool(answers.isOwnerSameAsAnnuitant) === true
+  ) {
     return { isSameAsAnnuitant: true };
   }
 
-  const ownerType = answers.owner_type;
+  const ownerType = answers.owner_type || answers.ownerType;
+
+  // camelCase products: "natural_person" means individual owner; check if same as annuitant by name
+  if (ownerType === 'natural_person') {
+    const ownerFirst = answers.ownerFirstName || '';
+    const annFirst = answers.annuitantFirstName || '';
+    const ownerLast = answers.ownerLastName || '';
+    const annLast = answers.annuitantLastName || '';
+    if (ownerFirst && annFirst && ownerFirst === annFirst && ownerLast === annLast) {
+      return { isSameAsAnnuitant: true };
+    }
+  }
 
   if (ownerType === 'trust' || ownerType === 'corporation') {
     return {
@@ -125,35 +150,35 @@ function buildOwner(answers) {
         entityName: answers.owner_trust_name || '',
         entityType: ownerType === 'corporation' ? 'corporation' : 'trust',
         entityDate: ownerType === 'trust' ? (answers.owner_trust_date || null) : null,
-        taxId: encryptSSN(answers.owner_ssn_tin),
+        taxId: encryptSSN(answers.ownerTaxId || answers.owner_ssn_tin),
         address: buildAddress(answers, 'owner'),
-        phone: answers.owner_phone || '',
-        email: answers.owner_email || null,
+        phone: answers.ownerPhone || answers.ownerHomePhone || answers.owner_phone || '',
+        email: answers.ownerEmail || answers.owner_email || null,
       },
     };
   }
 
-  // Default: individual
+  // Individual owner (natural_person for camelCase, or default for snake_case)
   return {
     isSameAsAnnuitant: false,
     type: 'individual',
     person: {
-      firstName: answers.owner_first_name || '',
-      middleName: answers.owner_middle_initial || null,
-      lastName: answers.owner_last_name || '',
-      dateOfBirth: answers.owner_dob || '',
-      gender: answers.owner_gender || '',
-      taxId: encryptSSN(answers.owner_ssn_tin),
+      firstName: answers.ownerFirstName || answers.owner_first_name || '',
+      middleName: answers.ownerMiddleName || answers.owner_middle_initial || null,
+      lastName: answers.ownerLastName || answers.owner_last_name || '',
+      dateOfBirth: answers.ownerDob || answers.owner_dob || '',
+      gender: answers.ownerGender || answers.owner_gender || '',
+      taxId: encryptSSN(answers.ownerTaxId || answers.owner_ssn_tin),
       address: buildAddress(answers, 'owner'),
-      phone: answers.owner_phone || '',
-      email: answers.owner_email || null,
-      isUsCitizen: true, // owner citizenship handled in identity verification
+      phone: answers.ownerPhone || answers.ownerHomePhone || answers.owner_phone || '',
+      email: answers.ownerEmail || answers.owner_email || null,
+      isUsCitizen: true,
     },
   };
 }
 
 function buildJointOwner(answers) {
-  if (yesNoToBool(answers.has_joint_owner) !== true) return null;
+  if (yesNoToBool(answers.has_joint_owner ?? answers.hasJointOwner) !== true) return null;
 
   const party = buildPersonParty(answers, 'joint_owner');
 
@@ -170,30 +195,31 @@ function buildJointOwner(answers) {
 }
 
 function buildBeneficiaries(answers, groupId) {
-  const items = answers[groupId];
+  // Support both snake_case group ID and camelCase group ID
+  const items = answers[groupId] || answers[groupId.replace(/_([a-z])/g, (_, c) => c.toUpperCase())];
   if (!Array.isArray(items) || items.length === 0) return [];
 
   return items.map((item, i) => ({
     index: i + 1,
-    type: item.bene_type || 'primary',
-    entityType: item.bene_entity_type || 'individual',
-    distributionMethod: item.bene_distribution_method || 'per_stirpes',
-    firstName: item.bene_first_name || '',
-    middleName: item.bene_middle_initial || null,
-    lastName: item.bene_last_name || '',
-    taxId: encryptSSN(item.bene_ssn),
-    dateOfBirth: item.bene_dob || null,
-    relationship: item.bene_relationship || 'other',
+    type: item.bene_type || item.beneType || 'primary',
+    entityType: item.bene_entity_type || item.beneEntityType || 'individual',
+    distributionMethod: item.bene_distribution_method || item.beneDistributionMethod || 'per_stirpes',
+    firstName: item.bene_first_name || item.beneFirstName || '',
+    middleName: item.bene_middle_initial || item.beneMiddleName || null,
+    lastName: item.bene_last_name || item.beneLastName || '',
+    taxId: encryptSSN(item.bene_ssn || item.beneTaxId),
+    dateOfBirth: item.bene_dob || item.beneDob || null,
+    relationship: item.bene_relationship || item.beneRelationship || 'other',
     address: {
-      street1: item.bene_street_address || '',
+      street1: item.bene_street_address || item.beneStreetAddress || item.beneAddress || '',
       street2: null,
-      city: item.bene_city || '',
-      state: item.bene_state || '',
-      zip: item.bene_zip || '',
+      city: item.bene_city || item.beneCity || '',
+      state: item.bene_state || item.beneState || '',
+      zip: item.bene_zip || item.beneZip || '',
     },
-    phone: item.bene_phone || null,
-    email: item.bene_email || null,
-    percentage: Number(item.bene_percentage) || 0,
+    phone: item.bene_phone || item.benePhone || null,
+    email: item.bene_email || item.beneEmail || null,
+    percentage: Number(item.bene_percentage ?? item.benePercentage) || 0,
   }));
 }
 
@@ -228,19 +254,19 @@ function buildIdentityVerification(answers) {
 }
 
 function buildProduct(answers) {
-  const taxStatus = answers.tax_status || 'non_qualified';
+  const taxStatus = answers.tax_status || answers.taxStatus || 'non_qualified';
   const needsTaxYear = ['ira', 'roth_ira', 'sep_ira'].includes(taxStatus);
 
   return {
     taxStatus,
     iraContributionTaxYear: needsTaxYear
-      ? (Number(answers.ira_contribution_tax_year) || null)
+      ? (Number(answers.ira_contribution_tax_year || answers.iraContributionTaxYear) || null)
       : null,
   };
 }
 
 function buildFunding(answers) {
-  const selectedMethods = answers.funding_methods || [];
+  const selectedMethods = answers.funding_methods || answers.fundingMethods || [];
   const methodAmountMap = {
     check: 'check_amount',
     direct_transfer: 'direct_transfer_amount',
@@ -257,6 +283,11 @@ function buildFunding(answers) {
     const amount = Number(answers[amountField]) || 0;
     methods.push({ type: methodType, amount });
     totalPremium += amount;
+  }
+
+  // Aspida uses totalSinglePremium as an explicit field; prefer it if methods didn't sum
+  if (totalPremium === 0) {
+    totalPremium = Number(answers.totalSinglePremium || answers.total_single_premium) || 0;
   }
 
   return {
@@ -374,16 +405,17 @@ function buildTransfers(answers) {
 }
 
 function buildReplacement(answers) {
-  const hasExisting = yesNoToBool(answers.has_existing_insurance) === true;
-  const isReplacement = yesNoToBool(answers.is_replacement) === true;
+  const hasExisting = yesNoToBool(answers.has_existing_insurance ?? answers.hasExistingInsurance) === true;
+  const isReplacement = yesNoToBool(answers.is_replacement ?? answers.isReplacement) === true;
 
   const contracts = [];
-  if (isReplacement && Array.isArray(answers.replacement_contracts)) {
-    answers.replacement_contracts.forEach((item, i) => {
+  const contractList = answers.replacement_contracts || answers.replacementContracts;
+  if (isReplacement && Array.isArray(contractList)) {
+    contractList.forEach((item, i) => {
       contracts.push({
         index: i + 1,
-        companyName: item.replacement_company_name || '',
-        contractNumber: item.replacement_contract_number || '',
+        companyName: item.replacement_company_name || item.replInsurerName || item.replacementInsurerName || '',
+        contractNumber: item.replacement_contract_number || item.replacementPolicyNumber || '',
       });
     });
   }
@@ -392,6 +424,15 @@ function buildReplacement(answers) {
     hasExistingInsurance: hasExisting,
     isReplacement,
     replacedContracts: contracts,
+    willPayPenaltyToObtainFunds: isReplacement
+      ? yesNoToBool(answers.suitReplacePenalty ?? answers.suit_replace_penalty) ?? null
+      : null,
+    replacementPenaltyPct: isReplacement
+      ? (Number(answers.suitReplacePenaltyAmount ?? answers.suit_replace_penalty_amount) || null)
+      : null,
+    replacedProductHasLivingOrDeathBenefits: isReplacement
+      ? yesNoToBool(answers.suitReplaceHasLivingDeathBenefit ?? answers.suit_replace_has_living_death_benefit) ?? null
+      : null,
   };
 }
 
@@ -440,29 +481,39 @@ function buildDisclosures(product, answers) {
 }
 
 function buildApplicationSignatures(answers) {
+  const ownerSig = answers.owner_signature || answers.ownerSignature;
+  const jointSig = answers.joint_owner_signature || answers.jointOwnerSignature;
+  const dateSigned = answers.date_signed || answers.dateSigned || '';
+
   return {
-    isOwnerStatementAcknowledged: yesNoToBool(answers.owner_statement_acknowledged) === true,
-    isFraudWarningAcknowledged: yesNoToBool(answers.fraud_warning_acknowledged) === true,
-    ownerSignature: buildSignatureRecord(answers.owner_signature),
-    ownerSignatureDate: answers.date_signed || '',
-    jointOwnerSignature: buildSignatureRecord(answers.joint_owner_signature),
-    jointOwnerSignatureDate: answers.joint_owner_signature ? (answers.date_signed || null) : null,
+    isOwnerStatementAcknowledged: yesNoToBool(
+      answers.owner_statement_acknowledged ?? answers.isOwnerStatementAcknowledged
+    ) === true,
+    isFraudWarningAcknowledged: yesNoToBool(
+      answers.fraud_warning_acknowledged ?? answers.isFraudWarningDisclosureAcknowledged
+    ) === true,
+    ownerSignature: buildSignatureRecord(ownerSig),
+    ownerSignatureDate: dateSigned,
+    jointOwnerSignature: buildSignatureRecord(jointSig),
+    jointOwnerSignatureDate: jointSig ? (dateSigned || null) : null,
     spouseSignature: buildSignatureRecord(answers.spouse_signature),
-    signedAtCity: answers.signed_at_city || '',
-    signedAtState: answers.signed_at_state || '',
-    ownerEmail: answers.owner_email || null,
-    jointOwnerEmail: answers.joint_owner_email || null,
+    signedAtCity: answers.signed_at_city || answers.signedAtStateCity || answers.signedAtCity || '',
+    signedAtState: answers.signed_at_state || answers.signedAtState || answers.ownerState || '',
+    ownerEmail: answers.owner_email || answers.ownerEmail || null,
+    jointOwnerEmail: answers.joint_owner_email || answers.jointOwnerEmail || null,
   };
 }
 
 function buildProducerCertification(answers) {
   const producers = [];
+
+  // Midland-style: writing_agents array with agent_ prefixed fields
   if (Array.isArray(answers.writing_agents)) {
     answers.writing_agents.forEach((agent, i) => {
       producers.push({
         index: i + 1,
         producerNumber: agent.agent_number || '',
-        npn: null, // NPN not collected in current product definition
+        npn: null,
         fullName: agent.agent_full_name || '',
         email: agent.agent_email || '',
         phone: agent.agent_phone || '',
@@ -474,13 +525,93 @@ function buildProducerCertification(answers) {
     });
   }
 
+  // camelCase products (Aspida/EquiTrust): writingProducers array with producer-prefixed fields
+  if (Array.isArray(answers.writingProducers)) {
+    answers.writingProducers.forEach((prod, i) => {
+      producers.push({
+        index: i + 1,
+        producerNumber: prod.producerStateLicense || prod.producerNumber || '',
+        npn: prod.producerNpn || null,
+        fullName: prod.producerFullName || '',
+        email: prod.producerEmail || '',
+        phone: prod.producerPhone || '',
+        commissionPercentage: Number(prod.producerCommissionPercentage) || 0,
+        commissionOption: answers.commissionOption || '',
+        signature: buildSignatureRecord(prod.producerSignature),
+        signatureDate: prod.producerDateSigned || '',
+      });
+    });
+  }
+
+  // Suitability fields for the engine
+  const conflicts = answers.suitProducerConflicts ?? answers.suit_producer_conflicts;
+  const hasConflict = conflicts === 'yes' || conflicts === true;
+
   return {
     isProducerAwareOfExistingInsurance: yesNoToBool(answers.agent_replacement_existing) === true,
     isProducerBelievesReplacement: yesNoToBool(answers.agent_replacement_replacing) === true,
     replacingCompanyName: yesNoToBool(answers.agent_replacement_replacing) === true
       ? (answers.agent_replacement_company || null)
       : null,
+    hasConflictOfInterest: hasConflict,
+    agentCertQ3Passed: yesNoToBool(
+      answers.producerCertReasonableEffort ?? answers.producer_cert_reasonable_effort
+    ) === true,
+    agentCertQ4Passed: yesNoToBool(
+      answers.producerCertSuitable ?? answers.producer_cert_suitable
+    ) === true,
+    agentCertQ5Passed: yesNoToBool(
+      answers.producerCertNoDiminishedCapacity ?? answers.producer_cert_no_diminished_capacity
+    ) === true,
     producers,
+  };
+}
+
+function buildSuitabilityProfile(answers) {
+  // EquiTrust uses fna* prefix, Aspida uses suit* prefix, Midland uses suit_ snake_case
+  const income = answers.suitAnnualHouseholdIncome
+    ?? answers.fnaAnnualHouseholdIncome
+    ?? answers.suit_annual_household_income;
+  const expenses = answers.suitAnnualHouseholdExpenses
+    ?? answers.fnaAnnualHouseholdExpenses
+    ?? answers.suit_annual_household_expenses;
+  const netWorth = answers.suitNetWorth
+    ?? answers.fnaEstimatedNetWorth
+    ?? answers.suit_net_worth;
+  const liquidAssets = answers.suitLiquidAssets
+    ?? answers.fnaCheckingSavings // EquiTrust: checking/savings as primary liquid
+    ?? answers.suit_liquid_assets;
+  // EquiTrust also has fnaOtherLiquidAssets — add to liquid if present
+  const otherLiquid = Number(answers.fnaOtherLiquidAssets) || 0;
+  const liquidTotal = (Number(liquidAssets) || 0) + otherLiquid;
+
+  const hasEmergency = answers.suitHasEmergencyFunds
+    ?? answers.hasSufficientAssets // EquiTrust equivalent
+    ?? answers.suit_has_emergency_funds;
+
+  const holdYears = answers.suitHowLongKeep
+    ?? answers.fnaHowLongKeep
+    ?? answers.suit_how_long_keep;
+
+  const nursingHome = answers.suitSkilledNursing
+    ?? answers.isInNursingHome // EquiTrust
+    ?? answers.suit_skilled_nursing;
+
+  return {
+    annualHouseholdIncome: Number(income) || null,
+    annualHouseholdExpenses: Number(expenses) || null,
+    totalNetWorth: Number(netWorth) || null,
+    liquidNetWorth: liquidTotal || null,
+    hasEmergencyFunds: yesNoToBool(hasEmergency) ?? null,
+    expectedHoldYears: Number(holdYears) || null,
+    hasNursingHomeStay: yesNoToBool(nursingHome) ?? null,
+    nursingHomeCareType:
+      answers.suitSkilledNursingExplain ?? answers.suit_skilled_nursing_explain ?? null,
+    nursingHomeCareMonths: null,
+    incomeCoversLivingExpenses:
+      yesNoToBool(answers.suitFlIncomeCoversExpenses ?? answers.suit_fl_income_covers_expenses) ?? null,
+    incomeSufficientForFutureExpenses:
+      yesNoToBool(answers.suitFlIncomeSufficientFuture ?? answers.suit_fl_income_sufficient_future) ?? null,
   };
 }
 
@@ -513,6 +644,7 @@ function transformSubmission(product, answers, context = {}) {
     disclosures: buildDisclosures(product, answers),
     applicationSignatures: buildApplicationSignatures(answers),
     producerCertification: buildProducerCertification(answers),
+    suitabilityProfile: buildSuitabilityProfile(answers),
   };
 }
 

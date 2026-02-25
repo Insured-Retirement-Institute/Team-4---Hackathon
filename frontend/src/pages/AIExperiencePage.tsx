@@ -288,6 +288,16 @@ export default function AIExperiencePage() {
 
   // Compute matched fields whenever we have results + definition
   const computeMatchedFields = useCallback((knownData: Record<string, string>, def: ApplicationDefinition) => {
+    // Build a lookup that maps both camelCase and snake_case keys to values
+    const camelToSnake = (s: string) => s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+    const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    const lookup: Record<string, string> = {};
+    for (const [k, v] of Object.entries(knownData)) {
+      lookup[k] = v;
+      lookup[snakeToCamel(k)] = v;
+      lookup[camelToSnake(k)] = v;
+    }
+
     const allQuestions = def.pages.flatMap((p) =>
       p.questions.map((q) => ({ ...q, pageTitle: p.title })),
     );
@@ -295,8 +305,8 @@ export default function AIExperiencePage() {
       id: q.id,
       label: q.label,
       pageTitle: q.pageTitle,
-      value: knownData[q.id] ?? null,
-      filled: q.id in knownData,
+      value: lookup[q.id] ?? null,
+      filled: q.id in lookup,
     }));
     setMatchedFields(matched);
   }, []);
@@ -366,7 +376,10 @@ export default function AIExperiencePage() {
 
     // Create a session (used for both voice and chat)
     try {
-      const session = await createSession(productId);
+      const clientCtx = selectedClient
+        ? { client_id: selectedClient.client_id, display_name: selectedClient.display_name }
+        : undefined;
+      const session = await createSession(productId, undefined, ADVISOR_NAME, clientCtx);
       setVoiceSessionId(session.session_id);
       setChatGreeting(session.greeting || '');
     } catch (err) {
@@ -387,10 +400,16 @@ export default function AIExperiencePage() {
     if (!finalResult?.known_data) return;
     setStartingSession(true);
     try {
-      const session = await createSession(productId, finalResult.known_data as Record<string, string>);
+      // Normalize snake_case keys to camelCase so they match application definition question IDs
+      const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+      const normalized: Record<string, string> = {};
+      for (const [k, v] of Object.entries(finalResult.known_data as Record<string, string>)) {
+        normalized[snakeToCamel(k)] = v;
+      }
+      const session = await createSession(productId, normalized, ADVISOR_NAME);
       setSessionId(session.session_id);
       setPhase('SPOT_CHECK');
-      mergeFields(finalResult.known_data as Record<string, string>);
+      mergeFields(normalized);
       navigate('/');
       setTimeout(() => openWidget(), 300);
     } catch (err) {
@@ -412,6 +431,23 @@ export default function AIExperiencePage() {
     setChatGreeting('');
     setInteractionMode('voice');
     sseStartedRef.current = false;
+  }, []);
+
+  const handleChatToolCalls = useCallback((tools: Array<{ name: string }>) => {
+    for (const tool of tools) {
+      setToolLog((prev) => [
+        ...prev,
+        {
+          name: tool.name,
+          description: 'via chat',
+          iteration: 0,
+          status: 'done' as const,
+          startTime: Date.now(),
+          durationMs: 0,
+          fieldsExtracted: {},
+        },
+      ]);
+    }
   }, []);
 
   const handleCallFieldsExtracted = useCallback((fields: Record<string, string>) => {
@@ -464,6 +500,27 @@ export default function AIExperiencePage() {
                 </Typography>
               </Box>
 
+              {/* Client and product selection */}
+              <Paper sx={{ p: 3, mb: 4, borderRadius: 2, maxWidth: 600, mx: 'auto' }}>
+                <Stack spacing={2.5}>
+                  <Autocomplete
+                    options={clients}
+                    getOptionLabel={(o) => o.display_name}
+                    value={selectedClient}
+                    onChange={(_, v) => setSelectedClient(v)}
+                    renderInput={(params) => <TextField {...params} label="Select CRM Client" />}
+                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Product</InputLabel>
+                    <Select value={productId} label="Product" onChange={(e) => setProductId(e.target.value)}>
+                      {products.map((p) => (
+                        <MenuItem key={p.productId} value={p.productId}>{p.productName}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Paper>
+
               <Box sx={{ textAlign: 'center' }}>
                 <Stack direction="row" spacing={2} justifyContent="center">
                   <Button
@@ -471,6 +528,7 @@ export default function AIExperiencePage() {
                     size="large"
                     color="secondary"
                     disableElevation
+                    disabled={!selectedClient}
                     startIcon={<MicIcon />}
                     onClick={() => { setInteractionMode('voice'); handleStartVoice(); }}
                     sx={{ fontWeight: 700, px: 5, py: 2, fontSize: '1.1rem', borderRadius: 3 }}
@@ -481,6 +539,7 @@ export default function AIExperiencePage() {
                     variant="outlined"
                     size="large"
                     color="secondary"
+                    disabled={!selectedClient}
                     startIcon={<ChatIcon />}
                     onClick={() => { setInteractionMode('chat'); handleStartVoice(); }}
                     sx={{ fontWeight: 700, px: 5, py: 2, fontSize: '1.1rem', borderRadius: 3 }}
@@ -488,9 +547,11 @@ export default function AIExperiencePage() {
                     Start with Chat
                   </Button>
                 </Stack>
-                <Typography variant="body2" color="text.secondary" mt={2}>
-                  Tell the AI which client you'd like to discuss today
-                </Typography>
+                {!selectedClient && (
+                  <Typography variant="body2" color="text.secondary" mt={2}>
+                    Select a client above to get started
+                  </Typography>
+                )}
               </Box>
             </Box>
           )}
@@ -517,48 +578,19 @@ export default function AIExperiencePage() {
                   <Typography variant="subtitle2" fontWeight={700}>
                     {interactionMode === 'voice' ? 'Voice' : 'Chat'} Session — {advisorLabel}
                   </Typography>
-                  {!selectedClient && (
-                    <Typography variant="caption" color="warning.main">
-                      Tell the AI which client, or select below
-                    </Typography>
-                  )}
+                  <Typography variant="caption" color="text.secondary">
+                    Client: {selectedClient?.display_name}
+                  </Typography>
                 </Box>
                 {interactionMode === 'voice' ? (
                   <VoicePanel sessionId={voiceSessionId} />
                 ) : (
-                  <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} />
+                  <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} onToolCalls={handleChatToolCalls} />
                 )}
               </Paper>
 
-              {/* Client selector — shown until client is picked */}
-              {!sseStartedRef.current && (
-                <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                    Or select a CRM client to start data gathering:
-                  </Typography>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Autocomplete
-                      sx={{ flex: 1, maxWidth: 400 }}
-                      options={clients}
-                      getOptionLabel={(o) => o.display_name}
-                      value={selectedClient}
-                      onChange={(_, v) => setSelectedClient(v)}
-                      renderInput={(params) => <TextField {...params} label="Select client" size="small" />}
-                    />
-                    <FormControl sx={{ minWidth: 200 }}>
-                      <InputLabel size="small">Product</InputLabel>
-                      <Select value={productId} label="Product" size="small" onChange={(e) => setProductId(e.target.value)}>
-                        {products.map((p) => (
-                          <MenuItem key={p.productId} value={p.productId}>{p.productName}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Stack>
-                </Paper>
-              )}
-
-              {/* Agent Log + Field Accumulator — shown once SSE is running */}
-              {sseStartedRef.current && (
+              {/* Agent Log + Field Accumulator */}
+              {(
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 7 }}>
                     <Paper sx={{ bgcolor: 'grey.900', borderRadius: 2, overflow: 'hidden', height: 400, display: 'flex', flexDirection: 'column' }}>
@@ -635,7 +667,7 @@ export default function AIExperiencePage() {
                   {interactionMode === 'voice' ? (
                     <VoicePanel sessionId={voiceSessionId} compact />
                   ) : (
-                    <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} />
+                    <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} onToolCalls={handleChatToolCalls} />
                   )}
                 </Paper>
               )}

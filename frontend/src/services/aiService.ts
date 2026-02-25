@@ -16,10 +16,16 @@ export interface UpdatedField {
   status: string;
 }
 
+export interface ToolCallInfo {
+  name: string;
+  result_summary?: string;
+}
+
 export interface MessageResponse {
   reply: string;
   phase: string;
   updated_fields: UpdatedField[];
+  tool_calls?: ToolCallInfo[];
   current_step: string | null;
   current_step_index: number | null;
   total_steps: number | null;
@@ -33,12 +39,23 @@ async function fetchSchema(): Promise<unknown[]> {
   return res.json();
 }
 
-export async function createSession(productId = 'midland-fixed-annuity-001', knownData?: Record<string, string>): Promise<SessionResponse> {
+export async function createSession(
+  productId = 'midland-fixed-annuity-001',
+  knownData?: Record<string, string>,
+  advisorName?: string,
+  clientContext?: { client_id: string; display_name: string },
+): Promise<SessionResponse> {
   const questions = await fetchSchema();
 
   const body: Record<string, unknown> = { questions, product_id: productId };
   if (knownData && Object.keys(knownData).length > 0) {
     body.known_data = knownData;
+  }
+  if (advisorName) {
+    body.advisor_name = advisorName;
+  }
+  if (clientContext) {
+    body.client_context = clientContext;
   }
 
   const res = await fetch(`${AI_SERVICE_BASE}/api/v1/sessions`, {

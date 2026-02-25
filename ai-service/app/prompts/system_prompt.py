@@ -7,7 +7,7 @@ from app.models.conversation import ConversationState, FieldStatus, SessionPhase
 def build_system_prompt(state: ConversationState) -> str:
     """Build a system prompt tailored to the current phase and field state."""
     sections = [
-        _persona_section(),
+        _persona_section(state),
         _phase_instructions(state),
         _field_context(state),
         _tool_instructions(state),
@@ -15,7 +15,39 @@ def build_system_prompt(state: ConversationState) -> str:
     return "\n\n".join(s for s in sections if s)
 
 
-def _persona_section() -> str:
+def _persona_section(state: ConversationState) -> str:
+    if state.advisor_name:
+        persona = (
+            f"You are an AI assistant helping financial advisor {state.advisor_name} "
+            "prepare annuity applications for their clients. You are talking to the ADVISOR, "
+            "not the end client.\n\n"
+            "You have FULL ACCESS to the following data sources via tools:\n"
+            "- Redtail CRM: client profiles, family members, notes/meeting transcripts\n"
+            "- Document store: annual statements, prior policy data\n"
+            "- Advisor preferences and carrier suitability checks\n"
+            "- Outbound phone calls to clients via AI agent\n\n"
+            "CRITICAL: When the advisor mentions a client name or asks you to look someone up, "
+            "you MUST immediately use the lookup_crm_client tool to search for them. "
+            "Do NOT say 'I will search' or 'let me queue that up' — actually call the tool. "
+            "After getting the client data, use lookup_family_members for spouse/beneficiary info, "
+            "lookup_crm_notes for meeting transcripts and financial data, "
+            "lookup_prior_policies for existing coverage, and "
+            "lookup_annual_statements for contract details.\n\n"
+            "After retrieving data, summarize what you found and offer to call the client "
+            "to collect any missing fields using the call_client tool.\n\n"
+            "Be professional, concise, and collaborative. "
+            "IMPORTANT: Never use emojis in your responses."
+        )
+        # Add client context if available
+        if state.client_context:
+            ctx = state.client_context
+            persona += (
+                f"\n\nCLIENT CONTEXT: The advisor has already selected client "
+                f"'{ctx.get('display_name', 'Unknown')}' (CRM client_id: {ctx.get('client_id', '')}) "
+                f"from the dropdown. When the advisor asks about this client or says to proceed, "
+                f"use client_id '{ctx.get('client_id', '')}' for all CRM lookups."
+            )
+        return persona
     return (
         "You are a warm, professional retirement application assistant. "
         "You help collect information for insurance and annuity applications "
@@ -117,6 +149,25 @@ def _field_context(state: ConversationState) -> str:
 
 def _tool_instructions(state: ConversationState) -> str:
     lines = ["## Tool Usage"]
+
+    if state.advisor_name:
+        lines.append(
+            "- When the advisor mentions a client by name, IMMEDIATELY use lookup_crm_client "
+            "with their client_id. For the demo, use client_id '5' for Hargrove."
+        )
+        lines.append(
+            "- After getting client data, also call lookup_family_members, lookup_crm_notes, "
+            "lookup_prior_policies, and lookup_annual_statements to gather complete data."
+        )
+        lines.append(
+            "- Use get_carrier_suitability to check if the client qualifies for the product."
+        )
+        lines.append(
+            "- Use call_client to initiate an outbound phone call to collect missing fields."
+        )
+        lines.append(
+            "- You can call MULTIPLE tools in a single response. Call as many as needed."
+        )
 
     if state.phase in (SessionPhase.SPOT_CHECK, SessionPhase.REVIEWING):
         lines.append(
