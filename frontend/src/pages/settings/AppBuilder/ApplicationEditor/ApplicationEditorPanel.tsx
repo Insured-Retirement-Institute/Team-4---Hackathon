@@ -423,12 +423,11 @@ function ApplicationEditorPanel({
     }
 
     try {
-      console.log('updating payload', payload)
       await updateProduct(selectedProduct.productId, payload);
 
-      return { ok: true, message: 'Application saved successfully.' };
+      return { ok: true, message: 'Product saved successfully.' };
     } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : 'Failed to save application.' };
+      return { ok: false, message: error instanceof Error ? error.message : 'Failed to save product.' };
     }
   }, [form, selectedDistributorIds, selectedProduct]);
 

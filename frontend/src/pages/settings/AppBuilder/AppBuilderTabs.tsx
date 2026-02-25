@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ApprovedDistributorsPanel from './ApprovedDistributors/ApprovedDistributorsPanel';
@@ -17,6 +19,9 @@ function AppBuilderTabs() {
   const [selectedDistributorIds, setSelectedDistributorIds] = useState<string[]>([]);
   const [saveHandler, setSaveHandler] = useState<null | (() => Promise<{ ok: boolean; message: string }>)>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [saveNoticeOpen, setSaveNoticeOpen] = useState(false);
+  const [saveNoticeMessage, setSaveNoticeMessage] = useState('');
+  const [saveNoticeSeverity, setSaveNoticeSeverity] = useState<'success' | 'error'>('success');
   const hasSelectedProduct = Boolean(getProductKey(selectedProduct));
 
   useEffect(() => {
@@ -53,10 +58,16 @@ function AppBuilderTabs() {
   const handleSaveApplication = async () => {
     if (!saveHandler) {
       setSaveStatus('error');
+      setSaveNoticeMessage('Unable to save application right now.');
+      setSaveNoticeSeverity('error');
+      setSaveNoticeOpen(true);
       return;
     }
     setSaveStatus('saving');
     const result = await saveHandler();
+    setSaveNoticeMessage(result.message);
+    setSaveNoticeSeverity(result.ok ? 'success' : 'error');
+    setSaveNoticeOpen(true);
     setSaveStatus(result.ok ? 'success' : 'error');
     if (result.ok) {
       setSelectedProduct(null);
@@ -79,6 +90,14 @@ function AppBuilderTabs() {
       setActiveTab(0);
     }
   }, [activeTab, hasSelectedProduct]);
+
+  useEffect(() => {
+    if (!saveNoticeOpen) return;
+    const timeoutId = window.setTimeout(() => {
+      setSaveNoticeOpen(false);
+    }, 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [saveNoticeOpen, saveNoticeMessage]);
 
   const steps = [
     { label: 'Product Selection', disabled: false },
@@ -202,6 +221,27 @@ function AppBuilderTabs() {
           }
         />
       )}
+
+      <Snackbar
+        key={saveNoticeMessage}
+        open={saveNoticeOpen}
+        autoHideDuration={3000}
+        resumeHideDuration={3000}
+        onClose={(_, reason) => {
+          if (reason === 'clickaway') return;
+          setSaveNoticeOpen(false);
+        }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSaveNoticeOpen(false)}
+          severity={saveNoticeSeverity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {saveNoticeMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
