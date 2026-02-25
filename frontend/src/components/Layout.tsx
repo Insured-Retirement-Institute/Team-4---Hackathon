@@ -1,37 +1,49 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import AppBar from '@mui/material/AppBar';
-import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
-import { useApplication } from '../context/ApplicationContext';
 import { useWidgetSync } from '../hooks/useWidgetSync';
-import { countInProgress } from '../services/applicationStorageService';
 
 function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { collectedFields } = useApplication();
-  const inProgressCount = countInProgress();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
   // Bridge widget.js events (iri:field_updated, etc.) into ApplicationContext
   useWidgetSync();
 
-  const fieldCount = Object.keys(collectedFields).length;
+  // Hide the floating assistant widget on settings routes.
+  useEffect(() => {
+    const onSettingsRoute = location.pathname.startsWith('/settings');
+    const applyWidgetVisibility = () => {
+      const widgetHost = document.getElementById('iri-chat-widget');
+      if (!widgetHost) return;
+      widgetHost.style.display = onSettingsRoute ? 'none' : '';
+    };
+
+    applyWidgetVisibility();
+    const observer = new MutationObserver(() => applyWidgetVisibility());
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    if (onSettingsRoute) {
+      const instance = window.IRIChat?._instance as ({ _closePanel?: () => void } | undefined);
+      instance?._closePanel?.();
+    }
+
+    return () => observer.disconnect();
+  }, [location.pathname]);
 
   const navItems = [
     { label: 'Home', path: '/' },
     { label: 'AI Experience', path: '/ai-experience' },
-    { label: 'Applications', path: '/applications', badge: inProgressCount },
-    { label: 'New Application', path: '/wizard-v2', badge: fieldCount },
+    { label: 'Applications', path: '/applications' },
+    { label: 'New Application', path: '/wizard-v2' },
     { label: 'Settings', path: '/settings' },
   ];
 
@@ -44,9 +56,18 @@ function Layout() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="sticky" sx={{ top: 0, zIndex: 'appBar' }}>
+      <AppBar
+        position="fixed"
+        elevation={4}
+        sx={{
+          top: 0,
+          zIndex: 'appBar',
+          bgcolor: 'rgba(18, 20, 36, 0.97)',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
         <Toolbar variant="dense">
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1, cursor: 'pointer' }} onClick={() => navigate('/')}>
             Annuity E-Application
           </Typography>
 
@@ -54,7 +75,7 @@ function Layout() {
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5 }}>
             {navItems.map((item) => {
               const active = location.pathname === item.path;
-              const btn = (
+              return (
                 <Button
                   key={item.path}
                   color="inherit"
@@ -71,12 +92,6 @@ function Layout() {
                   {item.label}
                 </Button>
               );
-
-              return (item.badge ?? 0) > 0 ? (
-                <Badge key={item.path} badgeContent={item.badge} color="secondary" max={99}>
-                  {btn}
-                </Badge>
-              ) : btn;
             })}
           </Box>
 
@@ -87,13 +102,7 @@ function Layout() {
             size="small"
             sx={{ display: { xs: 'flex', md: 'none' } }}
           >
-            <Badge
-              badgeContent={(inProgressCount || 0) + (fieldCount || 0)}
-              color="secondary"
-              max={99}
-            >
-              <MenuIcon />
-            </Badge>
+            <MenuIcon />
           </IconButton>
 
           <Menu
@@ -111,26 +120,20 @@ function Layout() {
                   key={item.path}
                   onClick={() => handleNavigate(item.path)}
                   selected={active}
-                  sx={{ gap: 1.5 }}
                 >
-                  <Typography variant="body2" sx={{ flex: 1, fontWeight: active ? 600 : 400 }}>
+                  <Typography variant="body2" sx={{ fontWeight: active ? 600 : 400 }}>
                     {item.label}
                   </Typography>
-                  {(item.badge ?? 0) > 0 && (
-                    <Chip
-                      label={item.badge}
-                      size="small"
-                      color="secondary"
-                      sx={{ height: 20, fontSize: 11, minWidth: 28 }}
-                    />
-                  )}
                 </MenuItem>
               );
             })}
           </Menu>
         </Toolbar>
       </AppBar>
+
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Push content below the fixed AppBar */}
+        <Box sx={{ height: 48 }} />
         <Outlet />
       </Box>
     </Box>

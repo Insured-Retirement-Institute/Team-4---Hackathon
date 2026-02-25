@@ -25,7 +25,6 @@ type QuestionDetailsPanelProps = {
   detailFieldSx: object;
   previewQuestion: (question: BuilderQuestion) => ReactNode;
   onUpdatePageTitle: (value: string) => void;
-  onUpdateSectionTitle: (value: string) => void;
   onUpdateQuestionId: (value: string) => void;
   onUpdateQuestionLabel: (value: string) => void;
   onUpdateQuestionType: (value: QuestionType) => void;
@@ -43,7 +42,6 @@ function QuestionDetailsPanel({
   detailFieldSx,
   previewQuestion,
   onUpdatePageTitle,
-  onUpdateSectionTitle,
   onUpdateQuestionId,
   onUpdateQuestionLabel,
   onUpdateQuestionType,
@@ -61,7 +59,6 @@ function QuestionDetailsPanel({
         {activePage && activeSection && activeQuestion ? (
           <Stack spacing={1.25}>
             <TextField size="small" label="Page Title" value={activePage.title} sx={detailFieldSx} onChange={(event) => onUpdatePageTitle(event.target.value)} />
-            <TextField size="small" label="Section Title" value={activeSection.title} sx={detailFieldSx} onChange={(event) => onUpdateSectionTitle(event.target.value)} />
             <TextField size="small" label="Question ID" value={activeQuestion.id} sx={detailFieldSx} onChange={(event) => onUpdateQuestionId(event.target.value)} />
             <TextField size="small" label="Label" value={activeQuestion.label} sx={detailFieldSx} onChange={(event) => onUpdateQuestionLabel(event.target.value)} />
             <TextField

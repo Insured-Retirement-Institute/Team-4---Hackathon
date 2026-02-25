@@ -19,8 +19,9 @@ function AppBuilderTabs() {
   const [selectedDistributorIds, setSelectedDistributorIds] = useState<string[]>([]);
   const [saveHandler, setSaveHandler] = useState<null | (() => Promise<{ ok: boolean; message: string }>)>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  const [saveMessage, setSaveMessage] = useState('');
-  const [toastOpen, setToastOpen] = useState(false);
+  const [saveNoticeOpen, setSaveNoticeOpen] = useState(false);
+  const [saveNoticeMessage, setSaveNoticeMessage] = useState('');
+  const [saveNoticeSeverity, setSaveNoticeSeverity] = useState<'success' | 'error'>('success');
   const hasSelectedProduct = Boolean(getProductKey(selectedProduct));
 
   useEffect(() => {
@@ -51,22 +52,23 @@ function AppBuilderTabs() {
     setSelectedProduct(null);
     setSelectedDistributorIds([]);
     setSaveStatus('idle');
-    setSaveMessage('');
     setActiveTab(0);
   };
 
   const handleSaveApplication = async () => {
     if (!saveHandler) {
       setSaveStatus('error');
-      setSaveMessage('Open Application Editor first to initialize the save action.');
+      setSaveNoticeMessage('Unable to save application right now.');
+      setSaveNoticeSeverity('error');
+      setSaveNoticeOpen(true);
       return;
     }
     setSaveStatus('saving');
-    setSaveMessage('');
     const result = await saveHandler();
+    setSaveNoticeMessage(result.message);
+    setSaveNoticeSeverity(result.ok ? 'success' : 'error');
+    setSaveNoticeOpen(true);
     setSaveStatus(result.ok ? 'success' : 'error');
-    setSaveMessage(result.message);
-    setToastOpen(true);
     if (result.ok) {
       setSelectedProduct(null);
       setSelectedDistributorIds([]);
@@ -81,7 +83,6 @@ function AppBuilderTabs() {
   useEffect(() => {
     setSelectedDistributorIds([]);
     setSaveStatus('idle');
-    setSaveMessage('');
   }, [selectedProduct?.productId]);
 
   useEffect(() => {
@@ -89,6 +90,14 @@ function AppBuilderTabs() {
       setActiveTab(0);
     }
   }, [activeTab, hasSelectedProduct]);
+
+  useEffect(() => {
+    if (!saveNoticeOpen) return;
+    const timeoutId = window.setTimeout(() => {
+      setSaveNoticeOpen(false);
+    }, 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [saveNoticeOpen, saveNoticeMessage]);
 
   const steps = [
     { label: 'Product Selection', disabled: false },
@@ -164,70 +173,99 @@ function AppBuilderTabs() {
         </Stack>
       </Box>
 
-      <Stack direction="row" spacing={1} justifyContent="space-between" sx={{ mb: 2 }}>
-        {isFirstStep ? <Box /> : (
-          <Button variant="outlined" onClick={handleBack}>
-            Back
-          </Button>
-        )}
-        {isLastStep ? (
-          <Button
-            variant="contained"
-            onClick={handleSaveApplication}
-            disabled={updateDisabled}
-            sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}
-          >
-            {saveStatus === 'saving' ? 'Updating...' : 'Update Product'}
-          </Button>
-        ) : (
-          <Button variant="contained" onClick={handleNext} disabled={nextDisabled} sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}>
-            Next
-          </Button>
-        )}
-      </Stack>
-
-      {activeTab === 0 && (
-        <ProductSelectionPanel
-          selectedProductKey={getProductKey(selectedProduct) || null}
-          onSelectProduct={handleProductSelect}
-          onInvalidSelection={handleInvalidSelection}
-        />
-      )}
-      {hasSelectedProduct ? (
-        <Box sx={{ display: activeTab === 1 ? 'block' : 'none' }}>
-          <ApplicationEditorPanel
-            selectedProduct={selectedProduct}
-            selectedDistributorIds={selectedDistributorIds}
-            onRegisterSaveHandler={registerSaveHandler}
+      <Box sx={{ pb: 11 }}>
+        {activeTab === 0 && (
+          <ProductSelectionPanel
+            selectedProductKey={getProductKey(selectedProduct) || null}
+            onSelectProduct={handleProductSelect}
+            onInvalidSelection={handleInvalidSelection}
           />
-        </Box>
-      ) : null}
-      {activeTab === 2 && (
-        <ApprovedDistributorsPanel
-          selectedDistributorIds={selectedDistributorIds}
-          onToggleDistributor={(distributorId) =>
-            setSelectedDistributorIds((prev) =>
-              prev.includes(distributorId) ? prev.filter((id) => id !== distributorId) : [...prev, distributorId],
-            )
-          }
-        />
-      )}
+        )}
+        {hasSelectedProduct ? (
+          <Box sx={{ display: activeTab === 1 ? 'block' : 'none' }}>
+            <ApplicationEditorPanel
+              selectedProduct={selectedProduct}
+              selectedDistributorIds={selectedDistributorIds}
+              onRegisterSaveHandler={registerSaveHandler}
+            />
+          </Box>
+        ) : null}
+        {activeTab === 2 && (
+          <ApprovedDistributorsPanel
+            selectedDistributorIds={selectedDistributorIds}
+            onToggleDistributor={(distributorId) =>
+              setSelectedDistributorIds((prev) =>
+                prev.includes(distributorId) ? prev.filter((id) => id !== distributorId) : [...prev, distributorId],
+              )
+            }
+          />
+        )}
+      </Box>
+
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 20,
+          py: 1.5,
+          px: 3,
+          borderTop: 'none',
+          bgcolor: 'transparent',
+          boxShadow: 'none',
+        }}
+      >
+        <Stack direction="row" spacing={1} justifyContent="space-between">
+          {isFirstStep ? <Box /> : (
+            <Button
+              variant="outlined"
+              onClick={handleBack}
+              sx={{ bgcolor: '#ffffff', '&:hover': { bgcolor: '#ffffff' } }}
+            >
+              Back
+            </Button>
+          )}
+          {isLastStep ? (
+            <Button
+              variant="contained"
+              onClick={handleSaveApplication}
+              disabled={updateDisabled}
+              sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}
+            >
+              {saveStatus === 'saving' ? 'Updating...' : 'Update Product'}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              disabled={nextDisabled}
+              sx={{ bgcolor: '#3a9df7', '&:hover': { bgcolor: '#258ff0' } }}
+            >
+              Next
+            </Button>
+          )}
+        </Stack>
+      </Box>
+
       <Snackbar
-        open={toastOpen}
-        autoHideDuration={4000}
+        key={saveNoticeMessage}
+        open={saveNoticeOpen}
+        autoHideDuration={3000}
+        resumeHideDuration={3000}
         onClose={(_, reason) => {
           if (reason === 'clickaway') return;
-          setToastOpen(false);
+          setSaveNoticeOpen(false);
         }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert
-          onClose={() => setToastOpen(false)}
-          severity={saveStatus === 'success' ? 'success' : 'error'}
+          onClose={() => setSaveNoticeOpen(false)}
+          severity={saveNoticeSeverity}
           variant="filled"
           sx={{ width: '100%' }}
         >
-          {saveMessage}
+          {saveNoticeMessage}
         </Alert>
       </Snackbar>
     </Box>
