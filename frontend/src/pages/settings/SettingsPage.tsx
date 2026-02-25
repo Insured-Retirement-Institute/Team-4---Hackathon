@@ -4,7 +4,7 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import AppBuilderPanel from './AppBuilder/AppBuilderPanel';
+import AppBuilderTabs from './AppBuilder/AppBuilderTabs';
 
 function SettingsPage() {
   const [activeTab, setActiveTab] = useState(0);
@@ -17,16 +17,45 @@ function SettingsPage() {
           onChange={(_, nextTab: number) => setActiveTab(nextTab)}
           variant="scrollable"
           scrollButtons="auto"
+          sx={{
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#3a9df7',
+            },
+          }}
         >
-          <Tab label="App Builder" />
-          <Tab label="Carriers & Vendors" />
-          <Tab label="AI Agent Guidelilnes" />
+          <Tab
+            label="App Builder"
+            sx={{
+              '&.Mui-selected': {
+                color: '#3a9df7',
+                fontWeight: 700,
+              },
+            }}
+          />
+          <Tab
+            label="Carriers & Vendors"
+            sx={{
+              '&.Mui-selected': {
+                color: '#3a9df7',
+                fontWeight: 700,
+              },
+            }}
+          />
+          <Tab
+            label="AI Agent Guidelilnes"
+            sx={{
+              '&.Mui-selected': {
+                color: '#3a9df7',
+                fontWeight: 700,
+              },
+            }}
+          />
         </Tabs>
       </Box>
 
       <Box sx={{ pt: 2 }}>
         {activeTab === 0 && (
-          <AppBuilderPanel />
+          <AppBuilderTabs />
         )}
         {activeTab === 1 && (
           <Typography variant="body1" color="text.secondary">
