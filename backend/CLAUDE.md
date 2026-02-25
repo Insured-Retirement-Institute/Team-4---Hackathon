@@ -16,7 +16,7 @@ npm run dev        # Run with --watch for auto-restart
 ```
 backend/
 ├── Assets/                        # Product definition JSON files + OpenAPI spec
-│   ├── annuity-eapp-openapi.yaml  # OpenAPI 3.1.0 specification
+│   ├── annuity-eapp-openapi-3.yaml # OpenAPI 3.1.0 specification (active)
 │   └── midland-national-eapp.json # Midland National fixed annuity product
 ├── src/
 │   ├── app.js                     # Express app setup, middleware, Swagger UI, routes
@@ -36,6 +36,18 @@ backend/
 └── .dockerignore
 ```
 
+## Deployment
+
+- **AWS Region:** us-east-1
+- **ECR Repo:** `536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api:latest`
+- **App Runner Service:** eAppAPI
+- **Deploy steps:**
+  1. Build image: `docker build --platform linux/amd64 -t eappapi .`
+  2. Tag: `docker tag eappapi:latest 536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api:latest`
+  3. Login: `aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 536697244409.dkr.ecr.us-east-1.amazonaws.com`
+  4. Push: `docker push 536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api:latest`
+  5. Deploy: `aws apprunner start-deployment --service-arn "arn:aws:apprunner:us-east-1:536697244409:service/eAppAPI/21aa6d1c0faf482784c33f92f5cbcc53" --region us-east-1`
+
 ## Validation Engine
 
 `src/services/validationEngine.js` — supports all rule types:
@@ -49,9 +61,20 @@ Key behaviors:
 - Repeatable groups with per-item field validation
 - Disclosure acknowledgment validation
 
-## Adding New Products
+## API Contract Notes
 
-Drop a JSON file into `Assets/` following the same schema as `midland-national-eapp.json`. The product store loads all `*.json` files on startup and indexes by `productId`.
+- The validate (`POST /application/:applicationId/validate`) and submit (`POST /application/:applicationId/submit`) endpoints require `productId` and `answers` in the request body
+- Submission metadata (`agentId`, `ipAddress`, `userAgent`, `submissionSource`) is nested under `req.body.metadata`
+- The active OpenAPI spec is `Assets/annuity-eapp-openapi-3.yaml`
+
+## Server-Stamped Signature Dates
+
+The submission endpoint (`POST /application/:applicationId/submit`) overwrites `date_signed` and each `writing_agents[].agent_date_signed` with the server's current UTC date **before** validation runs. This is intentional:
+
+- **Why:** The `equals_today` validation rule compares against the server's UTC date. Users in US time zones submitting in the evening would have their local date rejected once UTC rolls past midnight (e.g. 11pm CST = next day UTC). This caused production submission failures.
+- **Behavior:** The frontend may still send these date fields for display/UX purposes, but the server ignores them and stamps its own. The persisted submission and canonical payload always reflect the server-authoritative date.
+- **Security:** Prevents clients from backdating or future-dating signature dates. The server is the single source of truth for when the application was signed.
+- **Scope:** Only affects the submit endpoint. The validate endpoint (`/validate`) does **not** stamp dates, so `equals_today` still runs against client-provided values during page-level validation for frontend UX feedback.
 
 ## Key Files
 
@@ -60,4 +83,8 @@ Drop a JSON file into `Assets/` following the same schema as `midland-national-e
 | `src/services/validationEngine.js` | 500+ line validation engine, 15+ rule types |
 | `src/services/productStore.js` | Loads and indexes product JSON on startup |
 | `Assets/midland-national-eapp.json` | Midland National fixed annuity product definition |
-| `Assets/annuity-eapp-openapi.yaml` | OpenAPI 3.1.0 specification |
+| `Assets/annuity-eapp-openapi-3.yaml` | OpenAPI 3.1.0 specification |
+
+## Adding New Products
+
+Drop a JSON file into `Assets/` following the same schema as `midland-national-eapp.json`. The product store loads all `*.json` files on startup and indexes by `productId`.
