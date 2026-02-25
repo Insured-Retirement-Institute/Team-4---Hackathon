@@ -376,7 +376,10 @@ export default function AIExperiencePage() {
 
     // Create a session (used for both voice and chat)
     try {
-      const session = await createSession(productId, undefined, ADVISOR_NAME);
+      const clientCtx = selectedClient
+        ? { client_id: selectedClient.client_id, display_name: selectedClient.display_name }
+        : undefined;
+      const session = await createSession(productId, undefined, ADVISOR_NAME, clientCtx);
       setVoiceSessionId(session.session_id);
       setChatGreeting(session.greeting || '');
     } catch (err) {

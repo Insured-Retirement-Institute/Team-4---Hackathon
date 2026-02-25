@@ -31,6 +31,7 @@ class CreateSessionRequest(BaseModel):
     callback_url: str | None = None
     model: str | None = None
     advisor_name: str | None = None
+    client_context: dict[str, Any] | None = None  # {client_id, display_name}
 
 
 class SendMessageRequest(BaseModel):

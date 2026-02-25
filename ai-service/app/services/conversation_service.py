@@ -39,6 +39,7 @@ def create_session(
     callback_url: str | None = None,
     model: str | None = None,
     advisor_name: str | None = None,
+    client_context: dict[str, Any] | None = None,
 ) -> tuple[ConversationState, str]:
     """Create a new conversation session.
 
@@ -93,6 +94,7 @@ def create_session(
         callback_url=callback_url,
         model_override=model,
         advisor_name=advisor_name,
+        client_context=client_context,
     )
 
     # Generate greeting
@@ -284,8 +286,15 @@ def _generate_greeting(llm: LLMService, state: ConversationState, advisor_name: 
         response = llm.chat(system_prompt, messages)
         return llm.extract_text(response)
 
-    # For COLLECTING phase, return a simple hardcoded greeting
+    # For COLLECTING phase, return a greeting
     name = advisor_name or "there"
+    if state.client_context:
+        client_name = state.client_context.get("display_name", "your client")
+        return (
+            f"Hi {name}! I see you've selected {client_name}. "
+            f"I'll pull up their information right away. Just say the word and "
+            f"I'll search the CRM, review their documents, and check their policies."
+        )
     return f"Hi {name}! What client would you like to work on today?"
 
 

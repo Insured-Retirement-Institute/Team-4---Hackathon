@@ -39,7 +39,12 @@ async function fetchSchema(): Promise<unknown[]> {
   return res.json();
 }
 
-export async function createSession(productId = 'midland-fixed-annuity-001', knownData?: Record<string, string>, advisorName?: string): Promise<SessionResponse> {
+export async function createSession(
+  productId = 'midland-fixed-annuity-001',
+  knownData?: Record<string, string>,
+  advisorName?: string,
+  clientContext?: { client_id: string; display_name: string },
+): Promise<SessionResponse> {
   const questions = await fetchSchema();
 
   const body: Record<string, unknown> = { questions, product_id: productId };
@@ -48,6 +53,9 @@ export async function createSession(productId = 'midland-fixed-annuity-001', kno
   }
   if (advisorName) {
     body.advisor_name = advisorName;
+  }
+  if (clientContext) {
+    body.client_context = clientContext;
   }
 
   const res = await fetch(`${AI_SERVICE_BASE}/api/v1/sessions`, {
