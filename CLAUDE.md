@@ -79,21 +79,24 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 
 ## Cross-Service Integration
 
-**AI Chat flow:** Frontend fetches schema from AI service (`GET /api/v1/demo/midland-schema`) → creates session with questions (`POST /api/v1/sessions`) → sends messages (`POST /api/v1/sessions/{id}/message`) → receives reply + `updated_fields`.
+**AI Chat flow (text):** Frontend fetches schema from AI service (`GET /api/v1/demo/midland-schema`) → creates session with questions (`POST /api/v1/sessions`) → sends messages (`POST /api/v1/sessions/{id}/message`) → receives reply + `updated_fields`.
+
+**AI Chat flow (voice):** Same session creation as text. Frontend opens WebSocket to `WS /api/v1/sessions/{id}/voice` → sends `{"type":"audio","data":"<base64 PCM 16kHz>"}` → receives `{"type":"audio","data":"<base64 PCM 24kHz>"}` + `{"type":"transcript"}` + `{"type":"field_update"}`. Uses AWS Nova Sonic (speech-to-speech) via `aws_sdk_bedrock_runtime` bidirectional stream. Voice and text share the same `ConversationState` (fields, phase) so users can switch modes mid-session. Tool calls (field extraction, confirmation) are handled identically via shared `process_tool_calls()`/`maybe_advance_phase()`.
 
 **Widget ↔ Wizard sync (bidirectional):**
 - Widget → Wizard: `iri:field_updated` CustomEvents → `useWidgetSync` hook → `mergeFields()` → `collectedFields` in `ApplicationContext` → `bulkSetValues()` in form controller
 - Wizard → Widget: Form `values` change → `mergeFields()` → on widget reopen, new fields sent as message to existing session
 - `lastAppliedRef` prevents infinite sync loops
 
-**Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client`, `lookup_prior_policies`, `lookup_annual_statements`, `extract_document_fields`, `get_advisor_preferences`, `get_carrier_suitability` tools → returns `known_data` (including suitability score/rating and advisor recommendations) → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
+**Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client` (live Redtail API), `lookup_crm_notes` (meeting transcripts — LLM extracts financial data), `lookup_prior_policies` (fallback), `lookup_annual_statements`, `extract_document_fields`, `get_advisor_preferences`, `get_carrier_suitability` tools → returns `known_data` (including suitability score/rating and advisor recommendations) → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
 
-**Application persistence flow:** Frontend `ProductSelectionPage` fetches `GET /products` → user picks product → `POST /applications` creates DynamoDB record → wizard saves progress to localStorage via `applicationStorageService` → on submit, `POST /application/:applicationId/submit` runs 5-step pipeline (validate → transform → business rules → persist to Submissions table → mark submitted). Resume via `/wizard-v2/:productId?resume=<id>`.
+**Application persistence flow:** Frontend `ProductSelectionPage` fetches `GET /products` → user picks product → `POST /applications` creates DynamoDB record → wizard saves progress to localStorage via `applicationStorageService` → on submit, `POST /applications/:applicationId/submit` runs 5-step pipeline (validate → transform → business rules → persist to Submissions table → mark submitted). Resume via `/wizard-v2/:productId?resume=<id>`.
 
 **State hub:** `ApplicationContext.tsx` holds `collectedFields`, `sessionId`, `phase`, and step progress shared across wizard and chat.
 
 ## Shared Conventions
 
+- Nova Sonic voice requires Python 3.12+ (`aws_sdk_bedrock_runtime` SDK). Docker image uses `python:3.12-slim`.
 - All AI service routes use `/api/v1/` prefix
 - System prompt includes "never use emojis" instruction
 - AWS credentials must be explicitly passed to `AnthropicBedrock()` — system creds resolve to a different account

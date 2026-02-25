@@ -21,16 +21,16 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
-const applicationRoutes = require('./routes/application');
+const docusignRoutes = require('./routes/docusign');
 const validationRoutes = require('./routes/validation');
 const submissionRoutes = require('./routes/submission');
 const productRoutes = require('./routes/products');
 const applicationsRoutes = require('./routes/applications');
 const distributorRoutes = require('./routes/distributors');
 
-app.use('/application', applicationRoutes);
-app.use('/application', validationRoutes);
-app.use('/application', submissionRoutes);
+app.use('/applications', docusignRoutes);
+app.use('/applications', validationRoutes);
+app.use('/applications', submissionRoutes);
 app.use('/products', productRoutes);
 app.use('/applications', applicationsRoutes);
 app.use('/distributors', distributorRoutes);

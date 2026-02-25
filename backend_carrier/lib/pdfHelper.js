@@ -181,7 +181,7 @@ async function populatePDFWithMapping(pdfBuffer, submission, mapping) {
     }
   });
   
-  form.flatten();
+  // Do not flatten the form so the output PDF remains fillable
   return await pdfDoc.save();
 }
 
@@ -193,7 +193,42 @@ function setFieldValue(field, value, dataType = 'text') {
   
   try {
     if (fieldType === 'PDFTextField' || fieldType === 'PDFSignature') {
-      field.setText(String(value));
+      let text = String(value);
+
+      // Attempt to determine the field max length from several possible locations
+      let maxLen;
+      try {
+        if (typeof field.getMaxLength === 'function') {
+          maxLen = field.getMaxLength();
+        }
+      } catch (e) {}
+
+      try {
+        if (maxLen === undefined && typeof field.maxLength === 'number') {
+          maxLen = field.maxLength;
+        }
+      } catch (e) {}
+
+      try {
+        // Access lower-level acro field dict (pdf-lib internals)
+        if (maxLen === undefined && field.acroField && field.acroField.dict) {
+          const maybe = field.acroField.dict.get('MaxLen') || field.acroField.dict.get('maxLen');
+          if (maybe !== undefined && maybe !== null) {
+            // Try to coerce to number
+            const n = Number(maybe);
+            if (!Number.isNaN(n)) maxLen = n;
+            else if (typeof maybe.asNumber === 'function') {
+              maxLen = maybe.asNumber();
+            }
+          }
+        }
+      } catch (e) {}
+
+      if (typeof maxLen === 'number' && maxLen > 0 && text.length > maxLen) {
+        text = text.substring(0, maxLen);
+      }
+
+      field.setText(text);
     } else if (fieldType === 'PDFCheckBox') {
       if (dataType === 'checkbox') {
         // Boolean checkbox

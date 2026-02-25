@@ -180,7 +180,7 @@ export async function validateApplication(
   const params = new URLSearchParams({ scope });
   if (scope === 'page' && pageId) params.set('pageId', pageId);
 
-  const res = await fetch(`${BASE}/application/${encodeURIComponent(applicationId)}/validate?${params}`, {
+  const res = await fetch(`${BASE}/applications/${encodeURIComponent(applicationId)}/validate?${params}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -220,12 +220,12 @@ export interface SubmissionResponse {
   message?: string | null;
 }
 
-/** POST /application/:applicationId/submit — run the 5-step submission pipeline */
+/** POST /applications/:applicationId/submit — run the 5-step submission pipeline */
 export async function submitApplication(
   applicationId: string,
   body: SubmissionRequest,
 ): Promise<SubmissionResponse> {
-  const res = await fetch(`${BASE}/application/${encodeURIComponent(applicationId)}/submit`, {
+  const res = await fetch(`${BASE}/applications/${encodeURIComponent(applicationId)}/submit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

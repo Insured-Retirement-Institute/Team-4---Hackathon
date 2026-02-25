@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, UploadFile
 from pydantic import BaseModel
 
-from app.services.datasources.mock_redtail import MockRedtailCRM
+from app.services.datasources.redtail_crm import RedtailCRM
 from app.services.prefill_agent import run_prefill_agent
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class ClientInfo(BaseModel):
 @router.get("/prefill/clients", response_model=list[ClientInfo])
 async def list_clients():
     """Return list of CRM clients for the dropdown selector."""
-    return MockRedtailCRM.list_clients()
+    return await RedtailCRM.list_clients()
 
 
 @router.post("/prefill", response_model=PrefillResponse)

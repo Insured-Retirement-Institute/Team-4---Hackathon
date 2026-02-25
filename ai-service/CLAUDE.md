@@ -2,7 +2,7 @@
 
 ## Overview
 
-Conversational AI agent for annuity e-applications. FastAPI + Claude Haiku 4.5 via AWS Bedrock. Guides users through application fields via natural language, extracts and validates data using tool calls.
+Conversational AI agent for annuity e-applications. FastAPI + Claude Haiku 4.5 via AWS Bedrock (text) and AWS Nova Sonic via `aws_sdk_bedrock_runtime` (voice). Guides users through application fields via natural language or real-time voice, extracts and validates data using tool calls. Requires Python 3.12+.
 
 ## Commands
 
@@ -55,6 +55,8 @@ Phase determines which tools are available and which fields they target.
 3. **Field context** — Groups active fields by status (missing, unconfirmed, confirmed, collected, errors)
 4. **Tool instructions** — When to use each extraction tool
 
+`build_voice_system_prompt(state)` wraps the standard prompt with voice-specific guidelines: 1-3 sentence responses, digit-by-digit number reading, no markdown/bullets, natural spoken language.
+
 ## Schema Adapter
 
 `app/services/schema_adapter.py` — `adapt_eapp_schema(eapp)` transforms backend product JSON into flat question list for session creation. Maps question types, validation rules, and visibility conditions.
@@ -75,15 +77,37 @@ All routes under `/api/v1/`:
 | GET | `/prefill/clients` | List CRM clients for dropdown selection |
 | POST | `/prefill` | Run pre-fill agent for a CRM client (`{client_id, advisor_id?}` in body) |
 | POST | `/prefill/document` | Run pre-fill agent with uploaded document (multipart form: `file` + optional `client_id`) |
+| WS | `/sessions/{id}/voice` | Real-time voice conversation via Nova Sonic (WebSocket) |
 | GET | `/health` | Health check |
+
+## Nova Sonic Voice Integration
+
+**Model:** `amazon.nova-sonic-v1:0` — speech-to-speech on Bedrock via `aws_sdk_bedrock_runtime` (Python SDK, requires 3.12+).
+
+**How it works:** `NovaSonicStreamManager` opens a bidirectional stream to Bedrock. The WebSocket route (`voice.py`) runs two concurrent async tasks: `ws_to_nova` (browser audio → Nova Sonic) and `nova_to_ws` (Nova Sonic audio/transcript/tool events → browser). Audio format: 16kHz 16-bit PCM mono in, 24kHz 16-bit PCM mono out, base64-encoded.
+
+**Session setup sequence:** `sessionStart` (inference config) → `promptStart` (audio/text output config, voice ID, all tools upfront) → system prompt as TEXT content block. All tools from `build_tools_for_phase()` are provided at stream start, converted from Anthropic format via `tool_adapter.py`. Phase-specific guidance in the system prompt controls which tools the model uses.
+
+**Tool call bridging:** When Nova Sonic emits a `toolUse` event, the manager normalizes it to `{id, name, input}`, calls shared `process_tool_calls()` from `conversation_service.py`, sends `field_update` to the browser via WebSocket, calls `maybe_advance_phase()`, and sends the `toolResult` event back to Nova Sonic so the model resumes speaking.
+
+**Session sharing:** Voice and text modes read/write the **same `ConversationState`** from the in-memory `_sessions` store. They use different LLMs (Nova Sonic vs Claude) but share fields, phase, and tool processing. The system prompt includes full field context, so either model picks up seamlessly when switching modes.
+
+**WebSocket protocol (JSON over WS):**
+- Client → Server: `{"type":"audio","data":"<b64>"}`, `{"type":"end_session"}`
+- Server → Client: `{"type":"audio","data":"<b64>"}`, `{"type":"transcript","role":"assistant"|"user","text":"..."}`, `{"type":"field_update","fields":[...]}`, `{"type":"phase_change","phase":"..."}`, `{"type":"error","message":"..."}`, `{"type":"session_ended"}`
+
+**Config:** `NOVA_SONIC_MODEL` (default `amazon.nova-sonic-v1:0`), `NOVA_SONIC_VOICE` (default `tiffany`, options: matthew, tiffany, amy, lupe, carlos). Reuses existing AWS credentials.
+
+**Frontend integration (not yet built):** Browser needs `getUserMedia()` for mic (16kHz PCM mono), `AudioContext` for playback (24kHz). `field_update` messages fire the same `iri:field_updated` CustomEvents as text chat for wizard sync.
 
 ## Pre-Fill Agent
 
 `app/services/prefill_agent.py` — LLM-orchestrated agent that gathers client data from external sources before the application begins, feeding results into the existing `known_data` → SPOT_CHECK flow.
 
 **Agent tools** (Anthropic tool_use format):
-- `lookup_crm_client` — Queries `MockRedtailCRM` for client profile (name, DOB, SSN, contact, address)
-- `lookup_prior_policies` — Queries `MockPolicySystem` for suitability data (income, net worth, risk tolerance)
+- `lookup_crm_client` — Queries live Redtail CRM API (`RedtailCRM`) for client profile (name, DOB, SSN, contact, address). Deterministic field mapping from API response.
+- `lookup_crm_notes` — Fetches CRM notes/activity records for a client. Notes contain meeting transcripts with rich unstructured data (income, net worth, risk tolerance, goals, family). LLM extracts financial fields from note text.
+- `lookup_prior_policies` — Queries `MockPolicySystem` for suitability data (fallback if CRM notes lack financial data)
 - `lookup_annual_statements` — Fetches latest annual statement PDF from S3 (`S3StatementStore`)
 - `extract_document_fields` — LLM extracts fields from uploaded/retrieved document via vision
 - `get_advisor_preferences` — Fetches advisor profile from S3 (`S3AdvisorPrefsStore`): philosophy, preferred carriers, allocation strategy, suitability thresholds
@@ -93,8 +117,10 @@ All routes under `/api/v1/`:
 **Agent loop:** `run_prefill_agent(client_id, document_base64, document_media_type, advisor_id)` — up to 10 iterations with `force_tool=True`. Terminates when `report_prefill_results` is called. Uses same `LLMService.chat()` and `extract_tool_calls()` as the conversation flow.
 
 **Data sources** (`app/services/datasources/`):
-- `MockRedtailCRM` — 4 mock clients with ~18 CRM fields each. `list_clients()` for dropdown, `query({client_id})` for profile data. Designed for clean swap to live Redtail API.
-- `MockPolicySystem` — 10 suitability/financial fields per client (income, net worth, risk tolerance, investment details).
+- `RedtailClient` — Async HTTP client for Redtail CRM API. Two-step auth (Basic → UserKey with 1hr cache), 401 retry, typed methods for contacts/addresses/phones/emails/notes/family.
+- `RedtailCRM` — `DataSource` impl wrapping `RedtailClient`. `list_clients()` paginates contacts (Individual type filter). `query({client_id})` fetches contact+addresses+phones+emails via `asyncio.gather()`, deterministic field mapping to app fields, copies owner→annuitant. `get_notes(contact_id)` fetches notes with HTML stripping.
+- `MockRedtailCRM` — Legacy mock CRM (4 hardcoded clients). Kept for reference/testing but no longer used in production flow.
+- `MockPolicySystem` — 10 suitability/financial fields per client (income, net worth, risk tolerance, investment details). Used as fallback when CRM notes lack financial data.
 - `S3StatementStore` — Fetches annual statement PDFs from S3 bucket (`statements/{client_id}/`).
 - `S3AdvisorPrefsStore` — Fetches advisor preference profiles from S3 (`advisors/{advisor_id}/profile.json`). 3 mock advisors: conservative (advisor_001), balanced (advisor_002), accumulation-focused (advisor_003).
 - `S3SuitabilityStore` — Fetches carrier suitability guidelines from S3 (`suitability/{carrier_id}/guidelines.json`) and runs `evaluate_suitability()` weighted scoring. 3 carriers: midland-national, aspida, equitrust.
@@ -114,6 +140,13 @@ All routes under `/api/v1/`:
    - Check phase transitions → return reply + updated_fields + phase
 4. Frontend calls `/sessions/{id}/submit` when complete
 
+**Voice flow (alternative to step 3):**
+3v. Frontend opens `WS /sessions/{id}/voice` → `NovaSonicStreamManager` opens bidirectional Bedrock stream
+   - Browser sends audio chunks → Nova Sonic processes speech → responds with audio + transcript
+   - Tool calls handled mid-stream: `toolUse` → `process_tool_calls()` → `field_update` to browser + `toolResult` to Nova Sonic
+   - Phase transitions via shared `maybe_advance_phase()` — same logic as text
+   - On disconnect, stream is gracefully closed (`contentEnd` → `promptEnd` → `sessionEnd`)
+
 ## Config
 
 `app/config.py` — Pydantic `BaseSettings`, reads from `.env`:
@@ -126,7 +159,13 @@ All routes under `/api/v1/`:
 | `AWS_SECRET_ACCESS_KEY` | — | Required, explicit |
 | `AWS_SESSION_TOKEN` | — | Required, explicit |
 | `S3_STATEMENTS_BUCKET` | `iri-hackathon-statements` | S3 bucket for statements, advisor profiles, and suitability guidelines |
+| `REDTAIL_API_KEY` | — | Redtail CRM API key. Falls back to SSM Parameter Store if missing. |
+| `REDTAIL_USERNAME` | — | Redtail CRM username |
+| `REDTAIL_PASSWORD` | — | Redtail CRM password |
+| `REDTAIL_BASE_URL` | `https://smf.crm3.redtailtechnology.com/api/public/v1` | Redtail CRM API base URL |
 | `HOST` | `0.0.0.0` | |
+| `NOVA_SONIC_MODEL` | `amazon.nova-sonic-v1:0` | Nova Sonic model ID for voice |
+| `NOVA_SONIC_VOICE` | `tiffany` | Voice ID (matthew, tiffany, amy, lupe, carlos) |
 | `PORT` | `8000` | Use 8001 locally to avoid conflicts |
 
 ## Key Files
@@ -135,12 +174,17 @@ All routes under `/api/v1/`:
 |------|---------|
 | `app/main.py` | FastAPI app, CORS, route registration |
 | `app/services/llm_service.py` | Bedrock client, chat/stream methods, tool extraction |
-| `app/services/conversation_service.py` | Session store, message handling, phase transitions |
+| `app/services/conversation_service.py` | Session store, message handling, phase transitions. `process_tool_calls()` and `maybe_advance_phase()` are public — shared by text and voice |
 | `app/services/extraction_service.py` | Tool definitions, field validation, phase-aware tool sets |
+| `app/services/nova_sonic_service.py` | `NovaSonicStreamManager`: bidirectional Bedrock stream lifecycle, audio forwarding, tool call bridging |
+| `app/services/tool_adapter.py` | Anthropic → Nova Sonic tool format converter (`input_schema` → `toolSpec.inputSchema.json`) |
+| `app/routes/voice.py` | WebSocket `/sessions/{id}/voice` — two async tasks for bidirectional audio + tool events |
 | `app/services/schema_adapter.py` | eApp JSON → internal question format |
 | `app/services/prefill_agent.py` | LLM-orchestrated pre-fill agent: tool defs, agent loop, source execution |
-| `app/services/datasources/mock_redtail.py` | Mock CRM: 4 clients, ~18 fields each, `list_clients()` for dropdown |
-| `app/services/datasources/mock_policy.py` | Mock prior policy/suitability data: 10 fields per client |
+| `app/services/datasources/redtail_client.py` | Async HTTP client for Redtail CRM API: two-step auth, UserKey caching, typed API methods |
+| `app/services/datasources/redtail_crm.py` | Live Redtail CRM DataSource: `list_clients()`, `query()` with field mapping, `get_notes()` with HTML stripping |
+| `app/services/datasources/mock_redtail.py` | Legacy mock CRM (4 hardcoded clients, kept for reference) |
+| `app/services/datasources/mock_policy.py` | Mock prior policy/suitability data: 10 fields per client (fallback) |
 | `app/services/datasources/s3_statements.py` | S3 annual statement PDF fetcher |
 | `app/services/datasources/s3_advisor_prefs.py` | S3 advisor preference profile fetcher |
 | `app/services/datasources/s3_suitability.py` | S3 carrier suitability guidelines + weighted scoring engine |

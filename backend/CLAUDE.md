@@ -27,11 +27,11 @@ backend/
 │   ├── config/
 │   │   └── dynamodb.js               # DynamoDB client setup (region, optional local endpoint)
 │   ├── routes/
-│   │   ├── application.js            # GET /application/:productId
+│   │   ├── application.js            # GET /applications/:productId
 │   │   ├── applications.js           # POST /applications, GET /:id, PUT /:id/answers
 │   │   ├── products.js               # GET/POST/PUT/DELETE /products
-│   │   ├── validation.js             # POST /application/:applicationId/validate
-│   │   └── submission.js             # POST /application/:applicationId/submit
+│   │   ├── validation.js             # POST /applications/:applicationId/validate
+│   │   └── submission.js             # POST /applications/:applicationId/submit
 │   ├── services/
 │   │   ├── productStore.js           # Loads & indexes product JSON from Assets/
 │   │   ├── productService.js         # DynamoDB CRUD for Products table
@@ -54,9 +54,9 @@ backend/
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/application/:productId` | Get application definition for a product |
-| POST | `/application/:applicationId/validate` | Validate answers (scope: `page` or `full`) |
-| POST | `/application/:applicationId/submit` | Submit application (5-step pipeline) |
+| GET | `/applications/:productId` | Get application definition for a product |
+| POST | `/applications/:applicationId/validate` | Validate answers (scope: `page` or `full`) |
+| POST | `/applications/:applicationId/submit` | Submit application (5-step pipeline) |
 | POST | `/applications` | Create new application record (`{productId}` in body) |
 | GET | `/applications/:id` | Get application by ID |
 | PUT | `/applications/:id/answers` | Merge answers into in-progress application (409 if submitted) |
@@ -92,7 +92,7 @@ Three DynamoDB tables provide persistence. The `docClient` is configured in `src
 
 ## Submission Pipeline
 
-The submit endpoint (`POST /application/:applicationId/submit`) runs a 5-step pipeline:
+The submit endpoint (`POST /applications/:applicationId/submit`) runs a 5-step pipeline:
 
 1. **Server-stamp dates** — Overwrites `date_signed` and `writing_agents[].agent_date_signed` with server UTC date (prevents timezone-mismatch rejections)
 2. **Validate answers** — Full validation via `validationEngine.js` against product rules

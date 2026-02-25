@@ -8,6 +8,7 @@ const {
   deleteProduct,
 } = require('../services/productService');
 const { addProduct } = require('../services/productStore');
+const { getDistributorById } = require('../services/distributorService');
 
 // GET /products
 router.get('/', async (req, res) => {
@@ -63,6 +64,21 @@ router.post('/', async (req, res) => {
       });
     }
 
+    if (Array.isArray(req.body.distributors) && req.body.distributors.length > 0) {
+      const invalidIds = [];
+      for (const distId of req.body.distributors) {
+        const dist = await getDistributorById(distId);
+        if (!dist) invalidIds.push(distId);
+      }
+      if (invalidIds.length > 0) {
+        return res.status(400).json({
+          code: 'VALIDATION_ERROR',
+          message: `Invalid distributor IDs: ${invalidIds.join(', ')}.`,
+          details: { invalidDistributorIds: invalidIds },
+        });
+      }
+    }
+
     const product = await createProduct(req.body);
     addProduct(product);
     res.status(201).json(product);
@@ -86,6 +102,21 @@ router.post('/', async (req, res) => {
 // PUT /products/:productId
 router.put('/:productId', async (req, res) => {
   try {
+    if (Array.isArray(req.body.distributors) && req.body.distributors.length > 0) {
+      const invalidIds = [];
+      for (const distId of req.body.distributors) {
+        const dist = await getDistributorById(distId);
+        if (!dist) invalidIds.push(distId);
+      }
+      if (invalidIds.length > 0) {
+        return res.status(400).json({
+          code: 'VALIDATION_ERROR',
+          message: `Invalid distributor IDs: ${invalidIds.join(', ')}.`,
+          details: { invalidDistributorIds: invalidIds },
+        });
+      }
+    }
+
     const product = await updateProduct(req.params.productId, req.body);
     addProduct(product);
     res.json(product);

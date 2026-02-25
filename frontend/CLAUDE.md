@@ -2,7 +2,7 @@
 
 ## Flow
 1. `/wizard-v2` → `ProductSelectionPage` — fetches `GET /products`, user picks a product, navigates to `/wizard-v2/:productId`
-2. `/wizard-v2/:productId` → `WizardPageV2` — reads `:productId` from route params, fetches `GET /application/:productId` to get an `ApplicationDefinition`, then renders the dynamic form wizard
+2. `/wizard-v2/:productId` → `WizardPageV2` — reads `:productId` from route params, fetches `GET /applications/:productId` to get an `ApplicationDefinition`, then renders the dynamic form wizard
 
 ## Key Files
 - `src/pages/ProductSelectionPage.tsx` — product picker; navigates on selection, does NOT prefetch the application definition
@@ -83,7 +83,7 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 
 `src/features/wizard-v2/` — data-driven form wizard:
 - Product selected on `/wizard-v2` (`ProductSelectionPage`) → navigates to `/wizard-v2/:productId`
-- Schema fetched from backend `GET /application/:productId`
+- Schema fetched from backend `GET /applications/:productId`
 - `formController.tsx` manages form state with `bulkSetValues()` for external field injection
 - `visibility.ts` evaluates per-question visibility (AND/OR conditions, same logic as backend)
 - Supports repeating pages, repeatable groups, and `multi_select` fields

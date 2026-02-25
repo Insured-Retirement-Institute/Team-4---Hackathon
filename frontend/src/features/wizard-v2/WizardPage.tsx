@@ -24,6 +24,7 @@ import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import type { ApplicationDefinition } from '../../types/application';
 import { useApplication } from '../../context/ApplicationContext';
@@ -38,6 +39,13 @@ import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
 import { evaluateVisibility } from './visibility';
+
+type DocusignStartResponse = {
+  signingUrl?: string;
+  envelopeId?: string;
+  error?: string;
+  message?: string;
+};
 
 type AnswerMap = Record<string, string | boolean | Record<string, string | boolean>[]>;
 
@@ -386,6 +394,25 @@ function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefini
   };
 }
 
+function getSignerDefaults(values: AnswerMap) {
+  const ownerSameAsAnnuitant = asBool(values.owner_same_as_annuitant);
+  const ownerName = [asString(values.owner_first_name), asString(values.owner_last_name)]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const annuitantName = [asString(values.annuitant_first_name), asString(values.annuitant_last_name)]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const signerName = ownerSameAsAnnuitant ? annuitantName || ownerName : ownerName || annuitantName;
+  const signerEmail = asString(values.owner_email) || asString(values.annuitant_email);
+
+  return {
+    signerName: signerName.trim(),
+    signerEmail: signerEmail.trim(),
+  };
+}
+
 // ── Submission Progress Dialog ─────────────────────────────────────────────
 
 type StepStatus = 'pending' | 'active' | 'success' | 'error' | 'warn';
@@ -654,7 +681,14 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [docusignError, setDocusignError] = useState<string | null>(null);
+  const [isDocusignLoading, setIsDocusignLoading] = useState(false);
+  const [signerDialogOpen, setSignerDialogOpen] = useState(false);
+  const [signerName, setSignerName] = useState('');
+  const [signerEmail, setSignerEmail] = useState('');
+  const [signerFieldErrors, setSignerFieldErrors] = useState<{ name?: string; email?: string }>({});
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [isRedirectingToDocusign, setIsRedirectingToDocusign] = useState(false);
   const [subDialog, setSubDialog] = useState<{
     open: boolean;
     mode: 'validate' | 'submit';
@@ -664,6 +698,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
     resultMessage: string | null;
   }>({ open: false, mode: 'submit', phase: null, failedAt: null, resultStatus: null, resultMessage: null });
   const lastAppliedRef = useRef<Record<string, string | boolean>>({});
+  const isBusyWithDocusign = isDocusignLoading || isRedirectingToDocusign;
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
@@ -735,7 +770,9 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
     [isPageComplete, pages],
   );
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
+  const shouldShowDocusignStatus = Boolean(
+    isDocusignLoading || isRedirectingToDocusign || docusignError,
+  );
 
   const handleNext = () => {
     if (!isReviewStep && currentPage && !validatePage(currentPage)) return;
@@ -753,9 +790,6 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
       persistProgress(prev);
     }
   };
-
-  const handleSidebarPageClick = (pageIndex: number) => setCurrentStep(pageIndex + 1);
-  const handleSidebarIntroClick = () => setCurrentStep(0);
 
   // ── Exit ───────────────────────────────────────────────────────────────────
 
@@ -795,6 +829,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
   const handleSubmit = async () => {
     setSubmissionError(null);
     setShowSubmissionBanner(false);
+    setDocusignError(null);
     setIsSubmitting(true);
 
     const submissionPayload = buildSubmissionPayload(values as AnswerMap, definition);
@@ -828,6 +863,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
       console.log('eapp_submission_payload', submissionPayload);
       markSubmitted(applicationId);
       setShowSubmissionBanner(true);
+      handleDocusignClick();
       setSubDialog(prev => ({ ...prev, phase: 'done', resultStatus: 'success', resultMessage: 'Your application has been successfully submitted. You will receive a confirmation shortly.' }));
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unable to reach the server. Please try again.';
@@ -839,7 +875,103 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const handleStartDocusign = async (
+    requestedName: string,
+    requestedEmail: string,
+  ) => {
+    setDocusignError(null);
+    setIsDocusignLoading(true);
+    setIsRedirectingToDocusign(false);
+
+    const applicationId = `app_${definition.id}`;
+
+    try {
+      const response = await fetch(`/application/${applicationId}/docusign/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          signerEmail: requestedEmail,
+          signerName: requestedName,
+        }),
+      });
+
+      const result = (await response.json()) as DocusignStartResponse;
+
+      if (!response.ok) {
+        setDocusignError(result.error || result.message || 'DocuSign request failed. Please try again.');
+        setIsRedirectingToDocusign(false);
+        return;
+      }
+
+      if (!result.signingUrl) {
+        setDocusignError('DocuSign did not return a signing URL.');
+        setIsRedirectingToDocusign(false);
+        return;
+      }
+
+      setIsRedirectingToDocusign(true);
+      window.location.assign(result.signingUrl);
+    } catch (error) {
+      console.error('DocuSign request failed:', error);
+      setDocusignError('Unable to reach the DocuSign service. Please try again.');
+      setIsRedirectingToDocusign(false);
+    } finally {
+      setIsDocusignLoading(false);
+    }
+  };
+
+  const handleDocusignClick = () => {
+    const defaults = getSignerDefaults(values as AnswerMap);
+
+    if (!defaults.signerName || !defaults.signerEmail) {
+      setSignerName(defaults.signerName);
+      setSignerEmail(defaults.signerEmail);
+      setSignerFieldErrors({});
+      setSignerDialogOpen(true);
+      return;
+    }
+
+    handleStartDocusign(defaults.signerName, defaults.signerEmail);
+  };
+
+  const handleSignerDialogClose = () => {
+    if (!isDocusignLoading) {
+      setSignerDialogOpen(false);
+    }
+  };
+
+  const handleSignerDialogContinue = () => {
+    const trimmedName = signerName.trim();
+    const trimmedEmail = signerEmail.trim();
+    const nextErrors: { name?: string; email?: string } = {};
+
+    if (!trimmedName) {
+      nextErrors.name = 'Full name is required.';
+    }
+
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      nextErrors.email = 'Valid email is required.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setSignerFieldErrors(nextErrors);
+      return;
+    }
+
+    setSignerFieldErrors({});
+    setSignerDialogOpen(false);
+    handleStartDocusign(trimmedName, trimmedEmail);
+  };
+
+  const handleSidebarPageClick = (pageIndex: number) => {
+    setCurrentStep(pageIndex + 1);
+  };
+
+  const handleSidebarIntroClick = () => {
+    setCurrentStep(0);
+  };
 
   return (
     <Box sx={{ display: 'flex', height: 'calc(100vh - 48px)', overflow: 'hidden', bgcolor: 'background.default' }}>
@@ -944,6 +1076,22 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
             )}
 
             {isReviewStep && <ReviewPanel />}
+
+            {isReviewStep && shouldShowDocusignStatus && (
+              <Stack spacing={1.5} sx={{ mt: 3 }}>
+                {isDocusignLoading && (
+                  <Alert severity="info" icon={<CircularProgress size={16} color="inherit" />}>
+                    Starting DocuSign session...
+                  </Alert>
+                )}
+                {isRedirectingToDocusign && (
+                  <Alert severity="info" icon={<CircularProgress size={16} color="inherit" />}>
+                    Redirecting you to DocuSign...
+                  </Alert>
+                )}
+                {docusignError && <Alert severity="error">{docusignError}</Alert>}
+              </Stack>
+            )}
           </Box>
         </Box>
 
@@ -979,7 +1127,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
                 <Button
                   startIcon={<ArrowBackIcon />}
                   onClick={handleBack}
-                  disabled={currentStep === 0}
+                  disabled={isSubmitting || !isFormComplete}
                   color="secondary"
                   variant="outlined"
                   size="small"
@@ -993,6 +1141,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
                 )}
                 {isReviewStep && (
                   <>
+                    <>
                     <Button
                       variant="outlined"
                       color="secondary"
@@ -1004,15 +1153,16 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
                       Validate
                     </Button>
                     <Button
-                      variant="contained"
-                      color="secondary"
-                      size="small"
-                      startIcon={<SendIcon />}
+                        variant="contained"
+                        color="secondary"
+                        size="small"
+                        startIcon={<SendIcon />}
                       onClick={handleSubmit}
-                      disabled={isSubmitting || !isFormComplete}
-                    >
-                      Submit Application
-                    </Button>
+                        disabled={isSubmitting || isBusyWithDocusign || !isFormComplete}
+                      >
+                        Submit Application
+                      </Button>
+                  </>
                   </>
                 )}
               </Stack>
@@ -1032,6 +1182,57 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
         onClose={() => setSubDialog(prev => ({ ...prev, open: false }))}
       />
 
+      {/* ── Submission progress dialog ────────────────────────────────── */}
+      <SubmissionProgressDialog
+        open={subDialog.open}
+        mode={subDialog.mode}
+        phase={subDialog.phase}
+        failedAt={subDialog.failedAt}
+        resultStatus={subDialog.resultStatus}
+        resultMessage={subDialog.resultMessage}
+        onClose={() => setSubDialog(prev => ({ ...prev, open: false }))}
+      />
+
+      <Dialog
+        open={signerDialogOpen}
+        onClose={handleSignerDialogClose}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Signer details</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Full name"
+              value={signerName}
+              onChange={(event) => setSignerName(event.target.value)}
+              error={Boolean(signerFieldErrors.name)}
+              helperText={signerFieldErrors.name}
+              autoFocus
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={signerEmail}
+              onChange={(event) => setSignerEmail(event.target.value)}
+              error={Boolean(signerFieldErrors.email)}
+              helperText={signerFieldErrors.email}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSignerDialogClose} disabled={isDocusignLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSignerDialogContinue}
+            disabled={isDocusignLoading}
+          >
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* ── Exit confirmation dialog ──────────────────────────────────── */}
       <Dialog
         open={exitDialogOpen}
