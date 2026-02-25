@@ -4,6 +4,7 @@
   "carrier": "Midland National Life Insurance Company",
   "productName": "Fixed Annuity Application",
   "productId": "midland-fixed-annuity-001",
+  "productType": "FIA",
   "effectiveDate": "2021-03-01",
   "locale": "en-US",
   "description": "This application is used to apply for a Midland National fixed annuity contract. You will be asked to provide information about the annuitant, owner, beneficiaries, funding, and product selection. All statements made are representations and become part of the annuity contract. Please have personal identification, Social Security numbers, and funding account information available before beginning.",

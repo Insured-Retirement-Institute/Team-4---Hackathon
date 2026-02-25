@@ -4,6 +4,7 @@
   "carrier": "Aspida Life Insurance Company",
   "productName": "Multi-Year Tax-Deferred Guaranteed Annuity",
   "productId": "aspida-myga-001",
+  "productType": "MYGA",
   "effectiveDate": "2023-01-01",
   "locale": "en-US",
   "description": "This application is used to apply for an Aspida Life Insurance Company Multi-Year Tax-Deferred Guaranteed Annuity (Form Series ICC22C-MYGA1012 / C-MYGA1012). This is a single premium deferred annuity with a guaranteed interest rate for a selected guarantee period (2, 3, 5, or 7 years). Please have personal identification, Social Security numbers, existing contract information (if transferring or exchanging), and financial information available before beginning. Non-resident aliens are not eligible for this product.",
