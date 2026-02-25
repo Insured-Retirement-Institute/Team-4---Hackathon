@@ -26,7 +26,7 @@ class StepDefinition(BaseModel):
 
 
 class CreateSessionRequest(BaseModel):
-    questions: list[StepDefinition]
+    questions: list[StepDefinition] = Field(default_factory=list)
     known_data: dict[str, Any] = Field(default_factory=dict)
     callback_url: str | None = None
     model: str | None = None
@@ -65,6 +65,8 @@ class SessionResponse(BaseModel):
 class ToolCallInfo(BaseModel):
     name: str
     result_summary: str | None = None
+    result_data: dict[str, Any] | None = None
+    source_label: str | None = None
 
 
 class MessageResponse(BaseModel):

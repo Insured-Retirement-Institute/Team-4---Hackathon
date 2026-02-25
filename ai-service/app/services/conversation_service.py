@@ -25,6 +25,24 @@ from app.services.validation_service import validate_field
 
 logger = logging.getLogger(__name__)
 
+TOOL_SOURCE_LABELS = {
+    "lookup_crm_client": "Redtail CRM",
+    "lookup_family_members": "Redtail CRM",
+    "lookup_crm_notes": "CRM Notes",
+    "lookup_prior_policies": "Prior Policies",
+    "lookup_annual_statements": "Document Store",
+    "extract_document_fields": "Document Store",
+    "get_advisor_preferences": "Advisor Preferences",
+    "get_carrier_suitability": "Suitability Check",
+    "call_client": "Client Call",
+}
+
+ADVISOR_TOOL_NAMES = {
+    "lookup_crm_client", "lookup_family_members", "lookup_crm_notes",
+    "lookup_prior_policies", "lookup_annual_statements", "extract_document_fields",
+    "get_advisor_preferences", "get_carrier_suitability", "call_client",
+}
+
 # In-memory session store
 _sessions: dict[str, ConversationState] = {}
 
@@ -141,11 +159,6 @@ async def handle_message(
 
     if tool_calls:
         # Separate advisor tools from field extraction/confirmation tools
-        ADVISOR_TOOL_NAMES = {
-            "lookup_crm_client", "lookup_family_members", "lookup_crm_notes",
-            "lookup_prior_policies", "lookup_annual_statements", "extract_document_fields",
-            "get_advisor_preferences", "get_carrier_suitability", "call_client",
-        }
 
         advisor_tool_calls = [tc for tc in tool_calls if tc["name"] in ADVISOR_TOOL_NAMES]
         field_tool_calls = [tc for tc in tool_calls if tc["name"] not in ADVISOR_TOOL_NAMES]
@@ -211,8 +224,23 @@ async def handle_message(
     else:
         reply_text = llm.extract_text(response)
 
-    # Build tool call info for frontend
-    tool_calls_info = [{"name": tc["name"]} for tc in tool_calls] if tool_calls else []
+    # Build tool call info for frontend (include result data + source labels)
+    tool_calls_info = []
+    if tool_calls:
+        for tc in tool_calls:
+            info: dict[str, Any] = {
+                "name": tc["name"],
+                "source_label": TOOL_SOURCE_LABELS.get(tc["name"]),
+            }
+            raw = tool_results.get(tc["id"])
+            if raw and tc["name"] in ADVISOR_TOOL_NAMES and isinstance(raw, str):
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, dict) and "error" not in parsed:
+                        info["result_data"] = parsed
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            tool_calls_info.append(info)
 
     # Phase transitions
     maybe_advance_phase(state)

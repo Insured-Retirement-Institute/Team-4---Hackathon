@@ -54,5 +54,12 @@ async def send_message(session_id: str, req: SendMessageRequest):
             collected=summary.get("collected", 0),
         ),
         complete=state.phase in ("complete", "submitted"),
-        tool_calls=[ToolCallInfo(name=tc["name"]) for tc in tool_calls_info],
+        tool_calls=[
+            ToolCallInfo(
+                name=tc["name"],
+                result_data=tc.get("result_data"),
+                source_label=tc.get("source_label"),
+            )
+            for tc in tool_calls_info
+        ],
     )

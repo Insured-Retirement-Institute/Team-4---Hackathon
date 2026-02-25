@@ -168,6 +168,14 @@ def _tool_instructions(state: ConversationState) -> str:
         lines.append(
             "- You can call MULTIPLE tools in a single response. Call as many as needed."
         )
+        lines.append(
+            "- After gathering client data, ask the advisor which annuity product they'd like to use. "
+            "Available products: Midland National Fixed Annuity, Aspida MYGA, EquiTrust Certainty Select."
+        )
+        lines.append(
+            "- After the advisor selects a product, offer to look up the client's family members "
+            "for potential spouse or beneficiary information using lookup_family_members."
+        )
 
     if state.phase in (SessionPhase.SPOT_CHECK, SessionPhase.REVIEWING):
         lines.append(

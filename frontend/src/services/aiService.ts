@@ -19,6 +19,8 @@ export interface UpdatedField {
 export interface ToolCallInfo {
   name: string;
   result_summary?: string;
+  result_data?: Record<string, unknown>;
+  source_label?: string;
 }
 
 export interface MessageResponse {
@@ -40,14 +42,15 @@ async function fetchSchema(): Promise<unknown[]> {
 }
 
 export async function createSession(
-  productId = 'midland-fixed-annuity-001',
+  productId?: string,
   knownData?: Record<string, string>,
   advisorName?: string,
   clientContext?: { client_id: string; display_name: string },
 ): Promise<SessionResponse> {
-  const questions = await fetchSchema();
+  const questions = productId ? await fetchSchema() : [];
 
-  const body: Record<string, unknown> = { questions, product_id: productId };
+  const body: Record<string, unknown> = { questions };
+  if (productId) body.product_id = productId;
   if (knownData && Object.keys(knownData).length > 0) {
     body.known_data = knownData;
   }

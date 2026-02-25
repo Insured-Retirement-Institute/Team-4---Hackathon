@@ -34,6 +34,8 @@ pytest                                                          # Run tests
 
 Without this pattern, the model either skips tools or returns empty text responses.
 
+**Advisor mode exception:** When `state.advisor_name` is set, `force_tool=False` on the first call too — the LLM decides when to call tools based on the conversation. The system prompt strongly instructs the LLM to use CRM tools when the advisor mentions a client.
+
 **AWS credentials** must be explicitly passed to `AnthropicBedrock()` — the system credential chain resolves to a different account.
 
 **Message format:** Anthropic API requires alternating user/assistant roles. Tool results must be combined into a single user message to avoid role errors.
@@ -47,13 +49,24 @@ Built dynamically per phase by `extraction_service.py`:
 
 Phase determines which tools are available and which fields they target.
 
+**Advisor tools:** When `state.advisor_name` is set, `build_tools_for_phase()` prepends the full `ADVISOR_TOOLS` list (9 tools) to the phase-specific tools. These are the same tools used by the prefill agent but available interactively in the chat:
+- `lookup_crm_client`, `lookup_family_members`, `lookup_crm_notes` — Redtail CRM lookups
+- `lookup_prior_policies`, `lookup_annual_statements` — Policy/document data
+- `extract_document_fields` — LLM document analysis
+- `get_advisor_preferences`, `get_carrier_suitability` — Advisor prefs and suitability scoring
+- `call_client` — Initiates Retell AI outbound phone call
+
+In `handle_message()`, advisor tool calls are separated from field tools and executed async via `execute_prefill_tool()` (or `retell_service.create_outbound_call()` for `call_client`). Tool results are combined into a single user message for the follow-up LLM call.
+
+**Tool result surfacing:** `ToolCallInfo` response model includes `result_data` (parsed JSON from tool execution, excluding errors) and `source_label` (human-readable source name from `TOOL_SOURCE_LABELS` mapping in `conversation_service.py`). Frontend uses these to populate field mapping panels with source attribution. Source labels: "Redtail CRM", "CRM Notes", "Prior Policies", "Document Store", "Advisor Preferences", "Suitability Check", "Client Call".
+
 ## System Prompt
 
 `app/prompts/system_prompt.py` — `build_system_prompt(state)` generates phase-aware prompt:
-1. **Persona** — Warm, professional, conversational. Never use emojis.
+1. **Persona** — Two modes: (a) warm, professional client-facing assistant, or (b) advisor-facing assistant when `state.advisor_name` is set. Advisor mode lists available data sources, instructs LLM to immediately use CRM tools, and includes `client_context` (selected client's CRM ID + name) if available. Never use emojis.
 2. **Phase instructions** — Different guidance per phase (what to ask, when to advance)
 3. **Field context** — Groups active fields by status (missing, unconfirmed, confirmed, collected, errors)
-4. **Tool instructions** — When to use each extraction tool
+4. **Tool instructions** — When to use each extraction tool. Advisor mode adds instructions for CRM lookups, suitability checks, client calls, product selection guidance (asks advisor which annuity product), and family member lookup suggestions.
 
 `build_voice_system_prompt(state)` wraps the standard prompt with voice-specific guidelines: 1-3 sentence responses, digit-by-digit number reading, no markdown/bullets, natural spoken language.
 
@@ -69,9 +82,9 @@ All routes under `/api/v1/`:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/sessions` | Create session (requires `questions` array + optional `known_data`) |
+| POST | `/sessions` | Create session (`questions` array defaults to `[]` + optional `known_data`, `advisor_name`, `client_context`) |
 | GET | `/sessions/{id}` | Get session state |
-| POST | `/sessions/{id}/message` | Send message → reply + `updated_fields` |
+| POST | `/sessions/{id}/message` | Send message → reply + `updated_fields` + `tool_calls` |
 | POST | `/sessions/{id}/submit` | Submit completed application |
 | GET | `/demo/midland-schema` | Fetch adapted product schema |
 | GET | `/prefill/clients` | List CRM clients for dropdown selection |
@@ -137,14 +150,15 @@ All routes under `/api/v1/`:
 
 ## API Flow
 
-1. Frontend fetches `/demo/midland-schema` → adapted question list
-2. Frontend POSTs `/sessions` with questions + optional `known_data` → session ID + greeting
+1. Frontend fetches `/demo/midland-schema` → adapted question list (skipped for product-agnostic advisor sessions)
+2. Frontend POSTs `/sessions` with `questions` (defaults to `[]`) + optional `known_data`, `advisor_name`, `client_context` → session ID + greeting
 3. User messages go to `/sessions/{id}/message`:
-   - Build phase-aware system prompt
-   - First LLM call (forced tools) → extract/confirm fields
-   - Process tool results → validate fields → update statuses
-   - Follow-up LLM call (natural language) → assistant reply
-   - Check phase transitions → return reply + updated_fields + phase
+   - Build phase-aware system prompt (advisor vs client persona)
+   - First LLM call (forced tools for client mode, optional for advisor mode) → extract/confirm fields + advisor tools
+   - Separate advisor tool calls (CRM, documents, Retell) from field tools → execute async
+   - Process field tool results → validate fields → update statuses
+   - Follow-up LLM call (natural language) with all tool results → assistant reply
+   - Check phase transitions → return reply + updated_fields + tool_calls + phase
 4. Frontend calls `/sessions/{id}/submit` when complete
 
 **Voice flow (alternative to step 3):**
@@ -184,7 +198,7 @@ All routes under `/api/v1/`:
 |------|---------|
 | `app/main.py` | FastAPI app, CORS, route registration |
 | `app/services/llm_service.py` | Bedrock client, chat/stream methods, tool extraction |
-| `app/services/conversation_service.py` | Session store, message handling, phase transitions. `process_tool_calls()` and `maybe_advance_phase()` are public — shared by text and voice |
+| `app/services/conversation_service.py` | Session store, message handling, phase transitions. `process_tool_calls()` and `maybe_advance_phase()` are public — shared by text and voice. Advisor mode separates advisor tools from field tools and executes them async. `TOOL_SOURCE_LABELS` and `ADVISOR_TOOL_NAMES` are module-level constants. `tool_calls_info` includes parsed `result_data` + `source_label` for frontend field mapping |
 | `app/services/extraction_service.py` | Tool definitions, field validation, phase-aware tool sets |
 | `app/services/nova_sonic_service.py` | `NovaSonicStreamManager`: bidirectional Bedrock stream lifecycle, audio forwarding, tool call bridging |
 | `app/services/tool_adapter.py` | Anthropic → Nova Sonic tool format converter (`input_schema` → `toolSpec.inputSchema.json`) |
