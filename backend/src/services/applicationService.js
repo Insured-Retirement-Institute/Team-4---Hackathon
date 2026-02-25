@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const {
+  ScanCommand,
   GetCommand,
   PutCommand,
   UpdateCommand,
@@ -96,7 +97,13 @@ async function updateApplicationCarrierData(id, carrierData) {
   return result.Attributes;
 }
 
+async function getAllApplications() {
+  const result = await docClient.send(new ScanCommand({ TableName: TABLE_NAME }));
+  return result.Items || [];
+}
+
 module.exports = {
+  getAllApplications,
   createApplication,
   getApplicationById,
   updateApplicationAnswers,
