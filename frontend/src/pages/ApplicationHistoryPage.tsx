@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import Box from '@mui/material/Box';
@@ -9,16 +8,18 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
-import IconButton from '@mui/material/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import {
-  deleteApplication,
-  listSaves,
-  type SavedApplicationEntry,
-} from '../services/applicationStorageService';
+import Alert from '@mui/material/Alert';
+import { listApplications, getProducts, type ApplicationInstance, type Product } from '../services/apiService';
+
+interface EnrichedApplication extends ApplicationInstance {
+  productName: string;
+  carrier: string;
+  version: string;
+}
 
 function relativeTime(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
@@ -34,15 +35,33 @@ function relativeTime(isoDate: string): string {
 
 export default function ApplicationHistoryPage() {
   const navigate = useNavigate();
-  const [saves, setSaves] = useState<SavedApplicationEntry[]>(() => listSaves());
+  const [applications, setApplications] = useState<EnrichedApplication[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleContinue = (save: SavedApplicationEntry) => {
-    navigate(`/wizard-v2/${encodeURIComponent(save.productId)}?resume=${save.id}`);
-  };
+  useEffect(() => {
+    Promise.all([listApplications(), getProducts()])
+      .then(([apps, products]) => {
+        const productMap = new Map<string, Product>(products.map((p) => [p.productId, p]));
+        const enriched: EnrichedApplication[] = apps
+          .map((app) => {
+            const product = productMap.get(app.productId);
+            return {
+              ...app,
+              productName: product?.productName ?? app.productId,
+              carrier: product?.carrier ?? '',
+              version: product?.version ?? '',
+            };
+          })
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        setApplications(enriched);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load applications'))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const handleDelete = (id: string) => {
-    deleteApplication(id);
-    setSaves(listSaves());
+  const handleContinue = (app: EnrichedApplication) => {
+    navigate(`/wizard-v2/${encodeURIComponent(app.productId)}?resume=${app.id}`);
   };
 
   return (
@@ -60,7 +79,19 @@ export default function ApplicationHistoryPage() {
           Pick up where you left off or review submitted applications.
         </Typography>
 
-        {saves.length === 0 ? (
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress color="primary" />
+          </Box>
+        )}
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        {!loading && !error && applications.length === 0 && (
           <Card
             elevation={0}
             sx={{ border: '1px dashed', borderColor: 'divider', textAlign: 'center', p: { xs: 4, md: 8 } }}
@@ -76,15 +107,17 @@ export default function ApplicationHistoryPage() {
               Start an Application
             </Button>
           </Card>
-        ) : (
+        )}
+
+        {!loading && !error && applications.length > 0 && (
           <Stack spacing={2}>
-            {saves.map((save) => (
+            {applications.map((app) => (
               <Card
-                key={save.id}
+                key={app.id}
                 elevation={0}
                 sx={{
                   border: '1px solid',
-                  borderColor: save.status === 'submitted' ? 'success.light' : 'divider',
+                  borderColor: app.status === 'submitted' ? 'success.light' : 'divider',
                   bgcolor: 'background.paper',
                   transition: 'box-shadow 0.15s',
                   '&:hover': { boxShadow: 2 },
@@ -104,11 +137,11 @@ export default function ApplicationHistoryPage() {
                           width: 44,
                           height: 44,
                           borderRadius: 2,
-                          bgcolor: save.status === 'submitted' ? 'success.50' : 'grey.100',
+                          bgcolor: app.status === 'submitted' ? 'success.50' : 'grey.100',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: save.status === 'submitted' ? 'success.main' : 'text.secondary',
+                          color: app.status === 'submitted' ? 'success.main' : 'text.secondary',
                           flexShrink: 0,
                         }}
                       >
@@ -116,61 +149,51 @@ export default function ApplicationHistoryPage() {
                       </Box>
 
                       <Box minWidth={0}>
-                        <Typography
-                          variant="overline"
-                          color="text.secondary"
-                          sx={{ fontSize: 10, letterSpacing: 1, lineHeight: 1.2, display: 'block' }}
-                        >
-                          {save.carrier}
-                        </Typography>
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={700}
-                          lineHeight={1.2}
-                          noWrap
-                        >
-                          {save.productName}
+                        {app.carrier && (
+                          <Typography
+                            variant="overline"
+                            color="text.secondary"
+                            sx={{ fontSize: 10, letterSpacing: 1, lineHeight: 1.2, display: 'block' }}
+                          >
+                            {app.carrier}
+                          </Typography>
+                        )}
+                        <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2} noWrap>
+                          {app.productName}
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center" mt={0.5} flexWrap="wrap">
                           <Chip
-                            label={save.status === 'submitted' ? 'Submitted' : 'In Progress'}
+                            label={app.status === 'submitted' ? 'Submitted' : 'In Progress'}
                             size="small"
-                            color={save.status === 'submitted' ? 'success' : 'warning'}
+                            color={app.status === 'submitted' ? 'success' : 'warning'}
                             sx={{ height: 20, fontSize: 10 }}
                           />
                           <Typography variant="caption" color="text.disabled">
-                            Saved {relativeTime(save.lastSavedAt)}
+                            Updated {relativeTime(app.updatedAt)}
                           </Typography>
-                          <Typography variant="caption" color="text.disabled">
-                            · v{save.version}
-                          </Typography>
+                          {app.version && (
+                            <Typography variant="caption" color="text.disabled">
+                              · v{app.version}
+                            </Typography>
+                          )}
                         </Stack>
                       </Box>
                     </Stack>
 
                     {/* Right: actions */}
-                    <Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
-                      {save.status === 'in_progress' && (
+                    {app.status === 'in_progress' && (
+                      <Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
                         <Button
                           variant="contained"
                           color="primary"
                           size="small"
                           endIcon={<ArrowForwardIcon />}
-                          onClick={() => handleContinue(save)}
+                          onClick={() => handleContinue(app)}
                         >
                           Continue
                         </Button>
-                      )}
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(save.id)}
-                          aria-label="Delete application"
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
+                      </Stack>
+                    )}
                   </Stack>
                 </CardContent>
               </Card>

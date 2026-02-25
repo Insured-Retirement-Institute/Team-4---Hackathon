@@ -28,24 +28,12 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import type { ApplicationDefinition } from '../../types/application';
 import { useApplication } from '../../context/ApplicationContext';
-import { getApplication, getApplicationInstance, submitApplication, updateAnswers, validateApplication } from '../../services/apiService';
-import {
-  loadApplicationData,
-  markSubmitted,
-  saveApplication,
-  type SavedApplicationData,
-} from '../../services/applicationStorageService';
+import { getApplication, getApplicationInstance, startDocusignSigning, submitApplication, updateAnswers, validateApplication } from '../../services/apiService';
 import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
 import { evaluateVisibility } from './visibility';
 
-type DocusignStartResponse = {
-  signingUrl?: string;
-  envelopeId?: string;
-  error?: string;
-  message?: string;
-};
 
 type AnswerMap = Record<string, string | boolean | Record<string, string | boolean>[]>;
 
@@ -428,24 +416,6 @@ function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefini
   };
 }
 
-function getSignerDefaults(values: AnswerMap) {
-  const ownerSameAsAnnuitant = asBool(values.owner_same_as_annuitant);
-  const ownerName = [asString(values.owner_first_name), asString(values.owner_last_name)]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-  const annuitantName = [asString(values.annuitant_first_name), asString(values.annuitant_last_name)]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-  const signerName = ownerSameAsAnnuitant ? annuitantName || ownerName : ownerName || annuitantName;
-  const signerEmail = asString(values.owner_email) || asString(values.annuitant_email);
-
-  return {
-    signerName: signerName.trim(),
-    signerEmail: signerEmail.trim(),
-  };
-}
 
 // ── Submission Progress Dialog ─────────────────────────────────────────────
 
@@ -485,8 +455,8 @@ function StepIndicatorIcon({ status }: { status: StepStatus }) {
 interface SubmissionProgressDialogProps {
   open: boolean;
   mode: 'validate' | 'submit';
-  phase: 'validating' | 'submitting' | 'done' | null;
-  failedAt: 'validating' | 'submitting' | null;
+  phase: 'docusigning' | 'validating' | 'submitting' | 'done' | null;
+  failedAt: 'docusigning' | 'validating' | 'submitting' | null;
   resultStatus: 'success' | 'error' | 'warn' | null;
   resultMessage: string | null;
   onClose: () => void;
@@ -498,11 +468,23 @@ function SubmissionProgressDialog({ open, mode, phase, failedAt, resultStatus, r
 
   const validationStatus: StepStatus = (() => {
     if (phase === 'validating') return 'active';
-    if (phase === 'submitting') return 'success';
+    if (phase === 'docusigning' || phase === 'submitting') return 'success';
     if (phase === 'done') {
       if (!isSubmitMode) return resultStatus === 'error' ? 'error' : resultStatus === 'warn' ? 'warn' : 'success';
-      // In submit mode, validation only failed if the error occurred while still in the validating phase
       if (failedAt === 'validating') return resultStatus === 'error' ? 'error' : resultStatus === 'warn' ? 'warn' : 'success';
+      return 'success';
+    }
+    return 'pending';
+  })();
+
+  const docusignStatus: StepStatus = (() => {
+    if (!isSubmitMode) return 'pending';
+    if (phase === 'validating') return 'pending';
+    if (phase === 'docusigning') return 'active';
+    if (phase === 'submitting') return 'success';
+    if (phase === 'done') {
+      if (failedAt === 'validating') return 'pending';
+      if (failedAt === 'docusigning') return resultStatus === 'error' ? 'error' : 'success';
       return 'success';
     }
     return 'pending';
@@ -511,10 +493,9 @@ function SubmissionProgressDialog({ open, mode, phase, failedAt, resultStatus, r
   const submissionStatus: StepStatus = (() => {
     if (!isSubmitMode) return 'pending';
     if (phase === 'submitting') return 'active';
-    // Only mark submission as the failed step if we actually reached it
     if (phase === 'done' && failedAt === 'submitting') return resultStatus ?? 'error';
-    if (phase === 'done' && failedAt !== 'validating') return resultStatus ?? 'error';
-    if (phase === 'done') return 'pending'; // error was in validation, never reached submission
+    if (phase === 'done' && failedAt == null) return resultStatus ?? 'success';
+    if (phase === 'done') return 'pending';
     return 'pending';
   })();
 
@@ -534,6 +515,16 @@ function SubmissionProgressDialog({ open, mode, phase, failedAt, resultStatus, r
         : validationStatus === 'error' ? 'Validation issues found'
         : 'Waiting...',
     },
+    ...(isSubmitMode ? [{
+      id: 'docusign',
+      label: 'DocuSign',
+      status: docusignStatus,
+      sublabel:
+        docusignStatus === 'active' ? 'Preparing your signing document...'
+        : docusignStatus === 'success' ? 'Signing document ready'
+        : docusignStatus === 'error' ? 'DocuSign preparation failed'
+        : 'Waiting...',
+    }] : []),
     ...(isSubmitMode ? [{
       id: 'submission',
       label: 'Submission',
@@ -723,11 +714,11 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
   const [signerFieldErrors, setSignerFieldErrors] = useState<{ name?: string; email?: string }>({});
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [isRedirectingToDocusign, setIsRedirectingToDocusign] = useState(false);
-  const [subDialog, setSubDialog] = useState<{
+const [subDialog, setSubDialog] = useState<{
     open: boolean;
     mode: 'validate' | 'submit';
-    phase: 'validating' | 'submitting' | 'done' | null;
-    failedAt: 'validating' | 'submitting' | null;
+    phase: 'docusigning' | 'validating' | 'submitting' | 'done' | null;
+    failedAt: 'docusigning' | 'validating' | 'submitting' | null;
     resultStatus: 'success' | 'error' | 'warn' | null;
     resultMessage: string | null;
   }>({ open: false, mode: 'submit', phase: null, failedAt: null, resultStatus: null, resultMessage: null });
@@ -736,19 +727,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
-  const persistProgress = (step: number, status: 'in_progress' | 'submitted' = 'in_progress') => {
-    const entry = {
-      id: applicationId,
-      productId: definition.productId,
-      productName: definition.productName,
-      carrier: definition.carrier,
-      version: definition.version,
-      lastSavedAt: new Date().toISOString(),
-      status,
-      currentStep: step,
-    };
-    const data: SavedApplicationData = { currentStep: step, values: values as Record<string, unknown> };
-    saveApplication(entry, data);
+  const persistProgress = () => {
     // Sync answers to backend (fire-and-forget — don't block UI)
     updateAnswers(applicationId, values).catch(() => undefined);
   };
@@ -813,7 +792,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
     if (currentStep < totalSteps - 1) {
       const next = currentStep + 1;
       setCurrentStep(next);
-      persistProgress(next);
+      persistProgress();
     }
   };
 
@@ -821,14 +800,14 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
     if (currentStep > 0) {
       const prev = currentStep - 1;
       setCurrentStep(prev);
-      persistProgress(prev);
+      persistProgress();
     }
   };
 
   // ── Exit ───────────────────────────────────────────────────────────────────
 
   const handleExitSaveAndLeave = () => {
-    persistProgress(currentStep, 'in_progress');
+    persistProgress();
     navigate('/applications');
   };
 
@@ -860,10 +839,9 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
-  const handleSubmit = async () => {
+  const runSubmitFlow = async () => {
     setSubmissionError(null);
     setShowSubmissionBanner(false);
-    setDocusignError(null);
     setIsSubmitting(true);
 
     const submissionPayload = buildSubmissionPayload(values as AnswerMap, definition);
@@ -875,6 +853,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
     setSubDialog({ open: true, mode: 'submit', phase: 'validating', failedAt: null, resultStatus: null, resultMessage: null });
 
     try {
+      // Step 1: Validate
       const [validateResult] = await Promise.all([validateApplication(applicationId, requestPayload, 'full'), minDelay(1000)]);
 
       if (!validateResult.valid) {
@@ -884,6 +863,13 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
         return;
       }
 
+      // Step 2: DocuSign — stubbed until backend is ready
+      setSubDialog(prev => ({ ...prev, phase: 'docusigning' }));
+      await minDelay(1000);
+      // TODO: replace with real DocuSign call once backend is wired up:
+      // const docusignResult = await startDocusignSigning(applicationId, { signerEmail, signerName });
+
+      // Step 3: Submit
       setSubDialog(prev => ({ ...prev, phase: 'submitting' }));
 
       await Promise.all([submitApplication(applicationId, {
@@ -895,18 +881,20 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
       }), minDelay(1000)]);
 
       console.log('eapp_submission_payload', submissionPayload);
-      markSubmitted(applicationId);
       setShowSubmissionBanner(true);
-      handleDocusignClick();
       setSubDialog(prev => ({ ...prev, phase: 'done', resultStatus: 'success', resultMessage: 'Your application has been successfully submitted. You will receive a confirmation shortly.' }));
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unable to reach the server. Please try again.';
-      setSubDialog(prev => ({ ...prev, phase: 'done', failedAt: prev.phase as 'validating' | 'submitting', resultStatus: 'error', resultMessage: msg }));
+      setSubDialog(prev => ({ ...prev, phase: 'done', failedAt: prev.phase as 'docusigning' | 'validating' | 'submitting', resultStatus: 'error', resultMessage: msg }));
       setSubmissionError(msg);
       console.error('Submission request failed:', error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = () => {
+    void runSubmitFlow();
   };
 
   const handleStartDocusign = async (
@@ -920,20 +908,12 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
     const applicationId = `app_${definition.id}`;
 
     try {
-      const response = await fetch(`/application/${applicationId}/docusign/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          signerEmail: requestedEmail,
-          signerName: requestedName,
-        }),
+      const result = await startDocusignSigning(applicationId, {
+        signerEmail: requestedEmail,
+        signerName: requestedName,
       });
 
-      const result = (await response.json()) as DocusignStartResponse;
-
-      if (!response.ok) {
+      if (result.error || result.message) {
         setDocusignError(result.error || result.message || 'DocuSign request failed. Please try again.');
         setIsRedirectingToDocusign(false);
         return;
@@ -954,20 +934,6 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
     } finally {
       setIsDocusignLoading(false);
     }
-  };
-
-  const handleDocusignClick = () => {
-    const defaults = getSignerDefaults(values as AnswerMap);
-
-    if (!defaults.signerName || !defaults.signerEmail) {
-      setSignerName(defaults.signerName);
-      setSignerEmail(defaults.signerEmail);
-      setSignerFieldErrors({});
-      setSignerDialogOpen(true);
-      return;
-    }
-
-    handleStartDocusign(defaults.signerName, defaults.signerEmail);
   };
 
   const handleSignerDialogClose = () => {
@@ -1306,24 +1272,17 @@ function WizardPageV2() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Load saved data once at mount via stable useState initializers (localStorage is synchronous)
-  const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>(
-    () => (appId ? loadApplicationData(appId)?.values : undefined),
-  );
-  const [initialStep] = useState<number>(
-    () => (appId ? (loadApplicationData(appId)?.currentStep ?? 0) : 0),
-  );
-  // Track whether local data existed so the effect knows whether to fetch from backend
-  const [hasLocalData] = useState<boolean>(() => Boolean(appId && loadApplicationData(appId)));
+  const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>(undefined);
 
-  // applicationId is the backend DynamoDB UUID — used as both the localStorage key and API param
+  // applicationId is the backend DynamoDB UUID
   const [applicationId] = useState<string>(() => appId ?? crypto.randomUUID());
 
   useEffect(() => {
     if (!productId) return;
 
     const defFetch = getApplication(decodeURIComponent(productId));
-    // If resuming but localStorage was empty (cleared / different device), fall back to backend answers
-    const instFetch = appId && !hasLocalData
+    // Always load answers from backend when resuming
+    const instFetch = appId
       ? getApplicationInstance(appId).catch(() => null)
       : Promise.resolve(null);
 
@@ -1335,7 +1294,7 @@ function WizardPageV2() {
         setDefinition(def);
       })
       .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load application'));
-  }, [productId, appId, hasLocalData]);
+  }, [productId, appId]);
 
   if (loadError) {
     return (
@@ -1355,7 +1314,7 @@ function WizardPageV2() {
 
   return (
     <WizardV2FormProvider definition={definition} initialValues={initialValues}>
-      <WizardPageContent applicationId={applicationId} initialStep={initialStep} />
+      <WizardPageContent applicationId={applicationId} initialStep={0} />
     </WizardV2FormProvider>
   );
 }

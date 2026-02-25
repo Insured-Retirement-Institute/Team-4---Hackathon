@@ -59,6 +59,8 @@ tags:
     description: Create and manage application instances.
   - name: Distributors
     description: Manage distributor entities (CRUD).
+  - name: DocuSign
+    description: Embedded document signing via DocuSign.
 
 # ─────────────────────────────────────────────────────────────
 # PATHS
@@ -287,6 +289,69 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── DocuSign ──────────────────────────────────────────────
+
+  /applications/{applicationId}/docusign/start:
+    post:
+      tags:
+        - DocuSign
+      summary: Start Embedded Signing
+      description: |
+        Initiates a DocuSign embedded signing session for the given application.
+        Creates an envelope with the application PDF document and returns a
+        signing URL that can be opened in a new browser tab/window.
+
+        After the signer completes (or declines) signing, DocuSign redirects
+        to the configured return URL (`/docusign/return`).
+      operationId: startDocuSignSigning
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          description: Unique identifier for the application instance.
+          schema:
+            type: string
+          examples:
+            sample:
+              value: app-instance-abc123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocuSignStartRequest'
+            examples:
+              basic:
+                summary: Start signing for a signer
+                value:
+                  signerEmail: jane.smith@example.com
+                  signerName: Jane Smith
+      responses:
+        '200':
+          description: Signing session created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocuSignStartResponse'
+              examples:
+                success:
+                  summary: Envelope created with signing URL
+                  value:
+                    envelopeId: 12345678-abcd-1234-efgh-123456789abc
+                    signingUrl: https://demo.docusign.net/Signing/...
+        '400':
+          description: Missing or invalid signer information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to start signing process.
           content:
             application/json:
               schema:
@@ -2555,6 +2620,44 @@ components:
     # ─────────────────────────────────────────
     # ERROR
     # ─────────────────────────────────────────
+
+    DocuSignStartRequest:
+      type: object
+      description: Request body to initiate an embedded DocuSign signing session.
+      required:
+        - signerEmail
+        - signerName
+      properties:
+        signerEmail:
+          type: string
+          format: email
+          description: Email address of the signer.
+          examples:
+            - jane.smith@example.com
+        signerName:
+          type: string
+          description: Full name of the signer.
+          examples:
+            - Jane Smith
+
+    DocuSignStartResponse:
+      type: object
+      description: Response containing the DocuSign envelope ID and embedded signing URL.
+      required:
+        - envelopeId
+        - signingUrl
+      properties:
+        envelopeId:
+          type: string
+          description: The DocuSign envelope identifier.
+          examples:
+            - 12345678-abcd-1234-efgh-123456789abc
+        signingUrl:
+          type: string
+          format: uri
+          description: URL to open for the embedded signing ceremony.
+          examples:
+            - https://demo.docusign.net/Signing/startinsession.aspx?t=abc123
 
     ErrorResponse:
       type: object

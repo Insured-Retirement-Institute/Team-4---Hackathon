@@ -131,3 +131,19 @@ class RedtailClient:
     async def get_family(self, contact_id: int) -> dict[str, Any]:
         """GET /contacts/{id}/family — family members."""
         return await self.get(f"/contacts/{contact_id}/family")
+
+    async def update_contact(self, contact_id: int, data: dict[str, Any]) -> dict[str, Any]:
+        """PUT /contacts/{id} — update contact fields."""
+        user_key = await self.authenticate()
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.put(
+                f"{self.base_url}/contacts/{contact_id}",
+                headers={
+                    "Authorization": self._auth_header(user_key),
+                    "Content-Type": "application/json",
+                },
+                json=data,
+            )
+            resp.raise_for_status()
+            return resp.json()

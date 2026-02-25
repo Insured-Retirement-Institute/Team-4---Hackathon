@@ -107,6 +107,16 @@ export interface ApplicationInstance {
   updatedAt: string;
 }
 
+/** GET /applications — list all application instances */
+export async function listApplications(): Promise<ApplicationInstance[]> {
+  const res = await fetch(`${BASE}/applications`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch applications: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
 /** POST /applications — create a new in-progress application instance */
 export async function createApplication(productId: string): Promise<ApplicationInstance> {
   const res = await fetch(`${BASE}/applications`, {
@@ -308,4 +318,31 @@ export async function deleteDistributor(distributorId: string): Promise<void> {
     const text = await res.text();
     throw new Error(`Failed to delete distributor: ${res.status} ${text}`);
   }
+}
+
+// ── DocuSign ──────────────────────────────────────────────────────────────────
+
+export interface DocusignStartRequest {
+  signerEmail: string;
+  signerName: string;
+}
+
+export interface DocusignStartResponse {
+  envelopeId?: string;
+  signingUrl?: string;
+  error?: string;
+  message?: string;
+}
+
+/** POST /applications/:applicationId/docusign/start — create envelope and get embedded signing URL */
+export async function startDocusignSigning(
+  applicationId: string,
+  body: DocusignStartRequest,
+): Promise<DocusignStartResponse> {
+  const res = await fetch(`${BASE}/applications/${encodeURIComponent(applicationId)}/docusign/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
 }

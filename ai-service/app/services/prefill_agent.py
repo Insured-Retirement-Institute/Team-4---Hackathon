@@ -60,6 +60,27 @@ PREFILL_TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "lookup_family_members",
+        "description": (
+            "Look up a client's family members and relationships from the CRM (Redtail). "
+            "Returns spouse, children, and other family members with their contact details "
+            "(name, DOB, SSN, address, phone, email). Use this to populate joint owner, "
+            "joint annuitant, and beneficiary fields. If the client is married, the spouse "
+            "may be the joint owner or beneficiary."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "description": "The CRM client identifier (e.g. '5' or '11').",
+                },
+            },
+            "required": ["client_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "lookup_prior_policies",
         "description": (
             "Look up a client's prior policy and suitability data including income, "
@@ -212,41 +233,66 @@ Your job is to collect as much client data as possible from the available source
 before the application begins. This saves the advisor time by pre-populating fields.
 
 Available data sources:
-- CRM (Redtail): Client personal info — name, DOB, SSN, gender, contact, address
+- CRM (Redtail): Client personal info — name, DOB, SSN, gender, contact, address, occupation, employer
+- CRM Family: Spouse, children, and other family members with full contact details
 - CRM Notes: Meeting transcripts and activity notes — often contain income, net worth, \
 risk tolerance, investment goals, family info, and beneficiary details
-- Prior Policies: Suitability data — income, net worth, risk tolerance, investment details \
-(fallback if CRM notes lack financial data)
+- Prior Policies: Suitability data — income, net worth, risk tolerance, investment details
 - Annual Statements (S3 Document Store): Contract values, interest rates, balances, beneficiary info
 - Advisor Preferences: Advisor's investment philosophy, preferred carriers, allocation strategy
 - Carrier Suitability: Rule-based decision engine (14 rules: R01-R13 hard denials + MR01 manual review)
 
+IMPORTANT — Application field IDs you MUST use in known_data:
+
+Owner fields: owner_first_name, owner_last_name, owner_middle_initial, owner_dob, \
+owner_ssn_tin, owner_gender, owner_email, owner_phone, owner_street_address, owner_city, \
+owner_state, owner_zip, owner_type, owner_same_as_annuitant, owner_citizenship_status, \
+owner_country_of_citizenship, owner_occupation, owner_employer_name
+
+Annuitant fields (copy from owner if same): annuitant_first_name, annuitant_last_name, \
+annuitant_middle_initial, annuitant_dob, annuitant_ssn, annuitant_gender, annuitant_us_citizen, \
+annuitant_phone, annuitant_street_address, annuitant_city, annuitant_state, annuitant_zip
+
+Joint Owner fields (if spouse is joint owner): has_joint_owner, joint_owner_first_name, \
+joint_owner_last_name, joint_owner_middle_initial, joint_owner_dob, joint_owner_gender, \
+joint_owner_ssn, joint_owner_phone, joint_owner_email, joint_owner_street_address, \
+joint_owner_city, joint_owner_state, joint_owner_zip, joint_owner_address_same
+
+Joint Annuitant fields (if applicable): has_joint_annuitant, joint_annuitant_first_name, \
+joint_annuitant_last_name, joint_annuitant_middle_initial, joint_annuitant_dob, \
+joint_annuitant_gender, joint_annuitant_ssn, joint_annuitant_phone, \
+joint_annuitant_us_citizen, joint_annuitant_street_address, joint_annuitant_city, \
+joint_annuitant_state, joint_annuitant_zip, joint_annuitant_address_same
+
+Financial/suitability fields: annual_income, net_worth, tax_bracket, risk_tolerance, \
+investment_experience, investment_objective, time_horizon, source_of_funds, \
+existing_annuity_count, existing_life_insurance
+
+Other fields: signed_at_state, tax_status, is_replacement
+
 Workflow:
 1. If a client_id is provided, call lookup_crm_client to get their CRM profile
-2. Then call lookup_crm_notes to retrieve meeting transcripts and activity notes. \
+2. ALWAYS call lookup_family_members to get spouse, children, and family relationships. \
+If the client has a spouse, map them as joint owner (set has_joint_owner=true and populate \
+all joint_owner_* fields). Map children and family as beneficiaries.
+3. Then call lookup_crm_notes to retrieve meeting transcripts and activity notes. \
 Carefully analyze the note text to extract financial data: income, net worth, risk tolerance, \
-investment goals, existing policies, family members, beneficiaries, etc.
-3. If the CRM notes did NOT contain sufficient financial/suitability data, call \
-lookup_prior_policies as a fallback to get suitability data
-4. Then call lookup_annual_statements to retrieve the latest annual statement PDF
-5. If a PDF is returned, analyze it and call extract_document_fields with the extracted values
-6. If a document is attached by the user, also call extract_document_fields for it
-7. If an advisor_id is provided, call get_advisor_preferences to understand the advisor's approach
-8. Call get_carrier_suitability for the most relevant carrier(s) based on advisor preferences \
-and client profile. Pass ALL gathered financial data — the decision engine evaluates 14 rules \
-including premium-to-net-worth ratio, liquid asset sufficiency, emergency funds, holding period, \
-and more. Include: age, annual_household_income, annual_household_expenses, total_net_worth, \
-liquid_net_worth, has_emergency_funds, expected_hold_years, total_premium, source_of_funds, \
-signed_at_state, is_replacement, nursing_home_status.
-9. Once all sources are exhausted, call report_prefill_results with the combined data. \
-Include suitability_decision (approved/declined/pending_manual_review), suitability_rule_evaluations, \
-declined_reasons, manual_review_reasons, advisor_name, advisor_philosophy, and \
-recommended_allocation_strategy in the known_data if available.
+investment goals, existing policies, beneficiary details, tax status, replacement info, etc.
+4. Call lookup_prior_policies to get suitability data (income, net worth, risk tolerance, etc.)
+5. Then call lookup_annual_statements to retrieve the latest annual statement PDF
+6. If a PDF is returned, analyze it and call extract_document_fields with the extracted values
+7. If a document is attached by the user, also call extract_document_fields for it
+8. If an advisor_id is provided, call get_advisor_preferences to understand the advisor's approach
+9. Call get_carrier_suitability for the most relevant carrier(s) based on advisor preferences \
+and client profile. Pass ALL gathered financial data.
+10. Once all sources are exhausted, call report_prefill_results with the combined data. \
+Include ALL fields gathered using the exact field IDs listed above. Also include \
+suitability_decision, suitability_rule_evaluations, declined_reasons, advisor_name, \
+advisor_philosophy, and recommended_allocation_strategy if available.
 
-Combine data from structured CRM fields AND notes-extracted data. When notes contain financial \
-data that the structured CRM record lacks (e.g., income, net worth), include those values. \
-Always gather from ALL available sources before reporting results. \
-Never fabricate data. Only report what the sources actually return."""
+CRITICAL: Use the EXACT field IDs listed above in your known_data. Map every piece of data \
+you find to the correct field. The more fields you populate, the less the advisor has to \
+type manually. Combine data from ALL sources. Never fabricate data."""
 
 
 # ── Data source executors ───────────────────────────────────────────────────
@@ -276,6 +322,16 @@ async def _execute_tool(name: str, input_data: dict[str, Any]) -> str | list[dic
         if not notes:
             return json.dumps({"notes": [], "message": "No notes found for this client."})
         return json.dumps({"notes": notes, "count": len(notes)})
+
+    elif name == "lookup_family_members":
+        client_id = input_data.get("client_id", "")
+        try:
+            members = await _crm.get_family_members(int(client_id))
+        except (ValueError, TypeError):
+            return json.dumps({"error": f"Invalid client_id: {client_id}"})
+        if not members:
+            return json.dumps({"family_members": [], "message": "No family members found for this client."})
+        return json.dumps({"family_members": members, "count": len(members)})
 
     elif name == "lookup_prior_policies":
         result = await _policy.query(input_data)
@@ -441,6 +497,7 @@ async def run_prefill_agent(
 
 TOOL_DESCRIPTIONS: dict[str, str] = {
     "lookup_crm_client": "Looking up client in Redtail CRM",
+    "lookup_family_members": "Looking up spouse and family in Redtail CRM",
     "lookup_crm_notes": "Analyzing CRM notes and meeting transcripts",
     "lookup_prior_policies": "Retrieving prior policy and suitability data",
     "lookup_annual_statements": "Fetching annual statement from document store",
@@ -530,6 +587,23 @@ async def run_prefill_agent_stream(
                 fields_extracted = call["input"].get("known_data", {})
             elif tool_name == "lookup_crm_client":
                 # Parse the JSON result to show extracted CRM fields
+                try:
+                    parsed = json.loads(result) if isinstance(result, str) else {}
+                    fields_extracted = {k: str(v) for k, v in parsed.items() if v and k != "error"}
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            elif tool_name == "lookup_family_members":
+                try:
+                    parsed = json.loads(result) if isinstance(result, str) else {}
+                    members = parsed.get("family_members", [])
+                    for member in members:
+                        rel = member.get("relationship", "unknown")
+                        name = f"{member.get('first_name', '')} {member.get('last_name', '')}".strip()
+                        if name:
+                            fields_extracted[f"{rel}_name"] = name
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            elif tool_name == "lookup_prior_policies":
                 try:
                     parsed = json.loads(result) if isinstance(result, str) else {}
                     fields_extracted = {k: str(v) for k, v in parsed.items() if v and k != "error"}

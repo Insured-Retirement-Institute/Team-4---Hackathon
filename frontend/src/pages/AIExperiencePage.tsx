@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import FormControl from '@mui/material/FormControl';
@@ -25,6 +23,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import MicIcon from '@mui/icons-material/Mic';
+import PeopleIcon from '@mui/icons-material/People';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import PhoneIcon from '@mui/icons-material/Phone';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -74,6 +73,7 @@ interface MatchedField {
 
 const TOOL_META: Record<string, { label: string; icon: React.ReactNode }> = {
   lookup_crm_client: { label: 'CRM Client Lookup', icon: <PersonSearchIcon fontSize="small" /> },
+  lookup_family_members: { label: 'Family & Spouse Lookup', icon: <PeopleIcon fontSize="small" /> },
   lookup_crm_notes: { label: 'CRM Notes Analysis', icon: <DescriptionIcon fontSize="small" /> },
   lookup_prior_policies: { label: 'Prior Policy Lookup', icon: <PolicyIcon fontSize="small" /> },
   lookup_annual_statements: { label: 'Annual Statement Retrieval', icon: <PictureAsPdfIcon fontSize="small" /> },
@@ -83,11 +83,8 @@ const TOOL_META: Record<string, { label: string; icon: React.ReactNode }> = {
   report_prefill_results: { label: 'Compiling Results', icon: <SummarizeIcon fontSize="small" /> },
 };
 
-const ADVISORS = [
-  { id: 'advisor_001', label: 'Sarah Chen — Conservative' },
-  { id: 'advisor_002', label: 'Michael Rodriguez — Balanced' },
-  { id: 'advisor_003', label: 'Jennifer Park — Accumulation' },
-];
+const ADVISOR_ID = 'advisor_002';
+const ADVISOR_NAME = 'Andrew Barnett';
 
 const CLIENT_PHONE = '+17042076820';
 
@@ -246,7 +243,6 @@ export default function AIExperiencePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [advisorId, setAdvisorId] = useState('advisor_001');
   const [productId, setProductId] = useState('midland-fixed-annuity-001');
 
   // Stage state
@@ -349,8 +345,8 @@ export default function AIExperiencePage() {
   const startSSEIfReady = useCallback((client: Client) => {
     if (sseStartedRef.current) return;
     sseStartedRef.current = true;
-    abortRef.current = runPrefillStream(client.client_id, advisorId, handleEvent);
-  }, [advisorId, handleEvent]);
+    abortRef.current = runPrefillStream(client.client_id, ADVISOR_ID, handleEvent);
+  }, [handleEvent]);
 
   // When client selection changes during voice_active, kick off SSE
   useEffect(() => {
@@ -383,9 +379,9 @@ export default function AIExperiencePage() {
     // If client already selected, start SSE immediately
     if (selectedClient) {
       sseStartedRef.current = true;
-      abortRef.current = runPrefillStream(selectedClient.client_id, advisorId, handleEvent);
+      abortRef.current = runPrefillStream(selectedClient.client_id, ADVISOR_ID, handleEvent);
     }
-  }, [selectedClient, advisorId, productId, handleEvent]);
+  }, [selectedClient, productId, handleEvent]);
 
   const handleStartApplication = useCallback(async () => {
     if (!finalResult?.known_data) return;
@@ -439,7 +435,7 @@ export default function AIExperiencePage() {
   }, [finalResult, definition, gatheredFields, computeMatchedFields]);
 
   const missingFields = matchedFields.filter((f) => !f.filled).map((f) => ({ id: f.id, label: f.label }));
-  const advisorLabel = ADVISORS.find((a) => a.id === advisorId)?.label ?? advisorId;
+  const advisorLabel = ADVISOR_NAME;
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -462,25 +458,13 @@ export default function AIExperiencePage() {
           {/* ── SETUP STAGE ─────────────────────────────────────────────── */}
           {stage === 'setup' && (
             <Box>
-              <Grid container spacing={3} justifyContent="center">
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="overline" color="primary" fontWeight={700}>Who are you today?</Typography>
-                      <FormControl fullWidth sx={{ mt: 1.5 }}>
-                        <InputLabel>Advisor</InputLabel>
-                        <Select value={advisorId} label="Advisor" onChange={(e) => setAdvisorId(e.target.value)}>
-                          {ADVISORS.map((a) => (
-                            <MenuItem key={a.id} value={a.id}>{a.label}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+              <Box sx={{ textAlign: 'center', mb: 4 }}>
+                <Typography variant="h6" fontWeight={600} color="text.secondary">
+                  Welcome, {ADVISOR_NAME}
+                </Typography>
+              </Box>
 
-              <Box sx={{ textAlign: 'center', mt: 5 }}>
+              <Box sx={{ textAlign: 'center' }}>
                 <Stack direction="row" spacing={2} justifyContent="center">
                   <Button
                     variant="contained"
@@ -750,7 +734,7 @@ export default function AIExperiencePage() {
                   missingFields={missingFields}
                   clientPhone={CLIENT_PHONE}
                   clientName={selectedClient?.display_name ?? 'the client'}
-                  advisorName={advisorLabel.split(' — ')[0]}
+                  advisorName={ADVISOR_NAME}
                   onFieldsExtracted={handleCallFieldsExtracted}
                   onCallComplete={handleCallComplete}
                 />

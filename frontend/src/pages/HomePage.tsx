@@ -36,7 +36,7 @@ const FEATURES: {
       'Drag, drop, and configure. Build application templates with custom sections and questions, set field visibility rules, and control which distributors have access to each product — all without touching code.',
     accent: '#7C3AED',
     status: 'built',
-    cta: { label: 'Open Builder', route: '/settings' },
+    cta: { label: 'Open Builder', route: '/app-builder' },
   },
   {
     icon: <img src="/wizard.svg" alt="" style={{ width: 60, height: 60 }} />,

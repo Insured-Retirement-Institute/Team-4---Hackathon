@@ -68,8 +68,8 @@ ADVISORS = {
     },
     "advisor_002": {
         "advisor_id": "advisor_002",
-        "advisor_name": "Sarah Chen",
-        "firm": "Chen Wealth Advisors",
+        "advisor_name": "Andrew Barnett",
+        "firm": "Barnett Financial Partners",
         "years_experience": 15,
         "philosophy": (
             "Balanced growth approach. Seeks to optimize the blend of guaranteed returns and "
