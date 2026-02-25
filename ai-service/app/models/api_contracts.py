@@ -61,12 +61,18 @@ class SessionResponse(BaseModel):
     fields: list[FieldResponse] = Field(default_factory=list)
 
 
+class ToolCallInfo(BaseModel):
+    name: str
+    result_summary: str | None = None
+
+
 class MessageResponse(BaseModel):
     reply: str
     phase: str
     updated_fields: list[FieldResponse] = Field(default_factory=list)
     field_summary: FieldSummaryResponse
     complete: bool = False
+    tool_calls: list[ToolCallInfo] = Field(default_factory=list)
 
 
 class SubmitResponse(BaseModel):

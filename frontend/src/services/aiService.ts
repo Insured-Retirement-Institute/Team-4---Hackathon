@@ -16,10 +16,16 @@ export interface UpdatedField {
   status: string;
 }
 
+export interface ToolCallInfo {
+  name: string;
+  result_summary?: string;
+}
+
 export interface MessageResponse {
   reply: string;
   phase: string;
   updated_fields: UpdatedField[];
+  tool_calls?: ToolCallInfo[];
   current_step: string | null;
   current_step_index: number | null;
   total_steps: number | null;

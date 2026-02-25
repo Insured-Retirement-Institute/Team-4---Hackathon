@@ -430,6 +430,23 @@ export default function AIExperiencePage() {
     sseStartedRef.current = false;
   }, []);
 
+  const handleChatToolCalls = useCallback((tools: Array<{ name: string }>) => {
+    for (const tool of tools) {
+      setToolLog((prev) => [
+        ...prev,
+        {
+          name: tool.name,
+          description: 'via chat',
+          iteration: 0,
+          status: 'done' as const,
+          startTime: Date.now(),
+          durationMs: 0,
+          fieldsExtracted: {},
+        },
+      ]);
+    }
+  }, []);
+
   const handleCallFieldsExtracted = useCallback((fields: Record<string, string>) => {
     setGatheredFields((prev) => ({ ...prev, ...fields }));
     setFinalResult((prev) => {
@@ -565,7 +582,7 @@ export default function AIExperiencePage() {
                 {interactionMode === 'voice' ? (
                   <VoicePanel sessionId={voiceSessionId} />
                 ) : (
-                  <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} />
+                  <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} onToolCalls={handleChatToolCalls} />
                 )}
               </Paper>
 
@@ -647,7 +664,7 @@ export default function AIExperiencePage() {
                   {interactionMode === 'voice' ? (
                     <VoicePanel sessionId={voiceSessionId} compact />
                   ) : (
-                    <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} />
+                    <ChatPanel sessionId={voiceSessionId} greeting={chatGreeting} onToolCalls={handleChatToolCalls} />
                   )}
                 </Paper>
               )}

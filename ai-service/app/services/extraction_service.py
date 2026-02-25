@@ -91,10 +91,200 @@ def build_confirm_tool(unconfirmed_fields: list[TrackedField]) -> dict[str, Any]
     }
 
 
+ADVISOR_TOOLS: list[dict[str, Any]] = [
+    {
+        "name": "lookup_crm_client",
+        "description": (
+            "Look up a client in the CRM system (Redtail) to retrieve their personal "
+            "information such as name, date of birth, SSN, contact info, and address."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "description": "The CRM client identifier (e.g. '5' or '11').",
+                },
+            },
+            "required": ["client_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lookup_family_members",
+        "description": (
+            "Look up a client's family members and relationships from the CRM (Redtail). "
+            "Returns spouse, children, and other family members with their contact details."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "description": "The CRM client identifier.",
+                },
+            },
+            "required": ["client_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lookup_crm_notes",
+        "description": (
+            "Look up a client's notes and activity records from the CRM (Redtail). "
+            "Notes often contain meeting transcripts with financial data."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "description": "The CRM client identifier.",
+                },
+            },
+            "required": ["client_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lookup_prior_policies",
+        "description": (
+            "Look up a client's prior policy and suitability data including income, "
+            "net worth, risk tolerance, investment experience, and existing insurance."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "description": "The client identifier.",
+                },
+            },
+            "required": ["client_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lookup_annual_statements",
+        "description": (
+            "Look up a client's most recent annual statement from the document store (S3). "
+            "Returns a PDF with contract values, interest rates, balances, and beneficiary info."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "description": "The client identifier.",
+                },
+            },
+            "required": ["client_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "extract_document_fields",
+        "description": (
+            "Extract application fields from a document (image or PDF). "
+            "Analyze the document and return any fields you can identify."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "analysis": {
+                    "type": "string",
+                    "description": "Your analysis of what the document contains.",
+                },
+                "extracted_fields": {
+                    "type": "object",
+                    "description": "Map of field_id to extracted value from the document.",
+                    "additionalProperties": {"type": "string"},
+                },
+            },
+            "required": ["analysis", "extracted_fields"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_advisor_preferences",
+        "description": (
+            "Retrieve the advisor's preference profile including investment philosophy, "
+            "preferred carriers, allocation strategy, and suitability thresholds."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "advisor_id": {
+                    "type": "string",
+                    "description": "The advisor identifier (e.g. 'advisor_002').",
+                },
+            },
+            "required": ["advisor_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_carrier_suitability",
+        "description": (
+            "Run the carrier's suitability decision engine against client data. "
+            "Returns approved/declined/pending with per-rule findings."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "carrier_id": {
+                    "type": "string",
+                    "description": "The carrier: 'midland-national', 'aspida', or 'equitrust'.",
+                },
+                "client_data": {
+                    "type": "object",
+                    "description": "Client data gathered so far.",
+                    "additionalProperties": {},
+                },
+            },
+            "required": ["carrier_id", "client_data"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "call_client",
+        "description": (
+            "Initiate an outbound phone call to the client via Retell AI to collect "
+            "missing application fields. The AI agent will call the client, ask for "
+            "the missing information conversationally, and report back."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_name": {
+                    "type": "string",
+                    "description": "The client's full name.",
+                },
+                "phone_number": {
+                    "type": "string",
+                    "description": "The client's phone number to call.",
+                },
+                "missing_fields": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of field labels that need to be collected.",
+                },
+            },
+            "required": ["client_name", "phone_number", "missing_fields"],
+            "additionalProperties": False,
+        },
+    },
+]
+
+
 def build_tools_for_phase(state: ConversationState) -> list[dict[str, Any]]:
     """Build the tool set appropriate for the current session phase."""
     tools: list[dict[str, Any]] = []
     active = state.active_fields()
+
+    # Add advisor tools when in advisor mode
+    if state.advisor_name:
+        tools.extend(ADVISOR_TOOLS)
 
     if state.phase == SessionPhase.SPOT_CHECK:
         # Both confirm (for "looks right") and extract (for corrections)
