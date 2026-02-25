@@ -8,7 +8,7 @@ COPY package.json ./
 RUN npm install --production
 
 COPY index.js ./index.js 
-COPY lib/pdfHelper.js ./lib/pdfHelper.js
+COPY lib/ ./lib/
 COPY api/ ./api/
 COPY forms/ ./forms/
 COPY maps/ ./maps/

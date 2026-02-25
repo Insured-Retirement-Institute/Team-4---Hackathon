@@ -1,9 +1,8 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const { deleteSubmission, getSubmission } = require('../lib/carrierSubmissionsDb.js');
 const router = express.Router();
 
-router.delete('/applications/:submissionId', (req, res) => {
+router.delete('/applications/:submissionId', async (req, res) => {
   try {
     const { submissionId } = req.params;
 
@@ -14,28 +13,17 @@ router.delete('/applications/:submissionId', (req, res) => {
       });
     }
 
-    const appsDir = path.join(__dirname, '..', 'apps');
-
     // Check if the submission exists
-    const submissionFilePath = path.join(appsDir, `${submissionId}_SUB.json`);
-    const policyFilePath = path.join(appsDir, `${submissionId}_POLICY.json`);
-
-    if (!fs.existsSync(submissionFilePath) && !fs.existsSync(policyFilePath)) {
+    const submission = await getSubmission(submissionId);
+    if (!submission) {
       return res.status(404).json({
         error: 'Submission not found',
         details: `No submission found with submissionId: ${submissionId}`
       });
     }
 
-    // Delete the submission file if it exists
-    if (fs.existsSync(submissionFilePath)) {
-      fs.unlinkSync(submissionFilePath);
-    }
-
-    // Delete the policy file if it exists
-    if (fs.existsSync(policyFilePath)) {
-      fs.unlinkSync(policyFilePath);
-    }
+    // Delete from DynamoDB
+    await deleteSubmission(submissionId);
 
     res.json({
       message: 'Submission deleted successfully',

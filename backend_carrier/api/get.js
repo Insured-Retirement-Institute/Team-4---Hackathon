@@ -1,9 +1,8 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const { getSubmission } = require('../lib/carrierSubmissionsDb.js');
 const router = express.Router();
 
-router.get('/applications/:submissionId', (req, res) => {
+router.get('/applications/:submissionId', async (req, res) => {
   try {
     const { submissionId } = req.params;
 
@@ -14,35 +13,27 @@ router.get('/applications/:submissionId', (req, res) => {
       });
     }
 
-    const appsDir = path.join(__dirname, '..', 'apps');
-
-    // Load metadata file directly using submissionId
-    const metadataPath = path.join(appsDir, `${submissionId}_POLICY.json`);
-    if (!fs.existsSync(metadataPath)) {
+    // Load submission from DynamoDB
+    const ddbItem = await getSubmission(submissionId);
+    
+    if (!ddbItem) {
       return res.status(404).json({
         error: 'Submission not found',
         details: `No submission found with submissionId: ${submissionId}`
       });
     }
 
-    const metadataFile = fs.readFileSync(metadataPath, 'utf-8');
-    const metadata = JSON.parse(metadataFile);
-
-    // Load the submission data
-    const submissionFilePath = path.join(appsDir, `${submissionId}_SUB.json`);
-    if (!fs.existsSync(submissionFilePath)) {
-      return res.status(404).json({
-        error: 'Submission data not found',
-        details: `Submission file not found for submissionId: ${submissionId}`
-      });
-    }
-
-    const submissionFile = fs.readFileSync(submissionFilePath, 'utf-8');
-    const submission = JSON.parse(submissionFile);
+    // Extract metadata from DynamoDB item
+    const metadata = {
+      submissionId: ddbItem.submissionId,
+      applicationId: ddbItem.applicationId,
+      policyNumber: ddbItem.policyNumber,
+      received: ddbItem.received
+    };
 
     res.json({
       submission: metadata,
-      data: submission
+      data: ddbItem.submission
     });
   } catch (error) {
     console.error('Error retrieving submission:', error);
