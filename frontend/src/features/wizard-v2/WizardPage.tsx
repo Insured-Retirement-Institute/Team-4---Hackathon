@@ -867,7 +867,7 @@ const [subDialog, setSubDialog] = useState<{
       setSubDialog(prev => ({ ...prev, phase: 'docusigning' }));
       await minDelay(1000);
       // TODO: replace with real DocuSign call once backend is wired up:
-      // const docusignResult = await startDocusignSigning(applicationId, { signerEmail, signerName });
+      const docusignResult = await startDocusignSigning(applicationId, { signerEmail: 'ryan@suggs.com', signerName: 'ryan suggs' });
 
       // Step 3: Submit
       setSubDialog(prev => ({ ...prev, phase: 'submitting' }));

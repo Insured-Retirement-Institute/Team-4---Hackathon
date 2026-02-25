@@ -2,11 +2,28 @@ const fs = require("fs");
 const path = require("path");
 const docusign = require("docusign-esign");
 
+function readPrivateKey() {
+  const pem = process.env.DOCUSIGN_PRIVATE_KEY_PEM;
+  if (pem && pem.trim()) {
+    // If stored with literal "\n" sequences, normalize them
+    return Buffer.from(pem.replace(/\\n/g, '\n'));
+  }
+
+  const keyPath = process.env.DOCUSIGN_PRIVATE_KEY_PATH;
+  if (keyPath && keyPath.trim()) {
+    return fs.readFileSync(keyPath);
+  }
+
+  throw new Error(
+    'DocuSign private key not configured. Set DOCUSIGN_PRIVATE_KEY_PEM (recommended) or DOCUSIGN_PRIVATE_KEY_PATH.'
+  );
+}
+
 async function getJwtAccessTokenAndAccountContext() {
   const apiClient = new docusign.ApiClient();
   apiClient.setOAuthBasePath(process.env.DOCUSIGN_AUTH_SERVER);
 
-  const privateKey = fs.readFileSync(process.env.DOCUSIGN_PRIVATE_KEY_PATH);
+  const privateKey = readPrivateKey();
 
   const token = await apiClient.requestJWTUserToken(
     process.env.DOCUSIGN_INTEGRATION_KEY,
@@ -49,6 +66,8 @@ async function getJwtAccessTokenAndAccountContext() {
 async function startEmbeddedSigning({ applicationId, signerEmail, signerName }) {
   const { apiClient, accessToken, accountId, basePath } =
     await getJwtAccessTokenAndAccountContext();
+
+    console.log('here')
 
   apiClient.setBasePath(basePath);
   apiClient.addDefaultHeader("Authorization", `Bearer ${accessToken}`);
