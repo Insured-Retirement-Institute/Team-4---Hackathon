@@ -7,7 +7,15 @@
       "WebFetch(domain:lottiefiles.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:lottie.host)",
-      "WebFetch(domain:assets-v2.lottiefiles.com)"
+      "WebFetch(domain:assets-v2.lottiefiles.com)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s http://localhost:8080/api-docs)",
+      "Bash(curl -sv http://localhost:8080/api-docs)",
+      "Bash(curl -v --max-time 5 http://localhost:8080/)",
+      "Bash(ss -tlnp)",
+      "Bash(powershell -Command \"netstat -an | Select-String ''8080''\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -State Listen 2>$null | Where-Object {$_LocalPort -eq 8080 -or $_LocalPort -eq 3001 -or $_LocalPort -eq 8001 -or $_LocalPort -eq 5173} | Format-Table LocalAddress,LocalPort,State\")",
+      "WebFetch(domain:y5s8xyzi3v.us-east-1.awsapprunner.com)"
     ]
   }
 }
