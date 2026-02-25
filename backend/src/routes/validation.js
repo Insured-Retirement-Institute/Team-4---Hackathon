@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getProduct } = require('../services/productStore');
 const { validate } = require('../services/validationEngine');
-const { getApplicationById, updateApplicationAnswers } = require('../services/applicationService');
+const { getApplicationById, updateApplicationAnswers, updateApplicationSuitabilityDecision } = require('../services/applicationService');
+const { transformSubmission } = require('../services/submissionTransformer');
+const { evaluateSuitability } = require('../services/suitabilityService');
 
 // POST /application/:applicationId/validate
 router.post('/:applicationId/validate', async (req, res) => {
@@ -55,6 +57,24 @@ router.post('/:applicationId/validate', async (req, res) => {
     }
 
     const result = validate(product, mergedAnswers, scope, pageId);
+
+    if (scope === 'full') {
+      const applicationId = req.params.applicationId;
+      const payload = transformSubmission(product, mergedAnswers, { applicationId });
+      const suitabilityDecision = await evaluateSuitability(payload, product);
+
+      await updateApplicationSuitabilityDecision(applicationId, suitabilityDecision);
+
+      if (suitabilityDecision.valid === false) {
+        result.valid = false;
+      }
+      if (Array.isArray(suitabilityDecision.errors) && suitabilityDecision.errors.length > 0) {
+        result.errors = result.errors.concat(suitabilityDecision.errors);
+      }
+
+      return res.json({ ...result, suitabilityDecision });
+    }
+
     res.json(result);
   } catch (err) {
     console.error('Validation error:', err);

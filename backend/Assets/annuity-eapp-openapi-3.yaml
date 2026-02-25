@@ -102,7 +102,7 @@ paths:
           description: |
             Scope of validation.
             - `page` — validates only the answers for the specified `pageId`.
-            - `full` — validates all provided answers.
+            - `full` — validates all provided answers and runs suitability evaluation.
           schema:
             type: string
             enum: [page, full]
@@ -2461,6 +2461,31 @@ components:
           description: List of validation errors. Empty array when `valid` is `true`.
           items:
             $ref: '#/components/schemas/ValidationError'
+        suitabilityDecision:
+          $ref: '#/components/schemas/SuitabilityDecision'
+          description: >
+            Present only when `scope=full`. Contains the suitability engine's
+            evaluation of the application.
+
+    SuitabilityDecision:
+      type: object
+      description: Result from the external suitability evaluation engine.
+      properties:
+        decision:
+          type: string
+          description: The suitability decision (e.g. `approved`, `denied`, `review`).
+          examples:
+            - approved
+        valid:
+          type: boolean
+          description: '`true` if the application passes suitability checks.'
+          examples:
+            - true
+        errors:
+          type: array
+          description: Suitability-specific errors, if any.
+          items:
+            type: object
 
     ValidationError:
       type: object
