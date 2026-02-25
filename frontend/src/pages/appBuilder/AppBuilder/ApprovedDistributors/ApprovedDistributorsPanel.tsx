@@ -35,7 +35,7 @@ function ApprovedDistributorsPanel({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+      <Typography variant="h4" sx={{ fontWeight: 700, color: '#1f1f1f' }}>
         Approved Distributors
       </Typography>
       <Typography variant="body2" color="text.secondary">
