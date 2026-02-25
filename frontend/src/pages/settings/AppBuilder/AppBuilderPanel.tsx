@@ -976,9 +976,7 @@ function AppBuilderPanel() {
           <Alert severity="success">Generated JSON</Alert>
           <TextField fullWidth multiline minRows={14} value={savedJson} slotProps={{ input: { readOnly: true } }} />
         </Stack>
-      ) : (
-        <Alert severity="info">Build pages, sections, and questions, then select Save JSON to generate the schema output.</Alert>
-      )}
+      ) : null}
     </Stack>
   );
 }
