@@ -108,10 +108,11 @@ All routes under `/api/v1/`:
 
 `app/services/prefill_agent.py` — LLM-orchestrated agent that gathers client data from external sources before the application begins, feeding results into the existing `known_data` → SPOT_CHECK flow.
 
-**Agent tools** (Anthropic tool_use format):
-- `lookup_crm_client` — Queries live Redtail CRM API (`RedtailCRM`) for client profile (name, DOB, SSN, contact, address). Deterministic field mapping from API response.
+**Agent tools** (9 tools, Anthropic tool_use format):
+- `lookup_crm_client` — Queries live Redtail CRM API (`RedtailCRM`) for client profile (name, DOB, SSN, contact, address, occupation, employer, citizenship). Deterministic field mapping from API response. Maps both owner and annuitant fields with dual-ID aliases (e.g. `owner_dob` + `owner_date_of_birth`).
+- `lookup_family_members` — Queries Redtail family API (`GET /contacts/{id}/family`). Fetches full contact record for each member (spouse, children). Returns structured data the LLM maps to `joint_owner_*` fields (spouse) and beneficiary fields (children). Infers "spouse" relationship for HOH members with null relationship_name.
 - `lookup_crm_notes` — Fetches CRM notes/activity records for a client. Notes contain meeting transcripts with rich unstructured data (income, net worth, risk tolerance, goals, family). LLM extracts financial fields from note text.
-- `lookup_prior_policies` — Queries `MockPolicySystem` for suitability data (fallback if CRM notes lack financial data)
+- `lookup_prior_policies` — Queries `MockPolicySystem` for suitability data (income, net worth, risk tolerance, investment details)
 - `lookup_annual_statements` — Fetches latest annual statement PDF from S3 (`S3StatementStore`)
 - `extract_document_fields` — LLM extracts fields from uploaded/retrieved document via vision
 - `get_advisor_preferences` — Fetches advisor profile from S3 (`S3AdvisorPrefsStore`): philosophy, preferred carriers, allocation strategy, suitability thresholds
@@ -124,11 +125,11 @@ All routes under `/api/v1/`:
 
 **Data sources** (`app/services/datasources/`):
 - `RedtailClient` — Async HTTP client for Redtail CRM API. Two-step auth (Basic → UserKey with 1hr cache), 401 retry, typed methods for contacts/addresses/phones/emails/notes/family.
-- `RedtailCRM` — `DataSource` impl wrapping `RedtailClient`. `list_clients()` paginates contacts (Individual type filter). `query({client_id})` fetches contact+addresses+phones+emails via `asyncio.gather()`, deterministic field mapping to app fields, copies owner→annuitant. `get_notes(contact_id)` fetches notes with HTML stripping.
-- `MockRedtailCRM` — Legacy mock CRM (4 hardcoded clients). Kept for reference/testing but no longer used in production flow.
+- `RedtailCRM` — `DataSource` impl wrapping `RedtailClient`. `list_clients()` paginates contacts (Individual type filter). `query({client_id})` fetches contact+addresses+phones+emails via `asyncio.gather()`, deterministic field mapping to ~35 app fields (owner + annuitant + address + occupation + citizenship), copies owner→annuitant. `get_notes(contact_id)` fetches notes with HTML stripping. `get_family_members(contact_id)` fetches family, enriches each member with full contact data.
+- `MockRedtailCRM` — Legacy mock CRM (4 hardcoded clients: Whitfield, Morales, Hargrove, Pemberton). Kept for reference/testing but no longer used in production flow.
 - `MockPolicySystem` — 10 suitability/financial fields per client (income, net worth, risk tolerance, investment details). Used as fallback when CRM notes lack financial data.
 - `S3StatementStore` — Fetches annual statement PDFs from S3 bucket (`statements/{client_id}/`).
-- `S3AdvisorPrefsStore` — Fetches advisor preference profiles from S3 (`advisors/{advisor_id}/profile.json`). 3 mock advisors: conservative (advisor_001), balanced (advisor_002), accumulation-focused (advisor_003).
+- `S3AdvisorPrefsStore` — Fetches advisor preference profiles from S3 (`advisors/{advisor_id}/profile.json`). Default advisor: Andrew Barnett (`advisor_002`, balanced). Other profiles: advisor_001 (conservative), advisor_003 (accumulation).
 - `S3SuitabilityStore` — Fetches carrier suitability guidelines from S3 (`suitability/{carrier_id}/guidelines.json`) and runs `evaluate_suitability()` weighted scoring. 3 carriers: midland-national, aspida, equitrust.
 - `DataSource` base class — `async query(params) -> dict` and `available_fields() -> list[str]`.
 

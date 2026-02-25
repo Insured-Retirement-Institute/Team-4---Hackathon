@@ -50,6 +50,7 @@ npm run lint     # ESLint
 | `src/pages/AIExperiencePage.tsx` | Voice-first AI Experience: 5-stage state machine (setup → voice_active → gap_review → client_call → results) |
 | `src/hooks/useVoiceConnection.ts` | Nova Sonic voice WebSocket hook: getUserMedia, AudioContext, PCM encode/decode, transcript/field events |
 | `src/components/VoicePanel.tsx` | Mic button with pulse animation, status label, scrolling role-colored transcript |
+| `src/components/ChatPanel.tsx` | Inline text chat panel using `sendMessage()` API, shares session with voice |
 | `src/components/RetellCallPanel.tsx` | Retell outbound call UI: initiate, poll status, live transcript, extracted field display |
 | `src/services/retellService.ts` | Retell API client: `initiateCall()`, `getCallStatus()` |
 | `src/pages/ApplicationHistoryPage.tsx` | Lists saved/submitted applications from localStorage with resume and delete |
@@ -114,7 +115,7 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 
 `src/pages/AIExperiencePage.tsx` — voice-first advisor workflow with five-stage state machine (`setup` → `voice_active` → `gap_review` → `client_call` → `results`):
 
-1. **Setup stage**: Three selector cards — advisor profile, CRM client, product. Two buttons: "Start with Voice" (creates session + opens Nova Sonic + starts SSE) and "Run AI Agent" (SSE-only fallback).
+1. **Setup stage**: Single advisor (hardcoded: Andrew Barnett, `advisor_002`). Two buttons: "Start with Voice" (creates session + opens Nova Sonic) and "Start with Chat" (text-based). Voice/chat toggle available throughout.
 2. **Voice active stage**: VoicePanel (mic + transcript) at top. Below: agent log (dark terminal, SSE tool calls) + field accumulator (gathered fields). Voice and SSE run simultaneously. Auto-transitions to gap_review on `agent_complete`.
 3. **Gap review stage**: Compact VoicePanel (still connected). Summary bar (fields found, time, sources, suitability). Field matching table (filled vs missing, grouped by page). Actions: "Call Client to Fill Gaps", "Start Application", "Open in Wizard".
 4. **Client call stage**: RetellCallPanel (initiate call, poll status, live transcript, extracted fields). Field matching table updates when call completes. Collapsed VoicePanel available. Auto-transitions to results on call completion.
@@ -124,7 +125,7 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 
 **Retell call integration**: `retellService.ts` API client calls `POST /api/v1/retell/calls` (initiate) and `GET /api/v1/retell/calls/{id}` (poll). `RetellCallPanel` component handles the full call lifecycle: idle → ringing → in-progress (with duration timer + live transcript) → ended (transcript accordion + extracted field chips). Polls every 3s. On completion, extracted fields merge into `gatheredFields` + `finalResult.known_data`.
 
-**Tool display metadata**: `TOOL_META` maps tool names to human-readable labels and MUI icons (e.g., `lookup_crm_client` → "CRM Client Lookup" with `PersonSearchIcon`).
+**Tool display metadata**: `TOOL_META` maps tool names to human-readable labels and MUI icons (e.g., `lookup_crm_client` → "CRM Client Lookup" with `PersonSearchIcon`, `lookup_family_members` → "Family & Spouse Lookup" with `PeopleIcon`).
 
 **SSE event protocol** (`StreamEvent` type):
 - `agent_start` — `{type, message, timestamp}`
