@@ -29,12 +29,6 @@ import Typography from '@mui/material/Typography';
 import type { ApplicationDefinition } from '../../types/application';
 import { useApplication } from '../../context/ApplicationContext';
 import { getApplication, getApplicationInstance, startDocusignSigning, submitApplication, updateAnswers, validateApplication } from '../../services/apiService';
-import {
-  loadApplicationData,
-  markSubmitted,
-  saveApplication,
-  type SavedApplicationData,
-} from '../../services/applicationStorageService';
 import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
@@ -733,19 +727,7 @@ const [subDialog, setSubDialog] = useState<{
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
-  const persistProgress = (step: number, status: 'in_progress' | 'submitted' = 'in_progress') => {
-    const entry = {
-      id: applicationId,
-      productId: definition.productId,
-      productName: definition.productName,
-      carrier: definition.carrier,
-      version: definition.version,
-      lastSavedAt: new Date().toISOString(),
-      status,
-      currentStep: step,
-    };
-    const data: SavedApplicationData = { currentStep: step, values: values as Record<string, unknown> };
-    saveApplication(entry, data);
+  const persistProgress = () => {
     // Sync answers to backend (fire-and-forget — don't block UI)
     updateAnswers(applicationId, values).catch(() => undefined);
   };
@@ -810,7 +792,7 @@ const [subDialog, setSubDialog] = useState<{
     if (currentStep < totalSteps - 1) {
       const next = currentStep + 1;
       setCurrentStep(next);
-      persistProgress(next);
+      persistProgress();
     }
   };
 
@@ -818,14 +800,14 @@ const [subDialog, setSubDialog] = useState<{
     if (currentStep > 0) {
       const prev = currentStep - 1;
       setCurrentStep(prev);
-      persistProgress(prev);
+      persistProgress();
     }
   };
 
   // ── Exit ───────────────────────────────────────────────────────────────────
 
   const handleExitSaveAndLeave = () => {
-    persistProgress(currentStep, 'in_progress');
+    persistProgress();
     navigate('/applications');
   };
 
@@ -899,7 +881,6 @@ const [subDialog, setSubDialog] = useState<{
       }), minDelay(1000)]);
 
       console.log('eapp_submission_payload', submissionPayload);
-      markSubmitted(applicationId);
       setShowSubmissionBanner(true);
       setSubDialog(prev => ({ ...prev, phase: 'done', resultStatus: 'success', resultMessage: 'Your application has been successfully submitted. You will receive a confirmation shortly.' }));
     } catch (error) {
@@ -1291,24 +1272,17 @@ function WizardPageV2() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Load saved data once at mount via stable useState initializers (localStorage is synchronous)
-  const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>(
-    () => (appId ? loadApplicationData(appId)?.values : undefined),
-  );
-  const [initialStep] = useState<number>(
-    () => (appId ? (loadApplicationData(appId)?.currentStep ?? 0) : 0),
-  );
-  // Track whether local data existed so the effect knows whether to fetch from backend
-  const [hasLocalData] = useState<boolean>(() => Boolean(appId && loadApplicationData(appId)));
+  const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>(undefined);
 
-  // applicationId is the backend DynamoDB UUID — used as both the localStorage key and API param
+  // applicationId is the backend DynamoDB UUID
   const [applicationId] = useState<string>(() => appId ?? crypto.randomUUID());
 
   useEffect(() => {
     if (!productId) return;
 
     const defFetch = getApplication(decodeURIComponent(productId));
-    // If resuming but localStorage was empty (cleared / different device), fall back to backend answers
-    const instFetch = appId && !hasLocalData
+    // Always load answers from backend when resuming
+    const instFetch = appId
       ? getApplicationInstance(appId).catch(() => null)
       : Promise.resolve(null);
 
@@ -1320,7 +1294,7 @@ function WizardPageV2() {
         setDefinition(def);
       })
       .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load application'));
-  }, [productId, appId, hasLocalData]);
+  }, [productId, appId]);
 
   if (loadError) {
     return (
@@ -1340,7 +1314,7 @@ function WizardPageV2() {
 
   return (
     <WizardV2FormProvider definition={definition} initialValues={initialValues}>
-      <WizardPageContent applicationId={applicationId} initialStep={initialStep} />
+      <WizardPageContent applicationId={applicationId} initialStep={0} />
     </WizardV2FormProvider>
   );
 }
