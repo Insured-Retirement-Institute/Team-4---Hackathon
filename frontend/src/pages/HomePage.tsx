@@ -62,7 +62,7 @@ const FEATURES = [
     story: 'US-05',
     description:
       "Upload a prior carrier's PDF contract. AI extracts key fields and maps them to the new application — replacing manual re-entry.",
-    status: 'coming',
+    status: 'built',
   },
   {
     icon: <PrecisionManufacturingIcon sx={{ fontSize: 32 }} />,
@@ -70,7 +70,7 @@ const FEATURES = [
     story: 'US-08',
     description:
       'Initiate 8 applications in the time it takes to start 1. An AI agent pulls from CRM, call transcripts, and public records — surfacing only gaps.',
-    status: 'coming',
+    status: 'built',
   },
 ];
 
@@ -222,6 +222,24 @@ export default function HomePage() {
               }}
             >
               Open Wizard
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              endIcon={<PrecisionManufacturingIcon />}
+              onClick={() => navigate('/prefill')}
+              color="secondary"
+              sx={{
+                borderColor: 'secondary.main',
+                fontWeight: 600,
+                px: 4,
+                '&:hover': {
+                  borderColor: 'secondary.main',
+                  bgcolor: 'rgba(25,118,210,0.08)',
+                },
+              }}
+            >
+              Pre-Fill from CRM
             </Button>
           </Stack>
         </Container>
@@ -392,6 +410,24 @@ export default function HomePage() {
               }}
             >
               Guided Wizard
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              endIcon={<PrecisionManufacturingIcon />}
+              onClick={() => navigate('/prefill')}
+              color="secondary"
+              sx={{
+                fontWeight: 600,
+                px: 4,
+                borderColor: 'secondary.main',
+                '&:hover': {
+                  borderColor: 'secondary.main',
+                  bgcolor: 'rgba(25,118,210,0.08)',
+                },
+              }}
+            >
+              Pre-Fill from CRM
             </Button>
           </Stack>
 
