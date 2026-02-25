@@ -32,7 +32,7 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { useApplication } from '../context/ApplicationContext';
 import { openWidget } from '../hooks/useWidgetSync';
 import { createSession } from '../services/aiService';
-import { getProducts, getApplication, type Product } from '../services/applicationService';
+import { getProducts, getApplication, type Product } from '../services/apiService';
 import type { ApplicationDefinition } from '../types/application';
 import {
   type Client,
