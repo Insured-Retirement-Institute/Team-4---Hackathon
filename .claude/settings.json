@@ -3,7 +3,11 @@
     "allow": [
       "Bash(dir /b \"c:\\\\Users\\\\harryn\\\\source\\\\repos\\\\Team-4---Hackathon\")",
       "Bash(Get-ChildItem \"C:\\\\Users\\\\harryn\\\\source\\\\repos\\\\Team-4---Hackathon\")",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "WebFetch(domain:lottiefiles.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:lottie.host)",
+      "WebFetch(domain:assets-v2.lottiefiles.com)"
     ]
   }
 }

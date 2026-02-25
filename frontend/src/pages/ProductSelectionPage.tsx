@@ -91,8 +91,14 @@ export default function ProductSelectionPage() {
             </Alert>
           )}
 
-          {/* ── Header ───────────────────────────────────────────────────── */}
-          <Box mb={3}>
+          {/* ── Hero illustration + Header ───────────────────────────────── */}
+          <Box mb={3} display="flex" flexDirection="column" alignItems="center" textAlign="center">
+            <Box
+              component="img"
+              src="/undraw_selected-box_qnrz.svg"
+              alt="Select a product"
+              sx={{ width: '100%', maxWidth: 420, mb: 3, opacity: 0.92 }}
+            />
             <Chip label="New Application" color="secondary" size="small" sx={{ mb: 1, fontWeight: 600 }} />
             <Typography variant="h5" fontWeight={700} letterSpacing="-0.25px">
               Choose a product
