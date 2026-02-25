@@ -6,6 +6,7 @@ import ProductSelectionPage from './pages/ProductSelectionPage';
 import DocusignReturnPage from './pages/DocusignReturnPage';
 import WizardPage from './features/wizard-v1/WizardPage';
 import WizardPageV2 from './features/wizard-v2/WizardPage';
+import ApplicationHistoryPage from './pages/ApplicationHistoryPage';
 import { ApplicationProvider } from './context/ApplicationContext';
 
 function AppRoutes() {
@@ -18,6 +19,7 @@ function AppRoutes() {
           <Route path="/wizard-v1" element={<WizardPage />} />
           <Route path="/wizard-v2" element={<ProductSelectionPage />} />
           <Route path="/wizard-v2/:productId" element={<WizardPageV2 />} />
+          <Route path="/applications" element={<ApplicationHistoryPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

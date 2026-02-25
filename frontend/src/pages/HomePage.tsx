@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { openWidget } from '../hooks/useWidgetSync';
+import { listSaves } from '../services/applicationStorageService';
+import type { SavedApplicationEntry } from '../services/applicationStorageService';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -12,7 +14,6 @@ import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import ApiIcon from '@mui/icons-material/Api';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -25,7 +26,8 @@ import catAnimation from '../animations/cat.json';
 
 const FEATURES = [
   {
-    icon: <ApiIcon sx={{ fontSize: 32 }} />,
+    icon: null,
+    lottieSrc: 'https://lottie.host/2031cbaa-6e1f-4357-9dc6-6cacf301e30f/plKHGxzrh0.lottie',
     label: 'Universal Application API',
     story: 'US-01',
     description:
@@ -92,6 +94,141 @@ const HOW_IT_WORKS = [
   },
 ];
 
+function FeatureCard({ feature }: { feature: (typeof FEATURES)[0] }) {
+  const [hovered, setHovered] = useState(false);
+  const built = feature.status === 'built';
+
+  return (
+    <Card
+      elevation={0}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      sx={{
+        height: '100%',
+        border: '1px solid',
+        borderColor: built ? 'primary.light' : 'divider',
+        opacity: built ? 1 : 0.6,
+        transition: 'box-shadow 0.2s, transform 0.2s',
+        '&:hover': built ? { boxShadow: 4, transform: 'translateY(-2px)' } : {},
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+          <Box sx={{ color: built ? 'primary.main' : 'text.disabled' }}>
+            {feature.lottieSrc ? (
+              <DotLottieReact
+                key={hovered ? 'play' : 'stop'}
+                src={feature.lottieSrc}
+                loop
+                autoplay={hovered}
+                style={{ width: 32, height: 32 }}
+              />
+            ) : feature.icon}
+          </Box>
+          <Stack direction="row" spacing={0.75}>
+            <Chip label={feature.story} size="small" sx={{ fontSize: 10, height: 20, bgcolor: 'grey.100' }} />
+            {built ? (
+              <Chip
+                icon={<CheckCircleIcon sx={{ fontSize: '12px !important' }} />}
+                label="Built"
+                size="small"
+                color="secondary"
+                sx={{ fontSize: 10, height: 20 }}
+              />
+            ) : (
+              <Chip label="Coming Soon" size="small" sx={{ fontSize: 10, height: 20, bgcolor: 'grey.200' }} />
+            )}
+          </Stack>
+        </Stack>
+        <Typography variant="subtitle1" fontWeight={700} mb={0.75}>{feature.label}</Typography>
+        <Typography variant="body2" color="text.secondary" lineHeight={1.6}>{feature.description}</Typography>
+      </CardContent>
+    </Card>
+  );
+}
+
+function relativeTime(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function RecentApplications({ saves }: { saves: SavedApplicationEntry[] }) {
+  const navigate = useNavigate();
+  if (saves.length === 0) return null;
+
+  return (
+    <Box sx={{ py: { xs: 6, md: 8 }, px: 3, bgcolor: 'background.paper' }}>
+      <Container maxWidth="lg">
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+          <Box>
+            <Typography variant="overline" color="primary" fontWeight={700} display="block" mb={0.5}>
+              In Progress
+            </Typography>
+            <Typography variant="h5" fontWeight={700}>
+              Continue where you left off
+            </Typography>
+          </Box>
+          <Button variant="text" size="small" onClick={() => navigate('/applications')} endIcon={<ArrowForwardIcon />}>
+            View all
+          </Button>
+        </Stack>
+
+        <Grid container spacing={2}>
+          {saves.map((save) => (
+            <Grid key={save.id} size={{ xs: 12, sm: 6, md: 4 }}>
+              <Card
+                elevation={0}
+                sx={{
+                  border: '1px solid',
+                  borderColor: 'primary.light',
+                  height: '100%',
+                  transition: 'box-shadow 0.15s',
+                  '&:hover': { boxShadow: 3 },
+                }}
+              >
+                <CardContent sx={{ p: 2.5 }}>
+                  <Typography
+                    variant="overline"
+                    color="text.secondary"
+                    sx={{ fontSize: 9, letterSpacing: 0.8, lineHeight: 1.2, display: 'block' }}
+                  >
+                    {save.carrier}
+                  </Typography>
+                  <Typography variant="subtitle2" fontWeight={700} lineHeight={1.3} mb={0.5} noWrap>
+                    {save.productName}
+                  </Typography>
+                  <Typography variant="caption" color="text.disabled" display="block" mb={1.5}>
+                    Saved {relativeTime(save.lastSavedAt)}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="primary"
+                    endIcon={<ArrowForwardIcon />}
+                    fullWidth
+                    onClick={() =>
+                      navigate(`/wizard-v2/${encodeURIComponent(save.productId)}?resume=${save.id}`)
+                    }
+                  >
+                    Continue
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </Box>
+  );
+}
+
 function CatAnimation() {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -127,6 +264,7 @@ function CatAnimation() {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const inProgressSaves = listSaves().filter((s) => s.status === 'in_progress').slice(0, 3);
 
   return (
     <Box>
@@ -255,60 +393,11 @@ export default function HomePage() {
           </Typography>
 
           <Grid container spacing={3}>
-            {FEATURES.map((f) => {
-              const built = f.status === 'built';
-              return (
-                <Grid key={f.label} size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Card
-                    elevation={0}
-                    sx={{
-                      height: '100%',
-                      border: '1px solid',
-                      borderColor: built ? 'primary.light' : 'divider',
-                      opacity: built ? 1 : 0.6,
-                      transition: 'box-shadow 0.2s, transform 0.2s',
-                      '&:hover': built
-                        ? { boxShadow: 4, transform: 'translateY(-2px)' }
-                        : {},
-                    }}
-                  >
-                    <CardContent sx={{ p: 3 }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                        <Box sx={{ color: built ? 'primary.main' : 'text.disabled' }}>{f.icon}</Box>
-                        <Stack direction="row" spacing={0.75}>
-                          <Chip
-                            label={f.story}
-                            size="small"
-                            sx={{ fontSize: 10, height: 20, bgcolor: 'grey.100' }}
-                          />
-                          {built ? (
-                            <Chip
-                              icon={<CheckCircleIcon sx={{ fontSize: '12px !important' }} />}
-                              label="Built"
-                              size="small"
-                              color="success"
-                              sx={{ fontSize: 10, height: 20 }}
-                            />
-                          ) : (
-                            <Chip
-                              label="Coming Soon"
-                              size="small"
-                              sx={{ fontSize: 10, height: 20, bgcolor: 'grey.200' }}
-                            />
-                          )}
-                        </Stack>
-                      </Stack>
-                      <Typography variant="subtitle1" fontWeight={700} mb={0.75}>
-                        {f.label}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" lineHeight={1.6}>
-                        {f.description}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              );
-            })}
+            {FEATURES.map((f) => (
+              <Grid key={f.label} size={{ xs: 12, sm: 6, md: 4 }}>
+                <FeatureCard feature={f} />
+              </Grid>
+            ))}
           </Grid>
         </Container>
       </Box>
@@ -352,6 +441,11 @@ export default function HomePage() {
       </Box>
 
       <Divider />
+
+      {/* ── Recent Applications ───────────────────────────────────────────── */}
+      <RecentApplications saves={inProgressSaves} />
+
+      {inProgressSaves.length > 0 && <Divider />}
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <Box sx={{ py: { xs: 8, md: 10 }, px: 3, bgcolor: 'background.default', textAlign: 'center' }}>

@@ -1,3 +1,24 @@
+# Wizard Workflow
+
+## Flow
+1. `/wizard-v2` → `ProductSelectionPage` — fetches `GET /products`, user picks a product, navigates to `/wizard-v2/:productId`
+2. `/wizard-v2/:productId` → `WizardPageV2` — reads `:productId` from route params, fetches `GET /application/:productId` to get an `ApplicationDefinition`, then renders the dynamic form wizard
+
+## Key Files
+- `src/pages/ProductSelectionPage.tsx` — product picker; navigates on selection, does NOT prefetch the application definition
+- `src/features/wizard-v2/WizardPage.tsx` — outer shell fetches the definition; inner `WizardPageContent` drives the step-by-step wizard UI
+- `src/features/wizard-v2/formController.tsx` — React context provider; accepts `definition: ApplicationDefinition` as a prop; owns all form values, errors, validation, and dummy-data population
+- `src/features/wizard-v2/WizardField.tsx` — renders any `QuestionDefinition` dynamically; already fully generic, no product-specific logic
+- `src/features/wizard-v2/WizardSidebar.tsx` — step navigation sidebar; driven by `pages[]`, `productName`, and `carrier` props
+- `src/types/application.ts` — canonical types: `ApplicationDefinition`, `PageDefinition`, `QuestionDefinition`, `AnswerMap`
+- `src/services/applicationService.ts` — `getProducts()`, `getApplication(productId)`, `validateApplication()`, `submitApplication()`
+
+## ApplicationDefinition Shape
+Pages → Questions → `QuestionDefinition` (id, label, type, options, groupConfig, allocationConfig, …).
+All question types are handled in `WizardField.tsx`: `short_text`, `long_text`, `number`, `currency`, `date`, `boolean`, `select`, `radio`, `phone`, `email`, `ssn`, `signature`, `repeatable_group`, `allocation_table`.
+
+---
+
 # MUI + React Design System Guidelines
 
 Use this file to provide the AI with rules and guidelines to follow when generating React code with Material UI (MUI).

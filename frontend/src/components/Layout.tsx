@@ -7,11 +7,13 @@ import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import { useApplication } from '../context/ApplicationContext';
 import { useWidgetSync } from '../hooks/useWidgetSync';
+import { countInProgress } from '../services/applicationStorageService';
 
 function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { collectedFields } = useApplication();
+  const inProgressCount = countInProgress();
 
   // Bridge widget.js events (iri:field_updated, etc.) into ApplicationContext
   useWidgetSync();
@@ -20,7 +22,8 @@ function Layout() {
 
   const navItems = [
     { label: 'Home', path: '/' },
-{ label: 'New Application', path: '/wizard-v2', badge: fieldCount },
+    { label: 'Applications', path: '/applications', badge: inProgressCount },
+    { label: 'New Application', path: '/wizard-v2', badge: fieldCount },
   ];
 
   return (
@@ -53,7 +56,7 @@ function Layout() {
 
             if (item.badge) {
               return (
-                <Badge key={item.path} badgeContent={item.badge} color="success" max={999}>
+                <Badge key={item.path} badgeContent={item.badge} color="secondary" max={999}>
                   {btn}
                 </Badge>
               );

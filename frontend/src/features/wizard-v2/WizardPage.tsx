@@ -1,20 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckIcon from '@mui/icons-material/Check';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import type { ApplicationDefinition } from '../../types/application';
 import { useApplication } from '../../context/ApplicationContext';
-import { submitApplication, validateApplication } from '../../services/applicationService';
-import { APPLICATION_DEFINITION } from './applicationDefinition';
+import { getApplication, submitApplication, validateApplication } from '../../services/applicationService';
+import {
+  loadApplicationData,
+  markSubmitted,
+  saveApplication,
+  type SavedApplicationData,
+} from '../../services/applicationStorageService';
 import { WizardV2FormProvider, useWizardV2Controller } from './formController';
 import WizardField from './WizardField';
 import WizardSidebar from './WizardSidebar';
@@ -64,7 +78,7 @@ function signatureRecord(signatureToken: string | boolean | Record<string, strin
   };
 }
 
-function buildSubmissionPayload(values: AnswerMap) {
+function buildSubmissionPayload(values: AnswerMap, definition: ApplicationDefinition) {
   const taxStatusMap: Record<string, 'non_qualified' | 'ira' | 'roth_ira' | 'sep_ira' | 'tsa_403b' | 'inherited_ira'> = {
     non_qualified: 'non_qualified',
     ira: 'ira',
@@ -77,7 +91,7 @@ function buildSubmissionPayload(values: AnswerMap) {
   const transferScope = asString(values.transfer_scope);
   const transferTiming = asString(values.transfer_timing);
   const ownerSameAsAnnuitant = asBool(values.owner_same_as_annuitant);
-  const allocationQuestion = APPLICATION_DEFINITION.pages
+  const allocationQuestion = definition.pages
     .flatMap((page) => page.questions)
     .find((question) => question.id === 'investment_allocations');
   const allocationFundsById = new Map(
@@ -109,18 +123,18 @@ function buildSubmissionPayload(values: AnswerMap) {
   return {
     envelope: {
       submissionId: typeof crypto !== 'undefined' ? crypto.randomUUID() : `sub_${Date.now()}`,
-      applicationId: `app_${APPLICATION_DEFINITION.id}`,
+      applicationId: `app_${definition.id}`,
       schemaVersion: '1.0.0',
       submittedAt: new Date().toISOString(),
-      applicationDefinitionId: APPLICATION_DEFINITION.id,
-      applicationDefinitionVersion: APPLICATION_DEFINITION.version,
+      applicationDefinitionId: definition.id,
+      applicationDefinitionVersion: definition.version,
       carrier: {
-        name: APPLICATION_DEFINITION.carrier,
+        name: definition.carrier,
         carrierId: 'fig-carrier-midland-national',
       },
       product: {
-        productId: APPLICATION_DEFINITION.productId,
-        productName: APPLICATION_DEFINITION.productName,
+        productId: definition.productId,
+        productName: definition.productName,
         formNumbers: [],
       },
       submissionMode: 'pdf_fill' as const,
@@ -379,7 +393,7 @@ function ReviewPanel() {
       </Typography>
 
       {pages.map((page) => (
-        <Paper key={page.id} variant="outlined" sx={{ p: 2.5, borderColor: 'success.light' }}>
+        <Paper key={page.id} variant="outlined" sx={{ p: 2.5, borderColor: 'divider' }}>
           <Typography variant="subtitle1" fontWeight="bold" color="primary.main" gutterBottom>
             {page.title}
           </Typography>
@@ -428,16 +442,41 @@ function ReviewPanel() {
   );
 }
 
-function WizardPageContent() {
-  const { pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
+interface WizardPageContentProps {
+  saveId: string;
+  initialStep: number;
+}
+
+function WizardPageContent({ saveId, initialStep }: WizardPageContentProps) {
+  const navigate = useNavigate();
+  const { definition, pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
   const { collectedFields, mergeFields } = useApplication();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const lastAppliedRef = useRef<Record<string, string | boolean>>({});
 
-  // Continuously apply new fields from ApplicationContext (e.g. from widget chat) into wizard
+  // ── Persistence ────────────────────────────────────────────────────────────
+
+  const persistProgress = (step: number, status: 'in_progress' | 'submitted' = 'in_progress') => {
+    const entry = {
+      id: saveId,
+      productId: definition.productId,
+      productName: definition.productName,
+      carrier: definition.carrier,
+      version: definition.version,
+      lastSavedAt: new Date().toISOString(),
+      status,
+      currentStep: step,
+    };
+    const data: SavedApplicationData = { currentStep: step, values: values as Record<string, unknown> };
+    saveApplication(entry, data);
+  };
+
+  // ── AI field sync ──────────────────────────────────────────────────────────
+
   useEffect(() => {
     const newFields: Record<string, string | boolean> = {};
     for (const [key, val] of Object.entries(collectedFields)) {
@@ -451,7 +490,6 @@ function WizardPageContent() {
     }
   }, [collectedFields, bulkSetValues]);
 
-  // Sync wizard values back to ApplicationContext so AI chat can pick them up
   useEffect(() => {
     const nonEmpty: Record<string, string | boolean> = {};
     for (const [key, val] of Object.entries(values)) {
@@ -462,11 +500,12 @@ function WizardPageContent() {
       }
     }
     if (Object.keys(nonEmpty).length > 0) {
-      // Track these as already applied so we don't re-apply our own changes
       lastAppliedRef.current = { ...lastAppliedRef.current, ...nonEmpty };
       mergeFields(nonEmpty);
     }
   }, [values, mergeFields]);
+
+  // ── Step state ─────────────────────────────────────────────────────────────
 
   const isIntroStep = currentStep === 0;
   const isReviewStep = currentStep === pages.length + 1;
@@ -477,14 +516,8 @@ function WizardPageContent() {
   const sidebarStep = isIntroStep ? -1 : isReviewStep ? pages.length : currentStep - 1;
 
   const stepLabel = useMemo(() => {
-    if (isIntroStep) {
-      return 'Application Overview';
-    }
-
-    if (isReviewStep) {
-      return 'Review & Submit';
-    }
-
+    if (isIntroStep) return 'Application Overview';
+    if (isReviewStep) return 'Review & Submit';
     return currentPage?.title ?? '';
   }, [currentPage, isIntroStep, isReviewStep]);
 
@@ -493,32 +526,48 @@ function WizardPageContent() {
     [isPageComplete, pages],
   );
 
-  const handleNext = () => {
-    if (!isReviewStep && currentPage && !validatePage(currentPage)) {
-      return;
-    }
+  // ── Navigation ─────────────────────────────────────────────────────────────
 
+  const handleNext = () => {
+    if (!isReviewStep && currentPage && !validatePage(currentPage)) return;
     if (currentStep < totalSteps - 1) {
-      setCurrentStep((prev) => prev + 1);
+      const next = currentStep + 1;
+      setCurrentStep(next);
+      persistProgress(next);
     }
   };
 
   const handleBack = () => {
     if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
+      const prev = currentStep - 1;
+      setCurrentStep(prev);
+      persistProgress(prev);
     }
   };
+
+  const handleSidebarPageClick = (pageIndex: number) => setCurrentStep(pageIndex + 1);
+  const handleSidebarIntroClick = () => setCurrentStep(0);
+
+  // ── Exit ───────────────────────────────────────────────────────────────────
+
+  const handleExitSaveAndLeave = () => {
+    persistProgress(currentStep, 'in_progress');
+    navigate('/applications');
+  };
+
+  const handleExitDiscard = () => navigate('/applications');
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
     setSubmissionError(null);
     setShowSubmissionBanner(false);
     setIsSubmitting(true);
 
-    const submissionPayload = buildSubmissionPayload(values as AnswerMap);
-    const applicationId = `app_${APPLICATION_DEFINITION.id}`;
+    const submissionPayload = buildSubmissionPayload(values as AnswerMap, definition);
+    const applicationId = `app_${definition.id}`;
     const requestPayload = {
-      productId: APPLICATION_DEFINITION.productId,
-      // service types are currently flat; wizard answers include nested structures
+      productId: definition.productId,
       answers: values as unknown as Record<string, string | number | boolean | null>,
     };
 
@@ -531,17 +580,6 @@ function WizardPageContent() {
         return;
       }
 
-      console.log('Submitting payload to /application/:applicationId/submit', {
-        applicationId,
-        payload: {
-          ...requestPayload,
-          metadata: {
-            submissionSource: 'web',
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-          },
-        },
-      });
-
       await submitApplication(applicationId, {
         ...requestPayload,
         metadata: {
@@ -551,6 +589,7 @@ function WizardPageContent() {
       });
 
       console.log('eapp_submission_payload', submissionPayload);
+      markSubmitted(saveId);
       setShowSubmissionBanner(true);
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : 'Unable to reach the server. Please try again.');
@@ -560,37 +599,33 @@ function WizardPageContent() {
     }
   };
 
-  const handleSidebarPageClick = (pageIndex: number) => {
-    setCurrentStep(pageIndex + 1);
-  };
-
-  const handleSidebarIntroClick = () => {
-    setCurrentStep(0);
-  };
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <WizardSidebar
         pages={pages}
         currentStep={sidebarStep}
+        productName={definition.productName}
+        carrier={definition.carrier}
         isPageComplete={(index) => isPageComplete(pages[index])}
         onIntroClick={handleSidebarIntroClick}
         onPageClick={handleSidebarPageClick}
       />
 
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <LinearProgress variant="determinate" value={progress} color="success" sx={{ height: 6 }} />
+        <LinearProgress variant="determinate" value={progress} color="secondary" sx={{ height: 6 }} />
 
         <Box sx={{ p: { xs: 2, md: 4 }, flex: 1 }}>
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
             {isIntroStep && (
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
-                <Chip label={APPLICATION_DEFINITION.carrier} color="success" size="small" />
-                <Chip label={`Step ${currentStep + 1} of ${totalSteps}`} variant="outlined" color="success" size="small" />
+                <Chip label={definition.carrier} color="secondary" size="small" />
+                <Chip label={`Step ${currentStep + 1} of ${totalSteps}`} variant="outlined" color="secondary" size="small" />
                 <Typography variant="caption" color="text.secondary">
                   Active section: {stepLabel}
                 </Typography>
-                <Button size="small" variant="outlined" color="success" onClick={populateWithDummyData}>
+                <Button size="small" variant="outlined" color="secondary" onClick={populateWithDummyData}>
                   Fill Dummy Data
                 </Button>
               </Stack>
@@ -617,13 +652,23 @@ function WizardPageContent() {
             {isIntroStep && (
               <Paper
                 variant="outlined"
-                sx={{ p: { xs: 2.5, md: 3.5 }, borderColor: 'success.light', bgcolor: 'background.paper' }}
+                sx={{ p: { xs: 2.5, md: 3.5 }, borderColor: 'secondary.light', bgcolor: 'background.paper' }}
               >
-                <Typography variant="h4" component="h1" fontWeight="bold" color="primary.main" gutterBottom>
-                  {APPLICATION_DEFINITION.productName}
+                <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1 }}>
+                  {definition.carrier}
                 </Typography>
+                <Typography variant="h4" component="h1" fontWeight="bold" color="primary.main" gutterBottom>
+                  {definition.productName}
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+                  <Chip label={`Version ${definition.version}`} size="small" variant="outlined" />
+                  {definition.effectiveDate && (
+                    <Chip label={`Effective ${definition.effectiveDate}`} size="small" variant="outlined" />
+                  )}
+                  <Chip label={`${definition.pages.length} sections`} size="small" variant="outlined" />
+                </Stack>
                 <Typography variant="body1" color="text.secondary">
-                  {APPLICATION_DEFINITION.description}
+                  {definition.description}
                 </Typography>
               </Paper>
             )}
@@ -663,6 +708,8 @@ function WizardPageContent() {
         </Box>
 
         <Divider />
+
+        {/* ── Bottom navigation ────────────────────────────────────────── */}
         <Box
           sx={{
             p: { xs: 2, md: 3 },
@@ -676,25 +723,35 @@ function WizardPageContent() {
         >
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Button
-                startIcon={<ArrowBackIcon />}
-                onClick={handleBack}
-                disabled={currentStep === 0}
-                color="inherit"
-              >
-                Back
-              </Button>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button
+                  startIcon={<ArrowBackIcon />}
+                  onClick={handleBack}
+                  disabled={currentStep === 0}
+                  color="inherit"
+                >
+                  Back
+                </Button>
+                <Button
+                  startIcon={<ExitToAppIcon />}
+                  onClick={() => setExitDialogOpen(true)}
+                  color="inherit"
+                  size="small"
+                >
+                  Exit
+                </Button>
+              </Stack>
 
               <Stack direction="row" spacing={1.5}>
                 {!isReviewStep && (
-                  <Button variant="contained" color="success" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
+                  <Button variant="contained" color="secondary" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
                     {isIntroStep ? 'Start Application' : 'Save & Next'}
                   </Button>
                 )}
                 {isReviewStep && (
                   <Button
                     variant="contained"
-                    color="success"
+                    color="secondary"
                     onClick={handleSubmit}
                     disabled={isSubmitting || !isFormComplete}
                   >
@@ -706,14 +763,85 @@ function WizardPageContent() {
           </Box>
         </Box>
       </Box>
+
+      {/* ── Exit confirmation dialog ──────────────────────────────────── */}
+      <Dialog
+        open={exitDialogOpen}
+        onClose={() => setExitDialogOpen(false)}
+        aria-labelledby="exit-dialog-title"
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle id="exit-dialog-title">Save your progress?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Your answers will be saved so you can continue this application later from the Applications page.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExitDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleExitDiscard} color="inherit">
+            Exit without saving
+          </Button>
+          <Button onClick={handleExitSaveAndLeave} variant="contained" color="primary">
+            Save & Exit
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
 
 function WizardPageV2() {
+  const { productId } = useParams<{ productId: string }>();
+  const [searchParams] = useSearchParams();
+  const resumeId = searchParams.get('resume');
+
+  const [definition, setDefinition] = useState<ApplicationDefinition | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>(undefined);
+  const [initialStep, setInitialStep] = useState(0);
+
+  // Each save has its own UUID — stable for the lifetime of this session
+  const saveIdRef = useRef<string>(
+    resumeId ?? (typeof crypto !== 'undefined' ? crypto.randomUUID() : `save_${Date.now()}`),
+  );
+
+  useEffect(() => {
+    if (!productId) return;
+
+    getApplication(decodeURIComponent(productId))
+      .then(setDefinition)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load application definition'));
+
+    if (resumeId) {
+      const saved = loadApplicationData(resumeId);
+      if (saved) {
+        setInitialValues(saved.values);
+        setInitialStep(saved.currentStep);
+      }
+    }
+  }, [productId, resumeId]);
+
+  if (loadError) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Alert severity="error">{loadError}</Alert>
+      </Box>
+    );
+  }
+
+  if (!definition) {
+    return (
+      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress color="secondary" />
+      </Box>
+    );
+  }
+
   return (
-    <WizardV2FormProvider>
-      <WizardPageContent />
+    <WizardV2FormProvider definition={definition} initialValues={initialValues}>
+      <WizardPageContent saveId={saveIdRef.current} initialStep={initialStep} />
     </WizardV2FormProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react';
-import { APPLICATION_DEFINITION, type PageDefinition, type QuestionDefinition } from './applicationDefinition';
+import type { ApplicationDefinition, PageDefinition, QuestionDefinition } from '../../types/application';
 import { createDummyValue } from './createDummyValue';
 
 type GroupItemValue = Record<string, string | boolean>;
@@ -10,6 +10,7 @@ type FormValues = Record<string, AnswerValue>;
 type FormErrors = Record<string, string>;
 
 interface WizardV2Controller {
+  definition: ApplicationDefinition;
   values: FormValues;
   errors: FormErrors;
   pages: PageDefinition[];
@@ -141,14 +142,19 @@ function getValidationMessage(question: QuestionDefinition, value: AnswerValue):
 }
 
 interface WizardV2FormProviderProps {
+  definition: ApplicationDefinition;
+  initialValues?: Record<string, unknown>;
   children: React.ReactNode;
 }
 
-export function WizardV2FormProvider({ children }: WizardV2FormProviderProps) {
-  const pages = APPLICATION_DEFINITION.pages;
+export function WizardV2FormProvider({ definition, initialValues, children }: WizardV2FormProviderProps) {
+  const pages = definition.pages;
   const allQuestions = pages.flatMap((page) => page.questions);
 
-  const [values, setValues] = useState<FormValues>(() => getInitialValues(allQuestions));
+  const [values, setValues] = useState<FormValues>(() => {
+    const initial = getInitialValues(allQuestions);
+    return initialValues ? { ...initial, ...(initialValues as FormValues) } : initial;
+  });
   const [errors, setErrors] = useState<FormErrors>({});
 
   const getPageErrors = (page: PageDefinition) =>
@@ -205,6 +211,7 @@ export function WizardV2FormProvider({ children }: WizardV2FormProviderProps) {
 
   const controller = useMemo<WizardV2Controller>(
     () => ({
+      definition,
       values,
       errors,
       pages,
@@ -214,7 +221,7 @@ export function WizardV2FormProvider({ children }: WizardV2FormProviderProps) {
       isPageComplete,
       populateWithDummyData,
     }),
-    [errors, pages, values],
+    [definition, errors, pages, values],
   );
 
   return <WizardV2Context.Provider value={controller}>{children}</WizardV2Context.Provider>;
