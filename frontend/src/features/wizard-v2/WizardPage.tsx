@@ -1110,62 +1110,76 @@ const [subDialog, setSubDialog] = useState<{
           }}
         >
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" justifyContent="end" alignItems="center">
+              {showSubmissionBanner ? (
                 <Button
                   startIcon={<ExitToAppIcon />}
-                  onClick={() => setExitDialogOpen(true)}
-                  color="warning"
-                  variant="outlined"
-                  size="small"
-                >
-                  Exit
-                </Button>
-              </Stack>
-
-              <Stack direction="row" spacing={1.5}>
-                <Button
-                  startIcon={<ArrowBackIcon />}
-                  onClick={handleBack}
-                  disabled={isSubmitting || !isFormComplete}
+                  onClick={() => navigate('/applications')}
                   color="secondary"
-                  variant="outlined"
+                  variant="contained"
                   size="small"
                 >
-                  Back
+                  Exit Application
                 </Button>
-                {!isReviewStep && (
-                  <Button variant="contained" color="secondary" size="small" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
-                    {isIntroStep ? 'Start Application' : 'Save & Next'}
-                  </Button>
-                )}
-                {isReviewStep && (
-                  <>
-                    <>
+              ) : (
+                <>
+                  <Stack direction="row" spacing={1} alignItems="center">
                     <Button
+                      startIcon={<ExitToAppIcon />}
+                      onClick={() => setExitDialogOpen(true)}
+                      color="warning"
                       variant="outlined"
-                      color="secondary"
                       size="small"
-                      startIcon={<FactCheckIcon />}
-                      onClick={handleValidateOnly}
-                      disabled={isSubmitting}
                     >
-                      Validate
+                      Exit
                     </Button>
+                  </Stack>
+
+                  <Stack direction="row" spacing={1.5}>
                     <Button
-                        variant="contained"
-                        color="secondary"
-                        size="small"
-                        startIcon={<SendIcon />}
-                      onClick={handleSubmit}
-                        disabled={isSubmitting || isBusyWithDocusign || !isFormComplete}
-                      >
-                        Submit Application
+                      startIcon={<ArrowBackIcon />}
+                      onClick={handleBack}
+                      disabled={isSubmitting || !isFormComplete}
+                      color="secondary"
+                      variant="outlined"
+                      size="small"
+                    >
+                      Back
+                    </Button>
+                    {!isReviewStep && (
+                      <Button variant="contained" color="secondary" size="small" endIcon={<ArrowForwardIcon />} onClick={handleNext}>
+                        {isIntroStep ? 'Start Application' : 'Save & Next'}
                       </Button>
-                  </>
-                  </>
-                )}
-              </Stack>
+                    )}
+                    {isReviewStep && (
+                      <>
+                        <>
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          size="small"
+                          startIcon={<FactCheckIcon />}
+                          onClick={handleValidateOnly}
+                          disabled={isSubmitting}
+                        >
+                          Validate
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            size="small"
+                            startIcon={<SendIcon />}
+                          onClick={handleSubmit}
+                            disabled={isSubmitting || isBusyWithDocusign || !isFormComplete}
+                          >
+                            Submit Application
+                          </Button>
+                      </>
+                      </>
+                    )}
+                  </Stack>
+                </>
+              )}
             </Stack>
           </Box>
         </Box>
