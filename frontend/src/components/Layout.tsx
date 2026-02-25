@@ -31,6 +31,7 @@ function Layout() {
     { label: 'Home', path: '/' },
     { label: 'Applications', path: '/applications', badge: inProgressCount },
     { label: 'New Application', path: '/wizard-v2', badge: fieldCount },
+    { label: 'Settings', path: '/settings' },
   ];
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
