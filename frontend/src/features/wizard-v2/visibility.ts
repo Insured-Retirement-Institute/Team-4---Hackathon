@@ -38,7 +38,7 @@ export function evaluateVisibility(visibility: VisibilitySpec, values: FormValue
   if (visibility == null) return true;
 
   if ('conditions' in visibility) {
-    const results = visibility.conditions.map((c) => evalCondition(c, values));
+    const results = visibility.conditions.map((c) => evaluateVisibility(c, values));
     return visibility.operator === 'OR'
       ? results.some(Boolean)
       : results.every(Boolean);

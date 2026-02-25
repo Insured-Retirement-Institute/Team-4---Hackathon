@@ -615,7 +615,7 @@ function ApplicationEditorPanel({
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
         <Stack spacing={0.5}>
           <Typography variant="h4" sx={{ fontWeight: 700, color: palette.text }}>
-            Editing {form.productName.trim() || 'Annuity Application'}
+            Editing '{form.productName.trim() || `Annuity Application`}'
           </Typography>
           <Stack direction="row" spacing={1}>
             <Chip
@@ -634,10 +634,9 @@ function ApplicationEditorPanel({
 
       <Box sx={{ p: 2, border: '1px solid', borderColor: palette.border, bgcolor: palette.canvas }}>
         <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} alignItems={{ xs: 'stretch', lg: 'center' }}>
-          <TextField size="small" label="Schema ID" value={form.id} sx={metaFieldSx} onChange={(event) => handleMetaChange('id', event.target.value)} />
+          <TextField size="small" label="Product ID" value={form.productId} sx={metaFieldSx} onChange={(event) => handleMetaChange('productId', event.target.value)} />
           <TextField size="small" label="Carrier" value={form.carrier} sx={metaFieldSx} onChange={(event) => handleMetaChange('carrier', event.target.value)} />
           <TextField size="small" label="Product Name" value={form.productName} sx={metaFieldSx} onChange={(event) => handleMetaChange('productName', event.target.value)} />
-          <TextField size="small" label="Product ID" value={form.productId} sx={metaFieldSx} onChange={(event) => handleMetaChange('productId', event.target.value)} />
           <TextField
             size="small"
             type="date"

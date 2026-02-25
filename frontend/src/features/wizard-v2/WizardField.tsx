@@ -158,7 +158,7 @@ function WizardField({ question }: WizardFieldProps) {
         multiline={field.type === 'long_text'}
         minRows={field.type === 'long_text' ? 3 : undefined}
         type={field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text'}
-        placeholder={field.placeholder}
+        placeholder={field.placeholder ?? undefined}
         slotProps={{
           inputLabel: {
             shrink: field.type === 'date' ? true : undefined,
