@@ -7,6 +7,27 @@ export type QuestionType =
   | 'select'
   | 'switch';
 
+export type BuilderValidationType =
+  | 'min'
+  | 'max'
+  | 'min_length'
+  | 'max_length'
+  | 'pattern'
+  | 'min_date'
+  | 'max_date'
+  | 'equals'
+  | 'equals_today'
+  | 'allocation_sum'
+  | 'async';
+
+export type BuilderValidationRule = {
+  uid: string;
+  type: BuilderValidationType;
+  value: string;
+  description: string;
+  serviceKey: string;
+};
+
 export type BuilderQuestion = {
   uid: string;
   id: string;
@@ -16,6 +37,7 @@ export type BuilderQuestion = {
   placeholder: string;
   required: boolean;
   optionsInput: string;
+  validations: BuilderValidationRule[];
 };
 
 export type BuilderSection = {
@@ -72,4 +94,16 @@ export const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
   { value: 'radio', label: 'Radio' },
   { value: 'select', label: 'Dropdown' },
   { value: 'switch', label: 'Switch' },
+];
+
+export const VALIDATION_RULE_TYPES: Array<{ value: BuilderValidationType; label: string; needsValue?: boolean; needsServiceKey?: boolean }> = [
+  { value: 'min', label: 'Min (Numeric Value)', needsValue: true },
+  { value: 'max', label: 'Max (Numeric Value)', needsValue: true },
+  { value: 'min_length', label: 'Min (Text Length)', needsValue: true },
+  { value: 'max_length', label: 'Max (Text Length)', needsValue: true },
+  { value: 'pattern', label: 'Pattern (Regex)', needsValue: true },
+  { value: 'min_date', label: 'Min Date', needsValue: true },
+  { value: 'max_date', label: 'Max Date', needsValue: true },
+  { value: 'equals', label: 'Equals', needsValue: true },
+  { value: 'equals_today', label: 'Equals Today' },
 ];

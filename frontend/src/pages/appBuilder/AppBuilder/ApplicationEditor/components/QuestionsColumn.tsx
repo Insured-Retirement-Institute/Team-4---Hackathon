@@ -60,14 +60,17 @@ function QuestionsColumn({
                 cursor: 'pointer',
                 border: '1px solid',
                 borderColor: active ? palette.accent : palette.border,
+                borderRadius: 1,
                 outline:
                   dragState?.kind === 'question' && dropTargetUid === question.uid
                     ? `2px dashed ${palette.accent}`
                     : 'none',
-                bgcolor: '#ffffff',
-                color: palette.text,
+                bgcolor: active ? palette.accentSoft : '#ffffff',
+                color: active ? palette.accent : palette.text,
                 px: 1.25,
-                py: 1,
+                minHeight: 40,
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -84,7 +87,7 @@ function QuestionsColumn({
                         uid: question.uid,
                       })
                     }
-                    sx={{ display: 'inline-flex', cursor: 'grab', color: palette.mutedText }}
+                    sx={{ display: 'inline-flex', cursor: 'grab', color: active ? palette.accent : palette.mutedText }}
                     aria-label="Drag to reorder question"
                   >
                     <DragIndicatorIcon fontSize="small" sx={{ color: 'inherit' }} />
