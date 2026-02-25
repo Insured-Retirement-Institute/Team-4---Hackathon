@@ -1110,7 +1110,7 @@ const [subDialog, setSubDialog] = useState<{
           }}
         >
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
-            <Stack direction="row" justifyContent="end" alignItems="center">
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
               {showSubmissionBanner ? (
                 <Button
                   startIcon={<ExitToAppIcon />}

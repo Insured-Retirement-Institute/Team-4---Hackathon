@@ -68,7 +68,7 @@ function Layout() {
       >
         <Toolbar variant="dense">
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, cursor: 'pointer' }} onClick={() => navigate('/')}>
-            Annuity E-Application
+            Talk Annuity To Me
           </Typography>
 
           {/* ── Desktop: inline nav buttons ─────────────────────────── */}

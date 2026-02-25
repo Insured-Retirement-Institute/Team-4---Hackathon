@@ -704,7 +704,7 @@
               {
                 "field": "ownerType",
                 "op": "eq",
-                "value": "natural_person"
+                "value": "individual"
               }
             ]
           },

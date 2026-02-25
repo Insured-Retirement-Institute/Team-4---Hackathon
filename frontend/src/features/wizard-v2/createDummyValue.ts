@@ -16,7 +16,8 @@ function findOptionValue(question: QuestionDefinition, candidates: string[]) {
 }
 
 export function createDummyValue(question: QuestionDefinition): DummyAnswerValue {
-  const id = question.id.toLowerCase();
+  // Normalize camelCase IDs (e.g. ownerFirstName) to snake_case (owner_first_name)
+  const id = question.id.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
 
   if (question.type === 'boolean') {
     if (id.includes('same_as') || id.includes('address_same')) return false;
@@ -132,19 +133,19 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
   }
 
   if (id.includes('joint_annuitant_first_name')) return 'Sam';
-  if (id.includes('joint_annuitant_middle_initial')) return 'K';
+  if (id.includes('joint_annuitant_middle_initial') || id.includes('joint_annuitant_middle_name')) return 'K';
   if (id.includes('joint_annuitant_last_name')) return 'Rivera';
   if (id.includes('joint_owner_first_name')) return 'Sam';
-  if (id.includes('joint_owner_middle_initial')) return 'K';
+  if (id.includes('joint_owner_middle_initial') || id.includes('joint_owner_middle_name')) return 'K';
   if (id.includes('joint_owner_last_name')) return 'Rivera';
   if (id.includes('bene_first_name')) return 'Jane';
-  if (id.includes('bene_middle_initial')) return 'E';
+  if (id.includes('bene_middle_initial') || id.includes('bene_middle_name')) return 'E';
   if (id.includes('bene_last_name')) return 'Patel';
   if (id.includes('owner_first_name')) return 'Alex';
-  if (id.includes('owner_middle_initial')) return 'R';
+  if (id.includes('owner_middle_initial') || id.includes('owner_middle_name')) return 'R';
   if (id.includes('owner_last_name')) return 'Patel';
   if (id.includes('first_name')) return 'Alex';
-  if (id.includes('middle_initial')) return 'R';
+  if (id.includes('middle_initial') || id.includes('middle_name')) return 'R';
   if (id.includes('last_name')) return 'Patel';
   if (id.includes('surrendering_owner_name')) return 'Alex R Patel';
   if (id.includes('surrendering_annuitant_name')) return 'Alex R Patel';
