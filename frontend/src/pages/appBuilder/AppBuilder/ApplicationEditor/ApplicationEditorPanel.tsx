@@ -644,6 +644,9 @@ function ApplicationEditorPanel({
   };
 
   const detailFieldSx = {
+    '& .MuiOutlinedInput-root': {
+      bgcolor: '#ffffff',
+    },
     '& .MuiOutlinedInput-root.Mui-focused fieldset': {
       borderColor: palette.accent,
       borderWidth: 2,
@@ -678,15 +681,33 @@ function ApplicationEditorPanel({
 
       <Box sx={{ p: 2, border: '1px solid', borderColor: palette.border, bgcolor: palette.canvas }}>
         <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} alignItems={{ xs: 'stretch', lg: 'center' }}>
-          <TextField size="small" label="Product ID" value={form.productId} sx={metaFieldSx} onChange={(event) => handleMetaChange('productId', event.target.value)} />
-          <TextField size="small" label="Carrier" value={form.carrier} sx={metaFieldSx} onChange={(event) => handleMetaChange('carrier', event.target.value)} />
-          <TextField size="small" label="Product Name" value={form.productName} sx={metaFieldSx} onChange={(event) => handleMetaChange('productName', event.target.value)} />
+          <TextField
+            size="small"
+            label="Product ID"
+            value={form.productId}
+            sx={{ ...metaFieldSx, flex: 1, minWidth: { lg: 180 } }}
+            onChange={(event) => handleMetaChange('productId', event.target.value)}
+          />
+          <TextField
+            size="small"
+            label="Carrier"
+            value={form.carrier}
+            sx={{ ...metaFieldSx, flex: 1, minWidth: { lg: 180 } }}
+            onChange={(event) => handleMetaChange('carrier', event.target.value)}
+          />
+          <TextField
+            size="small"
+            label="Product Name"
+            value={form.productName}
+            sx={{ ...metaFieldSx, flex: 1, minWidth: { lg: 220 } }}
+            onChange={(event) => handleMetaChange('productName', event.target.value)}
+          />
           <TextField
             size="small"
             type="date"
             label="Effective Date"
             value={form.effectiveDate}
-            sx={metaFieldSx}
+            sx={{ ...metaFieldSx, flex: 1, minWidth: { lg: 180 } }}
             onChange={(event) => handleMetaChange('effectiveDate', event.target.value)}
             slotProps={{ inputLabel: { shrink: true } }}
           />

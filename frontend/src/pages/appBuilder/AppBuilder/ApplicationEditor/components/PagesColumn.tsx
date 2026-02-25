@@ -58,11 +58,14 @@ function PagesColumn({
                 cursor: 'pointer',
                 border: '1px solid',
                 borderColor: active ? palette.accent : palette.border,
+                borderRadius: 1,
                 outline: dragState?.kind === 'page' && dropTargetUid === page.uid ? `2px dashed ${palette.accent}` : 'none',
-                bgcolor: active ? palette.selectedDark : palette.card,
-                color: active ? '#ffffff' : palette.text,
+                bgcolor: active ? palette.accentSoft : palette.card,
+                color: active ? palette.accent : palette.text,
                 px: 1.25,
-                py: 1,
+                minHeight: 40,
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center">

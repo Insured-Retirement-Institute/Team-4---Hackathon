@@ -55,24 +55,25 @@ function ProductSelectionPanel({ selectedProductKey, onSelectProduct, onInvalidS
                   variant="outlined"
                   sx={{
                     borderWidth: 2,
-                    borderColor: selected ? 'primary.main' : 'divider',
-                    bgcolor: selected ? 'rgba(58,157,247,0.08)' : '#fff',
+                    borderColor: selected ? '#3a9df7' : 'divider',
+                    bgcolor: selected ? 'rgba(58,157,247,0.12)' : '#fff',
+                    boxShadow: selected ? '0 0 0 1px #3a9df7 inset' : 'none',
                   }}
                 >
                   <CardActionArea onClick={() => onSelectProduct(product)}>
                     <CardContent sx={{ py: 1.5 }}>
                       <Stack spacing={0.5}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color={selected ? '#3a9df7' : 'text.secondary'}>
                             {product.carrier}
                           </Typography>
-                          {selected ? <CheckCircleIcon sx={{ fontSize: 16, color: 'primary.main' }} /> : null}
+                          {selected ? <CheckCircleIcon sx={{ fontSize: 16, color: '#3a9df7' }} /> : null}
                         </Stack>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: selected ? '#3a9df7' : 'text.primary' }}>
                           {product.productName || product.productId}
                         </Typography>
                         <Box>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color={selected ? '#3a9df7' : 'text.secondary'}>
                             {product.productId}
                           </Typography>
                         </Box>
