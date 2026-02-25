@@ -1,62 +1,115 @@
-# eAppAPI
+# IRI Hackathon — Annuity E-Application
 
 ## Overview
 
-Annuity E-Application API built with Express.js, deployed to AWS App Runner. Serves application definitions for annuity products, validates answers against rules, and accepts submissions.
+AI-powered annuity e-application system. Four services in a monorepo: users fill out applications via a traditional wizard form OR conversational AI chat, with bidirectional field sync between them. Carrier PDF generation handles form population for submission.
 
-## Project Structure
+## Architecture
 
+| Service | Framework | Local Port | Deploy Target |
+|---------|-----------|-----------|---------------|
+| `frontend/` | React 19, TypeScript, Vite, MUI v7 | 5173 | AWS Amplify (auto-deploy from main) |
+| `ai-service/` | FastAPI, Uvicorn, Claude Haiku 4.5 | 8001 | AWS App Runner |
+| `backend/` | Express.js, Node 20 | 3001 | AWS App Runner |
+| `backend_carrier/` | Express.js, pdf-lib | 8080 | AWS App Runner |
+
+Each service has its own `CLAUDE.md` with service-specific details.
+
+## Live URLs
+
+- **Frontend:** https://main.d3467nj2uaisg3.amplifyapp.com
+- **AI Service:** https://3ddrg3spbd.us-east-1.awsapprunner.com
+- **Backend API:** https://y5s8xyzi3v.us-east-1.awsapprunner.com
+- **Swagger UI:** https://y5s8xyzi3v.us-east-1.awsapprunner.com/api-docs/
+
+## Key Routes
+
+- `/` — Landing page with feature overview, CTAs to wizard and AI chat
+- `/ai-chat` — Full-page AI conversational chat
+- `/wizard-v2` — Dynamic form wizard (data-driven from product JSON)
+- Widget popup available on all pages (floating chat bubble, bottom-right)
+
+## Local Development
+
+```bash
+# All services (from root)
+npm run dev                # Starts backend + frontend via concurrently
+
+# Individual services
+cd frontend && npm run dev                                                  # Port 5173
+cd backend && npm start                                                     # Port 3001
+cd ai-service && source venv/Scripts/activate && python -m uvicorn app.main:app --host 0.0.0.0 --port 8001
+cd backend_carrier && npm start                                             # Port 8080
 ```
-simpleAPI/
-├── Assets/                        # Product definition JSON files + OpenAPI spec
-│   ├── annuity-eapp-openapi.yaml  # OpenAPI 3.1.0 specification
-│   └── midland-national-eapp.json # Midland National fixed annuity product
-├── src/
-│   ├── app.js                     # Express app setup, middleware, Swagger UI, routes
-│   ├── routes/
-│   │   ├── application.js         # GET /application/:productId
-│   │   ├── validation.js          # POST /application/:applicationId/validate
-│   │   └── submission.js          # POST /application/:applicationId/submit
-│   ├── services/
-│   │   ├── productStore.js        # Loads & indexes product JSON from Assets/
-│   │   └── validationEngine.js    # Full validation engine for all rule types
-│   └── utils/
-│       └── dateUtils.js           # Relative date parsing (-18y, today, +1d)
-├── index.js                       # Entry point
-├── package.json
-├── Dockerfile
-└── .dockerignore
-```
 
-## Key Commands
-
-- `npm start` — Run the API locally on port 8080
-- `docker build --platform linux/amd64 -t eappapi .` — Build Docker image for deployment
-- `docker run -d --name eappapi -p 8080:8080 eappapi` — Run container locally
+When running locally, set `VITE_AI_SERVICE_URL=http://localhost:8001` or update `data-api-base` in `frontend/index.html`.
 
 ## Deployment
 
-- **AWS Region:** us-east-1
-- **ECR Repo:** `536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api:latest`
-- **App Runner Service:** eAppAPI
-- **Deploy steps:**
-  1. Build image: `docker build --platform linux/amd64 -t eappapi .`
-  2. Tag: `docker tag eappapi:latest 536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api:latest`
-  3. Login: `aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 536697244409.dkr.ecr.us-east-1.amazonaws.com`
-  4. Push: `docker push 536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api:latest`
-  5. Deploy: `aws apprunner start-deployment --service-arn "arn:aws:apprunner:us-east-1:536697244409:service/eAppAPI/21aa6d1c0faf482784c33f92f5cbcc53" --region us-east-1`
+**AWS Account:** 536697244409, Region: us-east-1
 
-## Validation Engine
+**Docker Desktop gotcha:** Credential store conflicts with ECR. Use `docker --config /tmp/docker-ecr` for login and push commands.
 
-Supports all rule types: `required`, `min`, `max`, `min_length`, `max_length`, `pattern`, `min_date`, `max_date`, `equals`, `equals_today`, `cross_field`, `allocation_sum`, `async` (stub), `group_sum`.
+### ECR Login (shared across services)
+```bash
+aws ecr get-login-password --region us-east-1 | docker --config /tmp/docker-ecr login --username AWS --password-stdin 536697244409.dkr.ecr.us-east-1.amazonaws.com
+```
 
-Key behaviors:
-- Visibility-aware (skips hidden pages/questions via recursive AND/OR/NOT condition evaluator)
-- Scope support (`page` or `full`)
-- Repeating pages (pageRepeat) with per-instance validation
-- Repeatable groups with per-item field validation
-- Disclosure acknowledgment validation
+### AI Service
+```bash
+cd ai-service && docker build --platform linux/amd64 -t iri-ai-service .
+docker tag iri-ai-service:latest 536697244409.dkr.ecr.us-east-1.amazonaws.com/iri-ai-service:latest
+docker --config /tmp/docker-ecr push 536697244409.dkr.ecr.us-east-1.amazonaws.com/iri-ai-service:latest
+aws apprunner start-deployment --service-arn "arn:aws:apprunner:us-east-1:536697244409:service/iri-ai-service/2953a2b8ea0b4b21bb191cae6eafdb7a" --region us-east-1
+```
 
-## Adding New Products
+### Backend API
+```bash
+cd backend && docker build --platform linux/amd64 -t eappapi .
+docker tag eappapi:latest 536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api:latest
+docker --config /tmp/docker-ecr push 536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api:latest
+aws apprunner start-deployment --service-arn "arn:aws:apprunner:us-east-1:536697244409:service/eAppAPI/21aa6d1c0faf482784c33f92f5cbcc53" --region us-east-1
+```
 
-Drop a JSON file into `Assets/` following the same schema as `midland-national-eapp.json`. The product store loads all `*.json` files on startup and indexes by `productId`.
+### Frontend
+Push to `main` branch → Amplify auto-deploys. No Docker needed.
+
+## Cross-Service Integration
+
+**AI Chat flow:** Frontend fetches schema from AI service (`GET /api/v1/demo/midland-schema`) → creates session with questions (`POST /api/v1/sessions`) → sends messages (`POST /api/v1/sessions/{id}/message`) → receives reply + `updated_fields`.
+
+**Widget ↔ Wizard sync (bidirectional):**
+- Widget → Wizard: `iri:field_updated` CustomEvents → `useWidgetSync` hook → `mergeFields()` → `collectedFields` in `ApplicationContext` → `bulkSetValues()` in form controller
+- Wizard → Widget: Form `values` change → `mergeFields()` → on widget reopen, new fields sent as message to existing session
+- `lastAppliedRef` prevents infinite sync loops
+
+**State hub:** `ApplicationContext.tsx` holds `collectedFields`, `sessionId`, `phase`, and step progress shared across wizard and chat.
+
+## Shared Conventions
+
+- All AI service routes use `/api/v1/` prefix
+- System prompt includes "never use emojis" instruction
+- AWS credentials must be explicitly passed to `AnthropicBedrock()` — system creds resolve to a different account
+- Product ID for Midland National: `midland-fixed-annuity-001`
+
+## AWS Resources
+
+| Resource | Identifier |
+|----------|-----------|
+| ECR: backend | `536697244409.dkr.ecr.us-east-1.amazonaws.com/simple-api` |
+| ECR: ai-service | `536697244409.dkr.ecr.us-east-1.amazonaws.com/iri-ai-service` |
+| App Runner: eAppAPI | `arn:aws:apprunner:us-east-1:536697244409:service/eAppAPI/21aa6d1c0faf482784c33f92f5cbcc53` |
+| App Runner: iri-ai-service | `arn:aws:apprunner:us-east-1:536697244409:service/iri-ai-service/2953a2b8ea0b4b21bb191cae6eafdb7a` |
+| IAM Roles | `AppRunnerECRAccessRole`, `AppRunnerInstanceRole`, `WSParticipantRole` |
+| IAM Policy | `BedrockInvokeModelAccess` |
+
+## Common Issues & Fixes
+
+- **ECR push 403** — Wrong AWS account creds. Export correct creds from `ai-service/.env`.
+- **Empty chat bubbles** — `tool_choice: any` on follow-up LLM call. Fix: `force_tool=False` on follow-up.
+- **Widget not syncing fields** — Model not calling extraction tools. Fix: ensure `tool_choice: {"type": "any"}` on initial call.
+- **"model identifier is invalid"** — App Runner env var `BEDROCK_MODEL` had `BEDROCK_MODEL=` prefix in value. Value should be just the model ID.
+- **Alternating roles error** — Combine tool results into single user message.
+- **Amplify build fails on missing dep** — Add to `frontend/package.json` (e.g., `lottie-web`, `@lottiefiles/dotlottie-react`).
+- **Widget 404** — Restart server after adding new routes.
+- **Git push rejected** — Remote has new commits. `git stash && git pull --rebase origin main && git stash pop && git push`.
