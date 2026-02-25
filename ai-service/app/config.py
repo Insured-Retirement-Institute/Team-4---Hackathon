@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     aws_session_token: str = ""
     bedrock_model: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 
+    s3_statements_bucket: str = "iri-hackathon-statements"
+
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "info"

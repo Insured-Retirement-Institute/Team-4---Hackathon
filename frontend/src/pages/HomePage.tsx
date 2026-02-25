@@ -36,6 +36,7 @@ const FEATURES = [
   },
   {
     icon: <FormatListBulletedIcon sx={{ fontSize: 32 }} />,
+    lottieSrc: 'https://assets-v2.lottiefiles.com/a/595b144a-117d-11ee-a0f0-97aecee50a7d/C3UVv2Ic4A.lottie',
     label: 'Guided Wizard',
     story: 'US-02',
     description:
@@ -44,6 +45,7 @@ const FEATURES = [
   },
   {
     icon: <SmartToyIcon sx={{ fontSize: 32 }} />,
+    lottieSrc: 'https://assets-v2.lottiefiles.com/a/5ed25642-1162-11ee-9380-b73830df334d/fjn76aFTNA.lottie',
     label: 'AI Chat Interface',
     story: 'US-03',
     description:
@@ -60,6 +62,7 @@ const FEATURES = [
   },
   {
     icon: <UploadFileIcon sx={{ fontSize: 32 }} />,
+    lottieSrc: 'https://assets-v2.lottiefiles.com/a/c578e9fe-1150-11ee-9553-7fec71359065/LcWAzn4bBN.lottie',
     label: 'Contract Auto-Population',
     story: 'US-05',
     description:
@@ -68,6 +71,7 @@ const FEATURES = [
   },
   {
     icon: <PrecisionManufacturingIcon sx={{ fontSize: 32 }} />,
+    lottieSrc: 'https://assets-v2.lottiefiles.com/a/5da190a8-1162-11ee-bf36-a71093638445/q87zC1TA7z.lottie',
     label: 'Agentic Orchestration',
     story: 'US-08',
     description:

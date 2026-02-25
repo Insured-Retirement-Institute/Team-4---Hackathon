@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { GetCommand } = require('@aws-sdk/lib-dynamodb');
 const { docClient } = require('../config/dynamodb');
 
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'Products';
@@ -30,20 +30,18 @@ async function getProduct(productId) {
     return products[productId];
   }
 
-  // Fallback: query DynamoDB by productId
+  // Fallback: direct DynamoDB lookup by productId (partition key)
   try {
     const result = await docClient.send(
-      new ScanCommand({
+      new GetCommand({
         TableName: TABLE_NAME,
-        FilterExpression: 'productId = :pid',
-        ExpressionAttributeValues: { ':pid': productId },
+        Key: { productId },
       })
     );
 
-    if (result.Items && result.Items.length > 0) {
-      const product = result.Items[0];
-      products[productId] = product;
-      return product;
+    if (result.Item) {
+      products[productId] = result.Item;
+      return result.Item;
     }
   } catch (err) {
     console.error(`Failed to fetch product ${productId} from DynamoDB:`, err.message);

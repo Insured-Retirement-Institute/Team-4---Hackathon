@@ -20,6 +20,7 @@ router = APIRouter(tags=["prefill"])
 
 class PrefillRequest(BaseModel):
     client_id: str
+    advisor_id: str | None = None
 
 
 class PrefillResponse(BaseModel):
@@ -45,8 +46,9 @@ async def list_clients():
 @router.post("/prefill", response_model=PrefillResponse)
 async def run_prefill(req: PrefillRequest):
     """Run the pre-fill agent for a selected CRM client."""
-    logger.info("Prefill requested for client_id=%s", req.client_id)
-    result = await run_prefill_agent(client_id=req.client_id)
+    advisor_id = req.advisor_id or "advisor_001"
+    logger.info("Prefill requested for client_id=%s, advisor_id=%s", req.client_id, advisor_id)
+    result = await run_prefill_agent(client_id=req.client_id, advisor_id=advisor_id)
     return PrefillResponse(**result)
 
 

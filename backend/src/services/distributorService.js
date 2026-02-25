@@ -6,21 +6,21 @@ const {
 } = require('@aws-sdk/lib-dynamodb');
 const { docClient } = require('../config/dynamodb');
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'Products';
+const TABLE_NAME = process.env.DISTRIBUTORS_TABLE_NAME || 'Distributors';
 
-async function getAllProducts() {
+async function getAllDistributors() {
   const result = await docClient.send(new ScanCommand({ TableName: TABLE_NAME }));
   return result.Items || [];
 }
 
-async function getProductById(productId) {
+async function getDistributorById(distributorId) {
   const result = await docClient.send(
-    new GetCommand({ TableName: TABLE_NAME, Key: { productId } })
+    new GetCommand({ TableName: TABLE_NAME, Key: { distributorId } })
   );
   return result.Item || null;
 }
 
-async function createProduct(data) {
+async function createDistributor(data) {
   const now = new Date().toISOString();
   const item = {
     ...data,
@@ -32,16 +32,16 @@ async function createProduct(data) {
     new PutCommand({
       TableName: TABLE_NAME,
       Item: item,
-      ConditionExpression: 'attribute_not_exists(productId)',
+      ConditionExpression: 'attribute_not_exists(distributorId)',
     })
   );
   return item;
 }
 
-async function updateProduct(productId, data) {
-  const existing = await getProductById(productId);
+async function updateDistributor(distributorId, data) {
+  const existing = await getDistributorById(distributorId);
   if (!existing) {
-    const err = new Error('Product not found');
+    const err = new Error('Distributor not found');
     err.name = 'ConditionalCheckFailedException';
     throw err;
   }
@@ -49,7 +49,7 @@ async function updateProduct(productId, data) {
   const item = {
     ...existing,
     ...data,
-    productId,
+    distributorId,
     createdAt: existing.createdAt,
     updatedAt: new Date().toISOString(),
   };
@@ -58,20 +58,20 @@ async function updateProduct(productId, data) {
   return item;
 }
 
-async function deleteProduct(productId) {
+async function deleteDistributor(distributorId) {
   await docClient.send(
     new DeleteCommand({
       TableName: TABLE_NAME,
-      Key: { productId },
-      ConditionExpression: 'attribute_exists(productId)',
+      Key: { distributorId },
+      ConditionExpression: 'attribute_exists(distributorId)',
     })
   );
 }
 
 module.exports = {
-  getAllProducts,
-  getProductById,
-  createProduct,
-  updateProduct,
-  deleteProduct,
+  getAllDistributors,
+  getDistributorById,
+  createDistributor,
+  updateDistributor,
+  deleteDistributor,
 };

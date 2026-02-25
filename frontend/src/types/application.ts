@@ -99,6 +99,10 @@ export interface ApplicationDefinition {
   effectiveDate?: string;
   locale?: string;
   description: string;
+  productType?: string;
+  distributors?: string[];
+  createdAt?: string;
+  updatedAt?: string;
   pages: PageDefinition[];
 }
 

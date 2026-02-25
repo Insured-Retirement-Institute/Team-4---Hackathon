@@ -86,7 +86,7 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 - Wizard → Widget: Form `values` change → `mergeFields()` → on widget reopen, new fields sent as message to existing session
 - `lastAppliedRef` prevents infinite sync loops
 
-**Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client`, `lookup_prior_policies`, `extract_document_fields` tools → returns `known_data` → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
+**Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client`, `lookup_prior_policies`, `lookup_annual_statements`, `extract_document_fields`, `get_advisor_preferences`, `get_carrier_suitability` tools → returns `known_data` (including suitability score/rating and advisor recommendations) → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
 
 **Application persistence flow:** Frontend `ProductSelectionPage` fetches `GET /products` → user picks product → `POST /applications` creates DynamoDB record → wizard saves progress to localStorage via `applicationStorageService` → on submit, `POST /application/:applicationId/submit` runs 5-step pipeline (validate → transform → business rules → persist to Submissions table → mark submitted). Resume via `/wizard-v2/:productId?resume=<id>`.
 
@@ -97,7 +97,8 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 - All AI service routes use `/api/v1/` prefix
 - System prompt includes "never use emojis" instruction
 - AWS credentials must be explicitly passed to `AnthropicBedrock()` — system creds resolve to a different account
-- Product ID for Midland National: `midland-fixed-annuity-001`
+- Product IDs: Midland National `midland-fixed-annuity-001`, Aspida `aspida-myga-001`, EquiTrust `certainty-select`
+- S3 bucket `iri-hackathon-statements` stores annual statements (`statements/`), advisor profiles (`advisors/`), and carrier suitability guidelines (`suitability/`)
 
 ## AWS Resources
 
@@ -110,6 +111,7 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 | DynamoDB: Applications | Table `Applications` (id key) — application records |
 | DynamoDB: Products | Table `Products` (id key) — product catalog |
 | DynamoDB: Submissions | Table `Submissions` (id key, GSI: `applicationId-index`) — submitted applications |
+| S3: statements/advisors/suitability | Bucket `iri-hackathon-statements` — `statements/{client_id}/`, `advisors/{advisor_id}/`, `suitability/{carrier_id}/` |
 | IAM Roles | `AppRunnerECRAccessRole`, `AppRunnerInstanceRole`, `WSParticipantRole` |
 | IAM Policy | `BedrockInvokeModelAccess` |
 
