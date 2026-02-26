@@ -286,41 +286,41 @@ export default function AIExperiencePage() {
     navigate(`/wizard-v2/${encodeURIComponent(selectedProductId)}`, { state: { fromAIExperience: true } });
   }, [selectedProductId, gatheredFields, navigate, mergeFields, setPendingSync]);
 
-  // High-value field patterns for a focused, demo-worthy Retell call
-  const HIGH_VALUE_PATTERNS = [
-    'income', 'net_worth', 'networth', 'liquid', 'risk_tolerance',
-    'source_of_funds', 'financial_objective', 'emergency_fund',
-    'beneficiary', 'address',
+  // Curated demo fields — exact product question IDs for a focused Retell call
+  const DEMO_CALL_FIELDS: Array<{ id: string; label: string }> = [
+    { id: 'suitAnnualIncome', label: 'Annual Income' },
+    { id: 'suitNetWorth', label: 'Net Worth' },
+    { id: 'suitLiquidAssets', label: 'Liquid Assets' },
+    { id: 'suitSourceOfFunds', label: 'Source of Funds for Annuity' },
+    { id: 'suitHasEmergencyFunds', label: 'Do you have emergency funds for unexpected expenses?' },
   ];
 
   const missingFields = (() => {
-    const allMissing = matchedFields
+    // If we have a product selected, use the curated demo list
+    // prepended with address verification from CRM
+    if (selectedProductId && matchedFields.length > 0) {
+      const result: Array<{ id: string; label: string }> = [];
+      const addressOnFile = gatheredFields.get('owner_street_address')?.value
+        ?? gatheredFields.get('owner_address_street')?.value;
+      if (addressOnFile) {
+        result.push({
+          id: 'verify_address',
+          label: `Verify current address (on file: ${addressOnFile})`,
+        });
+      }
+      // Only include demo fields that are actually still missing
+      for (const df of DEMO_CALL_FIELDS) {
+        const matched = matchedFields.find((m) => m.id === df.id);
+        if (!matched || !matched.filled) {
+          result.push(df);
+        }
+      }
+      return result;
+    }
+    // Fallback: all missing fields (before product is selected)
+    return matchedFields
       .filter((f) => !f.filled)
       .map((f) => ({ id: f.id, label: f.label }));
-
-    // Filter to high-value fields only
-    const highValue = allMissing.filter((f) => {
-      const idLower = f.id.toLowerCase();
-      const labelLower = f.label.toLowerCase();
-      return HIGH_VALUE_PATTERNS.some((p) => idLower.includes(p) || labelLower.includes(p));
-    });
-
-    // Prepend address verification if we have an address on file
-    const addressOnFile = gatheredFields.get('owner_street_address')?.value
-      ?? gatheredFields.get('owner_address_street')?.value
-      ?? gatheredFields.get('ownerResidentialAddress')?.value;
-    const result: Array<{ id: string; label: string }> = [];
-    if (addressOnFile) {
-      result.push({
-        id: 'verify_address',
-        label: `Verify current address (on file: ${addressOnFile})`,
-      });
-    }
-
-    // Use high-value fields (capped at 6), or fall back to first N missing
-    const selected = highValue.length >= 2 ? highValue.slice(0, 6) : allMissing.slice(0, 6);
-    result.push(...selected);
-    return result;
   })();
 
   // Get the client name from gathered fields for the call panel
