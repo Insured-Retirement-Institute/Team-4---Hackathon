@@ -16,102 +16,106 @@ function findOptionValue(question: QuestionDefinition, candidates: string[]) {
 }
 
 export function createDummyValue(question: QuestionDefinition): DummyAnswerValue {
-  const id = question.id.toLowerCase();
+  // Normalize camelCase IDs (e.g. ownerFirstName) to snake_case (owner_first_name)
+  const id = question.id.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+  const matches = (keyword: string) => id.includes(keyword);
 
   if (question.type === 'boolean') {
-    if (id.includes('same_as') || id.includes('address_same')) return false;
-    if (id.includes('has_joint')) return true;
-    if (id.includes('has_existing_insurance')) return true;
-    if (id.includes('is_replacement')) return false;
-    if (id.includes('acknowledged') || id.includes('certification')) return true;
+    if (matches('same_as') || matches('address_same')) return false;
+    if (matches('has_joint')) return true;
+    if (matches('has_existing_insurance')) return true;
+    if (matches('is_replacement')) return false;
+    if (matches('acknowledged') || matches('certification')) return true;
     return true;
   }
 
   if (question.type === 'select' || question.type === 'radio' || question.type === 'multi_select') {
-    if (id.includes('gender')) return findOptionValue(question, ['female', 'male']) ?? '';
-    if (id.includes('citizen')) return findOptionValue(question, ['yes']) ?? '';
-    if (id.includes('citizenship_status')) return findOptionValue(question, ['us', 'citizen']) ?? '';
-    if (id.includes('tax_status')) return findOptionValue(question, ['ira', 'qualified']) ?? '';
-    if (id.includes('owner_type')) return findOptionValue(question, ['individual', 'natural']) ?? '';
-    if (id.includes('id_type')) return findOptionValue(question, ['driver', 'license', 'state']) ?? '';
-    if (id.includes('state')) return findOptionValue(question, ['ia', 'iowa']) ?? '';
-    if (id.includes('country')) return findOptionValue(question, ['us', 'united']) ?? '';
-    if (id.includes('plan_type')) return findOptionValue(question, ['ira', 'qualified']) ?? '';
-    if (id.includes('product_type')) return findOptionValue(question, ['annuity', 'fixed']) ?? '';
-    if (id.includes('transfer_scope')) return findOptionValue(question, ['full']) ?? '';
-    if (id.includes('partial_amount_type')) return findOptionValue(question, ['dollar', 'amount']) ?? '';
-    if (id.includes('transfer_timing')) return findOptionValue(question, ['asap', 'immediate', 'next']) ?? '';
-    if (id.includes('backup_withholding')) return findOptionValue(question, ['no']) ?? '';
-    if (id.includes('funding_methods')) return findOptionValue(question, ['check', 'transfer']) ?? '';
-    if (id.includes('bene_type')) return findOptionValue(question, ['primary']) ?? '';
-    if (id.includes('bene_relationship')) return findOptionValue(question, ['spouse', 'child']) ?? '';
-    if (id.includes('bene_entity_type')) return findOptionValue(question, ['individual', 'person', 'natural']) ?? '';
-    if (id.includes('bene_distribution_method')) return findOptionValue(question, ['per_stirpes', 'equal', 'per']) ?? '';
+    if (matches('gender')) return findOptionValue(question, ['female', 'male']) ?? '';
+    if (matches('citizen')) return findOptionValue(question, ['yes']) ?? '';
+    if (matches('citizenship_status')) return findOptionValue(question, ['us', 'citizen']) ?? '';
+    if (matches('tax_status')) return findOptionValue(question, ['ira', 'qualified']) ?? '';
+    if (matches('owner_type')) return findOptionValue(question, ['individual', 'natural']) ?? '';
+    if (matches('id_type')) return findOptionValue(question, ['driver', 'license', 'state']) ?? '';
+    if (matches('state')) return findOptionValue(question, ['ia', 'iowa']) ?? '';
+    if (matches('country')) return findOptionValue(question, ['us', 'united']) ?? '';
+    if (matches('plan_type')) return findOptionValue(question, ['ira', 'qualified']) ?? '';
+    if (matches('product_type')) return findOptionValue(question, ['annuity', 'fixed']) ?? '';
+    if (matches('transfer_scope')) return findOptionValue(question, ['full']) ?? '';
+    if (matches('partial_amount_type')) return findOptionValue(question, ['dollar', 'amount']) ?? '';
+    if (matches('transfer_timing')) return findOptionValue(question, ['asap', 'immediate', 'next']) ?? '';
+    if (matches('backup_withholding')) return findOptionValue(question, ['no']) ?? '';
+    if (matches('funding_methods')) return findOptionValue(question, ['check', 'transfer']) ?? '';
+    if (matches('bene_type')) return findOptionValue(question, ['primary']) ?? '';
+    if (matches('bene_relationship')) return findOptionValue(question, ['spouse', 'child']) ?? '';
+    if (matches('bene_entity_type')) return findOptionValue(question, ['individual', 'person', 'natural']) ?? '';
+    if (matches('bene_distribution_method')) return findOptionValue(question, ['per_stirpes', 'equal', 'per']) ?? '';
     return question.options?.[0]?.value ?? '';
   }
 
   if (question.type === 'date') {
     const today = new Date().toISOString().slice(0, 10);
     if (
-      id.includes('signature_date')
-      || id === 'date_signed'
-      || id === 'agent_date_signed'
-      || id === 'producer_date_signed'
+      matches('signature_date')
+      || matches('date_signed')
+      || matches('agent_date_signed')
+      || matches('producer_date_signed')
     ) return today;
-    if (id.includes('expiration')) return '2030-12-31';
-    if (id.includes('trust_date')) return '2015-06-15';
-    if (id.includes('joint_annuitant_dob')) return '1968-07-22';
-    if (id.includes('joint_owner_dob')) return '1968-07-22';
-    if (id.includes('bene_dob')) return '1962-09-14';
-    if (id.includes('owner_dob')) return '1965-03-15';
-    if (id.includes('annuitant_dob')) return '1965-03-15';
-    if (id.includes('dob')) return '1965-03-15';
+    if (matches('expiration')) return '2030-12-31';
+    if (matches('trust_date')) return '2015-06-15';
+    if (matches('joint_annuitant_dob')) return '1968-07-22';
+    if (matches('joint_owner_dob')) return '1968-07-22';
+    if (matches('bene_dob')) return '1962-09-14';
+    if (matches('owner_dob')) return '1965-03-15';
+    if (matches('annuitant_dob')) return '1965-03-15';
+    if (matches('dob')) return '1965-03-15';
     return '2026-01-15';
   }
 
   if (question.type === 'email') {
-    if (id.includes('joint_owner')) return 'sam.patel@example.com';
-    if (id.includes('owner')) return 'alex.patel@example.com';
+    if (matches('joint_owner')) return 'sam.patel@example.com';
+    if (matches('owner')) return 'alex.patel@example.com';
     return 'client@example.com';
   }
 
   if (question.type === 'phone') {
-    if (id.includes('fax')) return '5155551122';
-    if (id.includes('joint_annuitant')) return '5155550199';
-    if (id.includes('joint_owner')) return '5155550199';
-    if (id.includes('owner')) return '5155550188';
+    if (matches('fax')) return '5155551122';
+    if (matches('joint_annuitant')) return '5155550199';
+    if (matches('joint_owner')) return '5155550199';
+    if (matches('owner')) return '5155550188';
     return '5155550188';
   }
 
   if (question.type === 'ssn') {
-    if (id.includes('joint_annuitant')) return '234-56-7890';
-    if (id.includes('joint')) return '234-56-7890';
-    if (id.includes('bene_ssn')) return '987-65-4321';
-    if (id.includes('owner')) return '345-67-8901';
-    if (id.includes('annuitant')) return '123-45-6789';
+    if (matches('joint_annuitant')) return '234-56-7890';
+    if (matches('joint')) return '234-56-7890';
+    if (matches('bene_ssn')) return '987-65-4321';
+    if (matches('owner')) return '345-67-8901';
+    if (matches('annuitant')) return '123-45-6789';
     return '123-45-6789';
   }
 
   if (question.type === 'currency') {
-    if (id.includes('check_amount')) return '25000';
-    if (id.includes('direct_transfer_amount')) return '50000';
-    if (id.includes('exchange_1035_amount')) return '60000';
-    if (id.includes('qualified_rollover_amount')) return '30000';
-    if (id.includes('salary_reduction_amount')) return '12000';
-    if (id.includes('estimated_transfer_amount')) return '85000';
-    if (id.includes('partial_dollar_amount')) return '10000';
+    if (matches('check_amount')) return '25000';
+    if (matches('direct_transfer_amount')) return '50000';
+    if (matches('exchange_1035_amount')) return '60000';
+    if (matches('qualified_rollover_amount')) return '30000';
+    if (matches('salary_reduction_amount')) return '12000';
+    if (matches('estimated_transfer_amount')) return '85000';
+    if (matches('partial_dollar_amount')) return '10000';
     return '100000';
   }
 
   if (question.type === 'number') {
-    if (id.includes('years_employed')) return '12';
-    if (id.includes('transfer_count')) return '1';
-    if (id.includes('bene_percentage')) return '100';
-    if (id.includes('percentage')) return '100';
+    if (matches('years_employed')) return '12';
+    if (matches('transfer_count')) return '1';
+    if (matches('bene_percentage')) return '100';
+    if (matches('percentage')) return '100';
     return '1';
   }
 
   if (question.type === 'signature') return 'sig_token_alex_patel';
+  if (question.type === 'initials') return 'ARP';
+  if (question.type === 'file_upload') return '';
   if (question.type === 'allocation_table') {
     const firstFund = question.allocationConfig?.funds?.[0];
     if (!firstFund) return [];
@@ -132,19 +136,19 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
   }
 
   if (id.includes('joint_annuitant_first_name')) return 'Sam';
-  if (id.includes('joint_annuitant_middle_initial')) return 'K';
+  if (id.includes('joint_annuitant_middle_initial') || id.includes('joint_annuitant_middle_name')) return 'K';
   if (id.includes('joint_annuitant_last_name')) return 'Rivera';
   if (id.includes('joint_owner_first_name')) return 'Sam';
-  if (id.includes('joint_owner_middle_initial')) return 'K';
+  if (id.includes('joint_owner_middle_initial') || id.includes('joint_owner_middle_name')) return 'K';
   if (id.includes('joint_owner_last_name')) return 'Rivera';
   if (id.includes('bene_first_name')) return 'Jane';
-  if (id.includes('bene_middle_initial')) return 'E';
+  if (id.includes('bene_middle_initial') || id.includes('bene_middle_name')) return 'E';
   if (id.includes('bene_last_name')) return 'Patel';
   if (id.includes('owner_first_name')) return 'Alex';
-  if (id.includes('owner_middle_initial')) return 'R';
+  if (id.includes('owner_middle_initial') || id.includes('owner_middle_name')) return 'R';
   if (id.includes('owner_last_name')) return 'Patel';
   if (id.includes('first_name')) return 'Alex';
-  if (id.includes('middle_initial')) return 'R';
+  if (id.includes('middle_initial') || id.includes('middle_name')) return 'R';
   if (id.includes('last_name')) return 'Patel';
   if (id.includes('surrendering_owner_name')) return 'Alex R Patel';
   if (id.includes('surrendering_annuitant_name')) return 'Alex R Patel';

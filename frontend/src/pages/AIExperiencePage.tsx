@@ -283,7 +283,7 @@ export default function AIExperiencePage() {
     }
     mergeFields(normalized);
     setPendingSync(true);
-    navigate(`/wizard-v2/${encodeURIComponent(selectedProductId)}`);
+    navigate(`/wizard-v2/${encodeURIComponent(selectedProductId)}`, { state: { fromAIExperience: true } });
   }, [selectedProductId, gatheredFields, navigate, mergeFields, setPendingSync]);
 
   // High-value field patterns for a focused, demo-worthy Retell call

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -36,6 +36,25 @@ import { evaluateVisibility } from './visibility';
 
 
 type AnswerMap = Record<string, string | boolean | Record<string, string | boolean>[]>;
+
+// Question IDs in the product JSON are all lowercase. Normalize saved answer keys
+// to lowercase so they align when the form is pre-populated on resume.
+function normalizeAnswerKeys(answers: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(answers)) {
+    const normalizedKey = key.toLowerCase();
+    if (Array.isArray(value)) {
+      result[normalizedKey] = value.map((item) =>
+        item !== null && typeof item === 'object' && !Array.isArray(item)
+          ? normalizeAnswerKeys(item as Record<string, unknown>)
+          : item,
+      );
+    } else {
+      result[normalizedKey] = value;
+    }
+  }
+  return result;
+}
 
 function asString(value: string | boolean | Record<string, string | boolean>[] | undefined) {
   if (typeof value === 'string') return value.trim();
@@ -700,6 +719,8 @@ interface WizardPageContentProps {
 
 function WizardPageContent({ applicationId, initialStep }: WizardPageContentProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromAIExperience = (location.state as { fromAIExperience?: boolean } | null)?.fromAIExperience === true;
   const { definition, pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
   const { collectedFields, mergeFields, pendingSync, setPendingSync } = useApplication();
   const [currentStep, setCurrentStep] = useState(initialStep);
@@ -732,9 +753,10 @@ const [subDialog, setSubDialog] = useState<{
     updateAnswers(applicationId, values).catch(() => undefined);
   };
 
-  // ── AI field sync ──────────────────────────────────────────────────────────
+  // ── AI field sync (only when launched from AI Experience) ─────────────────
 
   useEffect(() => {
+    if (!fromAIExperience) return;
     if (!pendingSync) return;
     const newFields: Record<string, string | boolean> = {};
     for (const [key, val] of Object.entries(collectedFields)) {
@@ -747,9 +769,10 @@ const [subDialog, setSubDialog] = useState<{
       bulkSetValues(newFields);
     }
     setPendingSync(false);
-  }, [collectedFields, bulkSetValues, pendingSync, setPendingSync]);
+  }, [fromAIExperience, collectedFields, bulkSetValues, pendingSync, setPendingSync]);
 
   useEffect(() => {
+    if (!fromAIExperience) return;
     const nonEmpty: Record<string, string | boolean> = {};
     for (const [key, val] of Object.entries(values)) {
       if (typeof val === 'string' && val.trim()) {
@@ -762,7 +785,7 @@ const [subDialog, setSubDialog] = useState<{
       lastAppliedRef.current = { ...lastAppliedRef.current, ...nonEmpty };
       mergeFields(nonEmpty);
     }
-  }, [values, mergeFields]);
+  }, [fromAIExperience, values, mergeFields]);
 
   // ── Step state ─────────────────────────────────────────────────────────────
 
@@ -1017,7 +1040,7 @@ const [subDialog, setSubDialog] = useState<{
               </Alert>
             )}
 
-            {isIntroStep && Object.keys(collectedFields).length > 0 && (
+            {isIntroStep && fromAIExperience && Object.keys(collectedFields).length > 0 && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 {Object.keys(collectedFields).length} fields have been pre-filled from your AI conversation. Review and complete the remaining sections.
               </Alert>
@@ -1112,7 +1135,7 @@ const [subDialog, setSubDialog] = useState<{
           }}
         >
           <Box sx={{ maxWidth: 860, mx: 'auto' }}>
-            <Stack direction="row" justifyContent="end" alignItems="center">
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
               {showSubmissionBanner ? (
                 <Button
                   startIcon={<ExitToAppIcon />}
@@ -1125,17 +1148,15 @@ const [subDialog, setSubDialog] = useState<{
                 </Button>
               ) : (
                 <>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Button
-                      startIcon={<ExitToAppIcon />}
-                      onClick={() => setExitDialogOpen(true)}
-                      color="warning"
-                      variant="outlined"
-                      size="small"
-                    >
-                      Exit
-                    </Button>
-                  </Stack>
+                  <Button
+                    startIcon={<ExitToAppIcon />}
+                    onClick={() => setExitDialogOpen(true)}
+                    color="warning"
+                    variant="outlined"
+                    size="small"
+                  >
+                    Exit
+                  </Button>
 
                   <Stack direction="row" spacing={1.5}>
                     <Button
@@ -1305,7 +1326,7 @@ function WizardPageV2() {
     Promise.all([defFetch, instFetch])
       .then(([def, inst]) => {
         if (inst?.answers && Object.keys(inst.answers).length > 0) {
-          setInitialValues(inst.answers as Record<string, unknown>);
+          setInitialValues(normalizeAnswerKeys(inst.answers as Record<string, unknown>));
         }
         setDefinition(def);
       })

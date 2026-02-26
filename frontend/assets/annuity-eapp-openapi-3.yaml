@@ -53,6 +53,14 @@ tags:
     description: Validate a partial or full set of answers against application rules.
   - name: Submission
     description: Submit a completed application.
+  - name: Products
+    description: Manage product definitions (CRUD).
+  - name: Applications
+    description: Create and manage application instances.
+  - name: Distributors
+    description: Manage distributor entities (CRUD).
+  - name: DocuSign
+    description: Embedded document signing via DocuSign.
 
 # ─────────────────────────────────────────────────────────────
 # PATHS
@@ -60,89 +68,7 @@ tags:
 
 paths:
 
-  /application/{productId}:
-    get:
-      tags:
-        - Application Definition
-      summary: Get Application Definition
-      description: |
-        Returns the complete e-application definition for the specified product,
-        including all pages, questions, visibility conditions, and validation rules.
-
-        Frontend renderers use this response to build the form dynamically.
-        AI agents use `hint` fields to phrase questions conversationally and
-        `pageRepeat` / `visibility` structures to determine question flow.
-      operationId: getApplicationDefinition
-      parameters:
-        - name: productId
-          in: path
-          required: true
-          description: Unique identifier for the annuity product.
-          schema:
-            type: string
-          examples:
-            fixed_annuity:
-              summary: Midland National Fixed Annuity
-              value: midland-fixed-annuity-001
-        - name: locale
-          in: query
-          required: false
-          description: BCP 47 locale for label and option localization. Defaults to `en-US`.
-          schema:
-            type: string
-            default: en-US
-          examples:
-            english:
-              summary: US English
-              value: en-US
-      responses:
-        '200':
-          description: Application definition returned successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplicationDefinition'
-              examples:
-                fixed_annuity:
-                  summary: Midland National Fixed Annuity (abbreviated)
-                  value:
-                    id: midland-fixed-annuity-001
-                    version: 1.0.0
-                    carrier: Midland National Life Insurance Company
-                    productName: Fixed Annuity Application
-                    productId: midland-fixed-annuity-001
-                    effectiveDate: '2021-03-01'
-                    locale: en-US
-                    description: Application for a Midland National fixed annuity contract.
-                    pages: []
-        '404':
-          description: Product not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  summary: Unknown product ID
-                  value:
-                    code: PRODUCT_NOT_FOUND
-                    message: No application definition found for product ID 'xyz-999'.
-                    details: null
-        '500':
-          description: Internal server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                server_error:
-                  summary: Unexpected server failure
-                  value:
-                    code: INTERNAL_ERROR
-                    message: An unexpected error occurred. Please try again.
-                    details: null
-
-  /application/{applicationId}/validate:
+  /applications/{applicationId}/validate:
     post:
       tags:
         - Validation
@@ -273,7 +199,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /application/{applicationId}/submit:
+  /applications/{applicationId}/submit:
     post:
       tags:
         - Submission
@@ -368,6 +294,558 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # ── DocuSign ──────────────────────────────────────────────
+
+  /applications/{applicationId}/docusign/start:
+    post:
+      tags:
+        - DocuSign
+      summary: Start Embedded Signing
+      description: |
+        Initiates a DocuSign embedded signing session for the given application.
+        Creates an envelope with the application PDF document and returns a
+        signing URL that can be opened in a new browser tab/window.
+
+        After the signer completes (or declines) signing, DocuSign redirects
+        to the configured return URL (`/docusign/return`).
+      operationId: startDocuSignSigning
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          description: Unique identifier for the application instance.
+          schema:
+            type: string
+          examples:
+            sample:
+              value: app-instance-abc123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocuSignStartRequest'
+            examples:
+              basic:
+                summary: Start signing for a signer
+                value:
+                  signerEmail: jane.smith@example.com
+                  signerName: Jane Smith
+      responses:
+        '200':
+          description: Signing session created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocuSignStartResponse'
+              examples:
+                success:
+                  summary: Envelope created with signing URL
+                  value:
+                    envelopeId: 12345678-abcd-1234-efgh-123456789abc
+                    signingUrl: https://demo.docusign.net/Signing/...
+        '400':
+          description: Missing or invalid signer information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to start signing process.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Products ──────────────────────────────────────────────
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List all products
+      operationId: listProducts
+      responses:
+        '200':
+          description: Array of product objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductSummary'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Products
+      summary: Create a product
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - carrier
+                - productName
+                - productId
+              properties:
+                carrier:
+                  type: string
+                productName:
+                  type: string
+                productId:
+                  type: string
+      responses:
+        '201':
+          description: Product created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '400':
+          description: Missing required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate productId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Get a product by productId
+      operationId: getProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Products
+      summary: Update a product
+      operationId: updateProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Product updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSummary'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Products
+      summary: Delete a product
+      operationId: deleteProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Product deleted.
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Distributors ────────────────────────────────────────────
+
+  /distributors:
+    get:
+      tags:
+        - Distributors
+      summary: List all distributors
+      operationId: listDistributors
+      responses:
+        '200':
+          description: Array of distributor objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Distributor'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Distributors
+      summary: Create a distributor
+      operationId: createDistributor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - distributorId
+                - name
+              properties:
+                distributorId:
+                  type: string
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Distributor created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Distributor'
+        '400':
+          description: Missing required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate distributorId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /distributors/{distributorId}:
+    get:
+      tags:
+        - Distributors
+      summary: Get a distributor by ID
+      operationId: getDistributor
+      parameters:
+        - name: distributorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Distributor object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Distributor'
+        '404':
+          description: Distributor not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Distributors
+      summary: Update a distributor
+      operationId: updateDistributor
+      parameters:
+        - name: distributorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Distributor updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Distributor'
+        '404':
+          description: Distributor not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Distributors
+      summary: Delete a distributor
+      operationId: deleteDistributor
+      parameters:
+        - name: distributorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Distributor deleted.
+        '404':
+          description: Distributor not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Applications ─────────────────────────────────────────
+
+  /applications:
+    get:
+      tags:
+        - Applications
+      summary: List all applications
+      operationId: listApplications
+      responses:
+        '200':
+          description: Array of all application records.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApplicationInstance'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Applications
+      summary: Create a new application
+      operationId: createApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+              properties:
+                productId:
+                  type: string
+            examples:
+              create:
+                value:
+                  productId: midland-fixed-annuity-001
+      responses:
+        '201':
+          description: Application created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '400':
+          description: Missing productId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{id}:
+    get:
+      tags:
+        - Applications
+      summary: Get an application by ID
+      operationId: getApplication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Application object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '404':
+          description: Application not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /applications/{id}/answers:
+    put:
+      tags:
+        - Applications
+      summary: Update application answers
+      operationId: updateApplicationAnswers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - answers
+              properties:
+                answers:
+                  type: object
+            examples:
+              partialUpdate:
+                value:
+                  answers:
+                    annuitant_first_name: Jane
+                    annuitant_last_name: Smith
+      responses:
+        '200':
+          description: Updated application with merged answers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationInstance'
+        '400':
+          description: Missing answers in request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Application not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Application already submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 # ─────────────────────────────────────────────────────────────
 # COMPONENTS
 # ─────────────────────────────────────────────────────────────
@@ -439,6 +917,22 @@ components:
               This application is used to apply for a Midland National fixed annuity
               contract. Please have your Social Security number, funding account details,
               and beneficiary information available before beginning.
+        productType:
+          type: string
+          description: Type of product (e.g. fixed_annuity, variable_annuity, myga).
+        distributors:
+          type: array
+          description: Array of distributorId strings for distributors approved to sell this product.
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when this record was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when this record was last updated.
         pages:
           type: array
           description: Ordered list of pages comprising the application.
@@ -2127,6 +2621,44 @@ components:
     # ERROR
     # ─────────────────────────────────────────
 
+    DocuSignStartRequest:
+      type: object
+      description: Request body to initiate an embedded DocuSign signing session.
+      required:
+        - signerEmail
+        - signerName
+      properties:
+        signerEmail:
+          type: string
+          format: email
+          description: Email address of the signer.
+          examples:
+            - jane.smith@example.com
+        signerName:
+          type: string
+          description: Full name of the signer.
+          examples:
+            - Jane Smith
+
+    DocuSignStartResponse:
+      type: object
+      description: Response containing the DocuSign envelope ID and embedded signing URL.
+      required:
+        - envelopeId
+        - signingUrl
+      properties:
+        envelopeId:
+          type: string
+          description: The DocuSign envelope identifier.
+          examples:
+            - 12345678-abcd-1234-efgh-123456789abc
+        signingUrl:
+          type: string
+          format: uri
+          description: URL to open for the embedded signing ceremony.
+          examples:
+            - https://demo.docusign.net/Signing/startinsession.aspx?t=abc123
+
     ErrorResponse:
       type: object
       description: Standard error envelope for non-validation HTTP errors.
@@ -2150,3 +2682,69 @@ components:
             - type: object
               additionalProperties: true
             - type: 'null'
+
+    ProductSummary:
+      type: object
+      properties:
+        productId:
+          type: string
+        carrier:
+          type: string
+        productName:
+          type: string
+        productType:
+          type: string
+        distributors:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    Distributor:
+      type: object
+      required:
+        - distributorId
+        - name
+      properties:
+        distributorId:
+          type: string
+          description: Unique identifier for this distributor.
+        name:
+          type: string
+          description: Display name of the distributor.
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when this record was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when this record was last updated.
+
+    ApplicationInstance:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        answers:
+          type: object
+        status:
+          type: string
+          enum:
+            - in_progress
+            - submitted
+        submissionId:
+          type: string
+          description: Carrier submission ID, set after successful submission.
+        policyNumber:
+          type: string
+          description: Carrier policy number, set after successful submission.
+        createdAt:
+          type: string
+        updatedAt:
+          type: string

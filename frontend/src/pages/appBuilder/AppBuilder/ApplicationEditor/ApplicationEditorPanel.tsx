@@ -66,6 +66,7 @@ function createEmptyQuestion(index: number): BuilderQuestion {
     hint: '',
     placeholder: '',
     required: false,
+    visibility: null,
     optionsInput: '',
     validations: [],
   };
@@ -174,6 +175,8 @@ function mapQuestionType(type: string): BuilderQuestion['type'] {
     case 'number':
     case 'currency':
       return 'number';
+    case 'ssn':
+      return 'ssn';
     case 'radio':
       return 'radio';
     case 'select':
@@ -227,6 +230,7 @@ function createFormFromProduct(product: Product): BuilderForm {
         hint: question.hint ?? '',
         placeholder: question.placeholder ?? '',
         required: Boolean(question.required || question.validation?.some((rule) => rule.type === 'required')),
+        visibility: question.visibility ?? null,
         optionsInput: toOptionsInput(question.options ?? undefined),
         validations: toBuilderValidationRules(question.validation ?? undefined),
       });
@@ -456,7 +460,7 @@ function ApplicationEditorPanel({
             placeholder: question.placeholder.trim() || null,
             order: runningOrder,
             required: question.required,
-            visibility: null,
+            visibility: question.visibility ?? null,
             options,
             validation: validationRules.length ? validationRules : undefined,
             groupConfig: undefined,
@@ -638,7 +642,7 @@ function ApplicationEditorPanel({
         minRows={question.type === 'long_text' ? 3 : undefined}
         type={question.type === 'date' || question.type === 'number' ? question.type : 'text'}
         label={question.label || 'Field label'}
-        placeholder={question.placeholder || 'Value'}
+        placeholder={question.placeholder || (question.type === 'ssn' ? 'XXX-XX-XXXX' : 'Value')}
       />
     );
   };

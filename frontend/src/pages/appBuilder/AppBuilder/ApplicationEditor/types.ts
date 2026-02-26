@@ -1,8 +1,11 @@
+import type { ConditionExpression } from '../../../../types/application';
+
 export type QuestionType =
   | 'short_text'
   | 'long_text'
   | 'date'
   | 'number'
+  | 'ssn'
   | 'radio'
   | 'select'
   | 'switch';
@@ -36,6 +39,7 @@ export type BuilderQuestion = {
   hint: string;
   placeholder: string;
   required: boolean;
+  visibility: null | ConditionExpression;
   optionsInput: string;
   validations: BuilderValidationRule[];
 };
@@ -91,6 +95,7 @@ export const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
   { value: 'long_text', label: 'Long Text' },
   { value: 'date', label: 'Date' },
   { value: 'number', label: 'Number' },
+  { value: 'ssn', label: 'SSN' },
   { value: 'radio', label: 'Radio' },
   { value: 'select', label: 'Dropdown' },
   { value: 'switch', label: 'Switch' },
