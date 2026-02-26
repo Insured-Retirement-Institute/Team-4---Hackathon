@@ -66,6 +66,7 @@ function createEmptyQuestion(index: number): BuilderQuestion {
     hint: '',
     placeholder: '',
     required: false,
+    visibility: null,
     optionsInput: '',
     validations: [],
   };
@@ -229,6 +230,7 @@ function createFormFromProduct(product: Product): BuilderForm {
         hint: question.hint ?? '',
         placeholder: question.placeholder ?? '',
         required: Boolean(question.required || question.validation?.some((rule) => rule.type === 'required')),
+        visibility: question.visibility ?? null,
         optionsInput: toOptionsInput(question.options ?? undefined),
         validations: toBuilderValidationRules(question.validation ?? undefined),
       });
@@ -458,7 +460,7 @@ function ApplicationEditorPanel({
             placeholder: question.placeholder.trim() || null,
             order: runningOrder,
             required: question.required,
-            visibility: null,
+            visibility: question.visibility ?? null,
             options,
             validation: validationRules.length ? validationRules : undefined,
             groupConfig: undefined,

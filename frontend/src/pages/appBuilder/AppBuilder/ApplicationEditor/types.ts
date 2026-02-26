@@ -1,3 +1,5 @@
+import type { ConditionExpression } from '../../../../types/application';
+
 export type QuestionType =
   | 'short_text'
   | 'long_text'
@@ -37,6 +39,7 @@ export type BuilderQuestion = {
   hint: string;
   placeholder: string;
   required: boolean;
+  visibility: null | ConditionExpression;
   optionsInput: string;
   validations: BuilderValidationRule[];
 };
