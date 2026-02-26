@@ -4,6 +4,7 @@ const {
   GetCommand,
   PutCommand,
   UpdateCommand,
+  DeleteCommand,
 } = require('@aws-sdk/lib-dynamodb');
 const { docClient } = require('../config/dynamodb');
 
@@ -121,6 +122,12 @@ async function updateApplicationSuitabilityDecision(id, suitabilityDecision) {
   return result.Attributes;
 }
 
+async function deleteApplication(id) {
+  await docClient.send(
+    new DeleteCommand({ TableName: TABLE_NAME, Key: { id } })
+  );
+}
+
 async function getAllApplications() {
   const result = await docClient.send(new ScanCommand({ TableName: TABLE_NAME }));
   return result.Items || [];
@@ -134,4 +141,5 @@ module.exports = {
   updateApplicationStatus,
   updateApplicationCarrierData,
   updateApplicationSuitabilityDecision,
+  deleteApplication,
 };

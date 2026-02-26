@@ -6,6 +6,7 @@ const {
   createApplication,
   getApplicationById,
   updateApplicationAnswers,
+  deleteApplication,
 } = require('../services/applicationService');
 
 // GET /applications
@@ -118,6 +119,43 @@ router.put('/:id/answers', async (req, res) => {
     res.json(updated);
   } catch (err) {
     console.error('Error updating application answers:', err);
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred. Please try again.',
+      details: null
+    });
+  }
+});
+
+// DELETE /applications/:id
+router.delete('/:id', async (req, res) => {
+  try {
+    const application = await getApplicationById(req.params.id);
+
+    if (!application) {
+      return res.status(404).json({
+        code: 'APPLICATION_NOT_FOUND',
+        message: `Application '${req.params.id}' not found.`,
+        details: null
+      });
+    }
+
+    if (application.status === 'submitted' || application.status === 'carrier_accepted') {
+      return res.status(409).json({
+        code: 'APPLICATION_ALREADY_SUBMITTED',
+        message: 'Cannot delete a submitted application.',
+        details: null
+      });
+    }
+
+    await deleteApplication(req.params.id);
+
+    res.json({
+      message: 'Application deleted successfully.',
+      id: req.params.id
+    });
+  } catch (err) {
+    console.error('Error deleting application:', err);
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: 'An unexpected error occurred. Please try again.',
