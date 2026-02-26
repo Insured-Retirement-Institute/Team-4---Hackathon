@@ -148,6 +148,20 @@ export default function AIExperiencePage() {
     }
   }, [gatheredFields, definition, computeMatchedFields]);
 
+  // Product selection — just set definition, let useEffect handle matching
+  const handleProductSelect = useCallback(
+    (productId: string) => {
+      setSelectedProductId(productId);
+      getApplication(productId)
+        .then((def) => {
+          console.log('[AIExperience] Product definition loaded:', def.productName, '—', def.pages?.length, 'pages');
+          setDefinition(def);
+        })
+        .catch(console.error);
+    },
+    [],
+  );
+
   // Handle tool calls from chat
   const handleToolCalls = useCallback(
     (tools: ToolCallInfo[]) => {
@@ -218,20 +232,6 @@ export default function AIExperiencePage() {
       },
     });
   const isVoiceConnected = voiceStatus === 'connected' || voiceStatus === 'speaking';
-
-  // Product selection — just set definition, let useEffect handle matching
-  const handleProductSelect = useCallback(
-    (productId: string) => {
-      setSelectedProductId(productId);
-      getApplication(productId)
-        .then((def) => {
-          console.log('[AIExperience] Product definition loaded:', def.productName, '—', def.pages?.length, 'pages');
-          setDefinition(def);
-        })
-        .catch(console.error);
-    },
-    [],
-  );
 
   // Call client
   const handleCallClient = useCallback(() => {
