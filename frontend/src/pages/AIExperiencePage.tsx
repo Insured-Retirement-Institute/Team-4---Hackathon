@@ -58,6 +58,8 @@ export default function AIExperiencePage() {
   // Compute matched fields when gathered data or definition changes
   const computeMatchedFields = useCallback(
     (fields: Map<string, { value: string; source: string }>, def: ApplicationDefinition) => {
+      console.log('[AIExperience] computeMatchedFields called with', fields.size, 'gathered fields');
+
       // Build lookup with camelCase, snake_case, AND explicit aliases
       const lookup: Record<string, { value: string; source: string }> = {};
       for (const [k, v] of fields) {
@@ -88,6 +90,8 @@ export default function AIExperiencePage() {
           source: entry?.source,
         };
       });
+      const filledCount = matched.filter((m) => m.filled).length;
+      console.log('[AIExperience] Matched:', filledCount, '/', matched.length, 'fields. Lookup keys sample:', Object.keys(lookup).slice(0, 10), 'Question IDs sample:', allQuestions.slice(0, 5).map((q) => q.id));
       setMatchedFields(matched);
     },
     [],
@@ -123,6 +127,7 @@ export default function AIExperiencePage() {
 
   // When gatheredFields or definition change, recompute matched fields
   useEffect(() => {
+    console.log('[AIExperience] useEffect fired: gatheredFields.size=', gatheredFields.size, 'definition=', !!definition);
     if (definition) {
       computeMatchedFields(gatheredFields, definition);
     }
@@ -179,18 +184,18 @@ export default function AIExperiencePage() {
     [mergeFieldsFromToolData],
   );
 
-  // Product selection
+  // Product selection — just set definition, let useEffect handle matching
   const handleProductSelect = useCallback(
     (productId: string) => {
       setSelectedProductId(productId);
       getApplication(productId)
         .then((def) => {
+          console.log('[AIExperience] Product definition loaded:', def.productName, '—', def.pages?.length, 'pages');
           setDefinition(def);
-          computeMatchedFields(gatheredFields, def);
         })
         .catch(console.error);
     },
-    [gatheredFields, computeMatchedFields],
+    [],
   );
 
   // Call client
