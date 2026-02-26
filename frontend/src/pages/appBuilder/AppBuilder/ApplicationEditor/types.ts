@@ -3,6 +3,7 @@ export type QuestionType =
   | 'long_text'
   | 'date'
   | 'number'
+  | 'ssn'
   | 'radio'
   | 'select'
   | 'switch';
@@ -91,6 +92,7 @@ export const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
   { value: 'long_text', label: 'Long Text' },
   { value: 'date', label: 'Date' },
   { value: 'number', label: 'Number' },
+  { value: 'ssn', label: 'SSN' },
   { value: 'radio', label: 'Radio' },
   { value: 'select', label: 'Dropdown' },
   { value: 'switch', label: 'Switch' },

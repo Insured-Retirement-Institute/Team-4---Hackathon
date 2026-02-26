@@ -174,6 +174,8 @@ function mapQuestionType(type: string): BuilderQuestion['type'] {
     case 'number':
     case 'currency':
       return 'number';
+    case 'ssn':
+      return 'ssn';
     case 'radio':
       return 'radio';
     case 'select':
@@ -638,7 +640,7 @@ function ApplicationEditorPanel({
         minRows={question.type === 'long_text' ? 3 : undefined}
         type={question.type === 'date' || question.type === 'number' ? question.type : 'text'}
         label={question.label || 'Field label'}
-        placeholder={question.placeholder || 'Value'}
+        placeholder={question.placeholder || (question.type === 'ssn' ? 'XXX-XX-XXXX' : 'Value')}
       />
     );
   };
