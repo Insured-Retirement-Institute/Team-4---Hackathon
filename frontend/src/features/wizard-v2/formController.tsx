@@ -1,14 +1,8 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import type { ApplicationDefinition, PageDefinition, QuestionDefinition } from '../../types/application';
 import { createDummyValue } from './createDummyValue';
+import { getPageErrors, type AnswerValue, type FormErrors, type FormValues, type GroupItemValue } from './formValidation';
 import { evaluateVisibility } from './visibility';
-
-type GroupItemValue = Record<string, string | boolean>;
-type AnswerValue = string | boolean | GroupItemValue[];
-
-type FormValues = Record<string, AnswerValue>;
-
-type FormErrors = Record<string, string>;
 
 interface WizardV2Controller {
   definition: ApplicationDefinition;
@@ -47,101 +41,6 @@ function getInitialValues(questions: QuestionDefinition[]): FormValues {
   }, {});
 }
 
-function isEmptyValue(value: AnswerValue) {
-  if (typeof value === 'boolean') return false;
-  if (Array.isArray(value)) return value.length === 0;
-
-  return !value.trim();
-}
-
-function getValidationMessage(question: QuestionDefinition, value: AnswerValue): string | null {
-  if (question.type === 'allocation_table') {
-    const allocations = Array.isArray(value) ? value : [];
-
-    if (question.required && allocations.length === 0) {
-      return 'Add at least one allocation';
-    }
-
-    if (allocations.length === 0) {
-      return null;
-    }
-
-    const invalidRow = allocations.some((item) => {
-      const fundId = item.fundId;
-      const percentage = item.percentage;
-      return (
-        typeof fundId !== 'string'
-        || !fundId.trim()
-        || typeof percentage !== 'string'
-        || !percentage.trim()
-        || Number.isNaN(Number(percentage))
-      );
-    });
-
-    if (invalidRow) {
-      return 'Choose a fund and enter a valid percentage for each allocation';
-    }
-
-    const total = allocations.reduce((sum, item) => sum + (Number(item.percentage) || 0), 0);
-    const requiredTotal = question.allocationConfig?.totalRequired ?? 100;
-    if (total !== requiredTotal) {
-      return `Allocations must total ${requiredTotal}% (current total: ${total}%)`;
-    }
-
-    return null;
-  }
-
-  if (question.type === 'repeatable_group' && question.groupConfig) {
-    const items = Array.isArray(value) ? value : [];
-    const minItems = Math.max(1, question.groupConfig.minItems);
-    if (items.length < minItems) {
-      return `Add at least ${minItems} item${minItems > 1 ? 's' : ''}`;
-    }
-
-    const missingRequired = items.some((item) =>
-      question.groupConfig!.fields.some((field) => {
-        if (!field.required || field.type === 'boolean') return false;
-        const fieldValue = item[field.id];
-        return typeof fieldValue !== 'string' || !fieldValue.trim();
-      }),
-    );
-
-    if (missingRequired) {
-      return 'Complete all required fields in each item';
-    }
-  }
-
-  if (question.required && question.type !== 'boolean' && isEmptyValue(value)) {
-    return 'This field is required';
-  }
-
-  if (typeof value !== 'string' || !value.trim()) {
-    return null;
-  }
-
-  if (question.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-    return 'Enter a valid email address';
-  }
-
-  if (question.type === 'phone' && value.replace(/\D/g, '').length < 10) {
-    return 'Enter a valid phone number';
-  }
-
-  if ((question.type === 'number' || question.type === 'currency') && Number.isNaN(Number(value))) {
-    return 'Enter a numeric value';
-  }
-
-  if (question.type === 'number' && question.min !== undefined && Number(value) < question.min) {
-    return `Value must be at least ${question.min}`;
-  }
-
-  if (question.type === 'number' && question.max !== undefined && Number(value) > question.max) {
-    return `Value must be ${question.max} or less`;
-  }
-
-  return null;
-}
-
 interface WizardV2FormProviderProps {
   definition: ApplicationDefinition;
   initialValues?: Record<string, unknown>;
@@ -162,18 +61,6 @@ export function WizardV2FormProvider({ definition, initialValues, children }: Wi
     () => definition.pages.filter((page) => evaluateVisibility(page.visibility, values)),
     [definition.pages, values],
   );
-
-  const getPageErrors = (page: PageDefinition) =>
-    page.questions.reduce<FormErrors>((acc, question) => {
-      // Skip validation entirely for hidden questions
-      if (!evaluateVisibility(question.visibility, values)) return acc;
-      const value = values[question.id];
-      const message = getValidationMessage(question, value);
-      if (message) {
-        acc[question.id] = message;
-      }
-      return acc;
-    }, {});
 
   const setValue = (questionId: string, value: AnswerValue) => {
     setValues((prev) => ({ ...prev, [questionId]: value }));
@@ -209,13 +96,13 @@ export function WizardV2FormProvider({ definition, initialValues, children }: Wi
   };
 
   const validatePage = (page: PageDefinition) => {
-    const nextErrors = getPageErrors(page);
+    const nextErrors = getPageErrors(page, values);
 
     setErrors((prev) => ({ ...prev, ...nextErrors }));
     return Object.keys(nextErrors).length === 0;
   };
 
-  const isPageComplete = (page: PageDefinition) => Object.keys(getPageErrors(page)).length === 0;
+  const isPageComplete = (page: PageDefinition) => Object.keys(getPageErrors(page, values)).length === 0;
 
   const controller: WizardV2Controller = {
     definition,
