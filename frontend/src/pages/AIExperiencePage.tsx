@@ -91,7 +91,10 @@ export default function AIExperiencePage() {
         };
       });
       const filledCount = matched.filter((m) => m.filled).length;
-      console.log('[AIExperience] Matched:', filledCount, '/', matched.length, 'fields. Lookup keys sample:', Object.keys(lookup).slice(0, 10), 'Question IDs sample:', allQuestions.slice(0, 5).map((q) => q.id));
+      const lookupKeys = Object.keys(lookup);
+      console.log('[AIExperience] Matched:', filledCount, '/', matched.length);
+      console.log('[AIExperience] Lookup keys (' + lookupKeys.length + '):', lookupKeys.join(', '));
+      console.log('[AIExperience] Question IDs (' + allQuestions.length + '):', allQuestions.slice(0, 20).map((q) => q.id).join(', '));
       setMatchedFields(matched);
     },
     [],
