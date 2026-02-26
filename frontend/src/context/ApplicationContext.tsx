@@ -11,6 +11,9 @@ interface ApplicationContextValue {
   collectedFields: CollectedFields;
   /** Merge new fields into collected set (from AI chat responses) */
   mergeFields: (fields: Record<string, FieldValue>) => void;
+  /** Whether the wizard should consume collectedFields on mount */
+  pendingSync: boolean;
+  setPendingSync: (pending: boolean) => void;
   /** Active AI session ID */
   sessionId: string | null;
   setSessionId: (id: string | null) => void;
@@ -27,6 +30,7 @@ const ApplicationContext = createContext<ApplicationContextValue | undefined>(un
 
 export function ApplicationProvider({ children }: { children: React.ReactNode }) {
   const [collectedFields, setCollectedFields] = useState<CollectedFields>({});
+  const [pendingSync, setPendingSync] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [phase, setPhase] = useState<string | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState<number | null>(null);
@@ -45,6 +49,8 @@ export function ApplicationProvider({ children }: { children: React.ReactNode })
     () => ({
       collectedFields,
       mergeFields,
+      pendingSync,
+      setPendingSync,
       sessionId,
       setSessionId,
       phase,
@@ -53,7 +59,7 @@ export function ApplicationProvider({ children }: { children: React.ReactNode })
       totalSteps,
       setStepProgress,
     }),
-    [collectedFields, mergeFields, sessionId, phase, currentStepIndex, totalSteps, setStepProgress],
+    [collectedFields, mergeFields, pendingSync, sessionId, phase, currentStepIndex, totalSteps, setStepProgress],
   );
 
   return <ApplicationContext.Provider value={value}>{children}</ApplicationContext.Provider>;

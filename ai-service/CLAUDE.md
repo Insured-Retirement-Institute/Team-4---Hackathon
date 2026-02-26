@@ -103,17 +103,17 @@ All routes under `/api/v1/`:
 
 **How it works:** `NovaSonicStreamManager` opens a bidirectional stream to Bedrock. The WebSocket route (`voice.py`) runs two concurrent async tasks: `ws_to_nova` (browser audio → Nova Sonic) and `nova_to_ws` (Nova Sonic audio/transcript/tool events → browser). Audio format: 16kHz 16-bit PCM mono in, 24kHz 16-bit PCM mono out, base64-encoded.
 
-**Session setup sequence:** `sessionStart` (inference config) → `promptStart` (audio/text output config, voice ID, all tools upfront) → system prompt as TEXT content block. All tools from `build_tools_for_phase()` are provided at stream start, converted from Anthropic format via `tool_adapter.py`. Phase-specific guidance in the system prompt controls which tools the model uses.
+**Session setup sequence:** `sessionStart` (inference config) → `promptStart` (audio/text output config, voice ID, all tools upfront) → system prompt as TEXT content block. All tools from `build_tools_for_phase()` are provided at stream start, converted from Anthropic format via `tool_adapter.py`. Phase-specific guidance in the system prompt controls which tools the model uses. After setup, `send_initial_greeting()` sends a text USER prompt to trigger Nova Sonic to speak first (called from `voice.py` right after `start_session()`).
 
-**Tool call bridging:** When Nova Sonic emits a `toolUse` event, the manager normalizes it to `{id, name, input}`, calls shared `process_tool_calls()` from `conversation_service.py`, sends `field_update` to the browser via WebSocket, calls `maybe_advance_phase()`, and sends the `toolResult` event back to Nova Sonic so the model resumes speaking.
+**Tool call bridging:** When Nova Sonic emits a `toolUse` event, the manager normalizes it to `{id, name, input}`. If `tool_name in ADVISOR_TOOL_NAMES`, the tool is routed through `execute_prefill_tool()` and a `tool_call_info` WebSocket message is emitted with `result_data` and `source_label` (same format as text mode). Otherwise, the tool goes through the existing `process_tool_calls()` path from `conversation_service.py`, sending `field_update` to the browser via WebSocket. In both cases, `maybe_advance_phase()` is called and the `toolResult` event is sent back to Nova Sonic so the model resumes speaking.
 
 **Session sharing:** Voice and text modes read/write the **same `ConversationState`** from the in-memory `_sessions` store. They use different LLMs (Nova Sonic vs Claude) but share fields, phase, and tool processing. The system prompt includes full field context, so either model picks up seamlessly when switching modes.
 
 **WebSocket protocol (JSON over WS):**
 - Client → Server: `{"type":"audio","data":"<b64>"}`, `{"type":"end_session"}`
-- Server → Client: `{"type":"audio","data":"<b64>"}`, `{"type":"transcript","role":"assistant"|"user","text":"..."}`, `{"type":"field_update","fields":[...]}`, `{"type":"phase_change","phase":"..."}`, `{"type":"error","message":"..."}`, `{"type":"session_ended"}`
+- Server → Client: `{"type":"audio","data":"<b64>"}`, `{"type":"transcript","role":"assistant"|"user","text":"..."}`, `{"type":"field_update","fields":[...]}`, `{"type":"tool_call_info","tool_call":{...}}` (advisor tool results with `result_data` + `source_label`), `{"type":"phase_change","phase":"..."}`, `{"type":"error","message":"..."}`, `{"type":"session_ended"}`
 
-**Config:** `NOVA_SONIC_MODEL` (default `amazon.nova-sonic-v1:0`), `NOVA_SONIC_VOICE` (default `tiffany`, options: matthew, tiffany, amy, lupe, carlos). Reuses existing AWS credentials.
+**Config:** `NOVA_SONIC_MODEL` (default `amazon.nova-sonic-v1:0`), `NOVA_SONIC_VOICE` (default `tiffany`, options: matthew, tiffany, amy, lupe, carlos). Reuses existing AWS credentials. **Note:** App Runner does not support WebSockets — voice requires EC2 or ECS+ALB deployment.
 
 **Frontend integration:** `useVoiceConnection` hook handles `getUserMedia()` for mic (16kHz PCM mono), `AudioContext` for playback (24kHz), WebSocket messaging. `VoicePanel` component renders mic button with pulse animation and scrolling transcript. `field_update` messages fire `iri:field_updated` CustomEvents for wizard sync.
 

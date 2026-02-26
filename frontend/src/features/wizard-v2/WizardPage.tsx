@@ -722,7 +722,7 @@ function WizardPageContent({ applicationId, initialStep }: WizardPageContentProp
   const location = useLocation();
   const fromAIExperience = (location.state as { fromAIExperience?: boolean } | null)?.fromAIExperience === true;
   const { definition, pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
-  const { collectedFields, mergeFields } = useApplication();
+  const { collectedFields, mergeFields, pendingSync, setPendingSync } = useApplication();
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -757,6 +757,7 @@ const [subDialog, setSubDialog] = useState<{
 
   useEffect(() => {
     if (!fromAIExperience) return;
+    if (!pendingSync) return;
     const newFields: Record<string, string | boolean> = {};
     for (const [key, val] of Object.entries(collectedFields)) {
       if ((typeof val === 'string' || typeof val === 'boolean') && lastAppliedRef.current[key] !== val) {
@@ -767,7 +768,8 @@ const [subDialog, setSubDialog] = useState<{
       lastAppliedRef.current = { ...lastAppliedRef.current, ...newFields };
       bulkSetValues(newFields);
     }
-  }, [fromAIExperience, collectedFields, bulkSetValues]);
+    setPendingSync(false);
+  }, [fromAIExperience, collectedFields, bulkSetValues, pendingSync, setPendingSync]);
 
   useEffect(() => {
     if (!fromAIExperience) return;

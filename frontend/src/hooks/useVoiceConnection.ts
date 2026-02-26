@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import type { ToolCallInfo } from '../services/aiService';
 
 const AI_SERVICE_BASE = import.meta.env.VITE_AI_SERVICE_URL ?? 'https://3ddrg3spbd.us-east-1.awsapprunner.com';
 
@@ -9,9 +10,16 @@ export interface TranscriptEntry {
 
 export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'speaking' | 'error';
 
-export function useVoiceConnection() {
+export interface VoiceConnectionOptions {
+  onToolCallInfo?: (info: ToolCallInfo) => void;
+}
+
+export function useVoiceConnection(options?: VoiceConnectionOptions) {
   const [status, setStatus] = useState<VoiceStatus>('idle');
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
+
+  const onToolCallInfoRef = useRef(options?.onToolCallInfo);
+  onToolCallInfoRef.current = options?.onToolCallInfo;
 
   const wsRef = useRef<WebSocket | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -23,6 +31,7 @@ export function useVoiceConnection() {
   const connect = useCallback(async (sessionId: string) => {
     if (wsRef.current) return;
 
+    console.log('[Voice] Connecting to session:', sessionId);
     setStatus('connecting');
     setTranscripts([]);
 
@@ -31,14 +40,18 @@ export function useVoiceConnection() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
-    } catch {
+    } catch (err) {
+      console.error('[Voice] Microphone access denied:', err);
       setStatus('error');
       return;
     }
+    console.log('[Voice] Microphone access granted');
 
     // Build WebSocket URL
     const wsBase = AI_SERVICE_BASE.replace(/^http/, 'ws');
-    const ws = new WebSocket(`${wsBase}/api/v1/sessions/${sessionId}/voice`);
+    const wsUrl = `${wsBase}/api/v1/sessions/${sessionId}/voice`;
+    console.log('[Voice] Opening WebSocket:', wsUrl);
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     // Playback context at 24kHz
@@ -47,6 +60,7 @@ export function useVoiceConnection() {
     nextPlayTimeRef.current = 0;
 
     ws.onopen = () => {
+      console.log('[Voice] WebSocket connected, setting up mic capture');
       setStatus('connected');
 
       // Set up mic capture
@@ -101,11 +115,13 @@ export function useVoiceConnection() {
           setStatus('speaking');
           playAudioChunk(msg.data, playbackCtx);
         } else if (msg.type === 'transcript') {
+          console.log(`[Voice] Transcript (${msg.role}):`, msg.text);
           if (msg.role === 'user') {
             setStatus('connected');
           }
           setTranscripts((prev) => [...prev, { role: msg.role, text: msg.text }]);
         } else if (msg.type === 'field_update' && msg.fields) {
+          console.log('[Voice] field_update received:', msg.fields.length, 'fields', msg.fields);
           // Dispatch the same CustomEvent that the widget uses
           for (const field of msg.fields) {
             window.dispatchEvent(
@@ -114,15 +130,25 @@ export function useVoiceConnection() {
               }),
             );
           }
+        } else if (msg.type === 'tool_call_info') {
+          console.log('[Voice] tool_call_info received:', {
+            name: msg.name,
+            source_label: msg.source_label,
+            result_data_keys: msg.result_data ? Object.keys(msg.result_data) : [],
+            field_count: msg.result_data ? Object.keys(msg.result_data).length : 0,
+          });
+          onToolCallInfoRef.current?.(msg as ToolCallInfo);
         } else if (msg.type === 'phase_change') {
+          console.log('[Voice] phase_change:', msg.phase);
           window.dispatchEvent(
             new CustomEvent('iri:phase_changed', { detail: { phase: msg.phase } }),
           );
         } else if (msg.type === 'session_ended') {
+          console.log('[Voice] Session ended');
           cleanupConnection();
           setStatus('idle');
         } else if (msg.type === 'error') {
-          console.error('Voice error:', msg.message);
+          console.error('[Voice] Error:', msg.message);
           setStatus('error');
         }
       } catch {
@@ -130,12 +156,14 @@ export function useVoiceConnection() {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
+      console.log('[Voice] WebSocket closed:', ev.code, ev.reason);
       cleanupConnection();
       setStatus('idle');
     };
 
-    ws.onerror = () => {
+    ws.onerror = (ev) => {
+      console.error('[Voice] WebSocket error:', ev);
       cleanupConnection();
       setStatus('error');
     };

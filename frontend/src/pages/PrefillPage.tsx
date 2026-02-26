@@ -32,7 +32,7 @@ type Stage = 'input' | 'loading' | 'results';
 
 export default function PrefillPage() {
   const navigate = useNavigate();
-  const { setSessionId, setPhase, mergeFields } = useApplication();
+  const { setSessionId, setPhase, mergeFields, setPendingSync } = useApplication();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -82,6 +82,7 @@ export default function PrefillPage() {
       setSessionId(session.session_id);
       setPhase(session.phase);
       mergeFields(result.known_data);
+      setPendingSync(true);
       navigate('/');
       // Open widget after navigation so user sees the AI chat with pre-filled data
       setTimeout(() => openWidget(), 300);
@@ -89,7 +90,7 @@ export default function PrefillPage() {
       setError(err instanceof Error ? err.message : 'Failed to start session');
       setStartingSession(false);
     }
-  }, [result, navigate, setSessionId, setPhase, mergeFields]);
+  }, [result, navigate, setSessionId, setPhase, mergeFields, setPendingSync]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;

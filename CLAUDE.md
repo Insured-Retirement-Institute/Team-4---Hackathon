@@ -9,7 +9,7 @@ AI-powered annuity e-application system. Four services in a monorepo: users fill
 | Service | Framework | Local Port | Deploy Target |
 |---------|-----------|-----------|---------------|
 | `frontend/` | React 19, TypeScript, Vite, MUI v7 | 5173 | AWS Amplify (auto-deploy from main) |
-| `ai-service/` | FastAPI, Uvicorn, Claude Haiku 4.5 | 8001 | AWS App Runner |
+| `ai-service/` | FastAPI, Uvicorn, Claude Haiku 4.5 | 8001 | AWS App Runner (REST only); EC2/ECS+ALB for voice WebSocket |
 | `backend/` | Express.js, Node 20 | 3001 | AWS App Runner |
 | `backend_carrier/` | Express.js, pdf-lib | 8080 | AWS App Runner |
 
@@ -94,20 +94,20 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 
 **AI Chat flow (voice):** Same session creation as text. Frontend opens WebSocket to `WS /api/v1/sessions/{id}/voice` → sends `{"type":"audio","data":"<base64 PCM 16kHz>"}` → receives `{"type":"audio","data":"<base64 PCM 24kHz>"}` + `{"type":"transcript"}` + `{"type":"field_update"}`. Uses AWS Nova Sonic (speech-to-speech) via `aws_sdk_bedrock_runtime` bidirectional stream. Voice and text share the same `ConversationState` (fields, phase) so users can switch modes mid-session. Tool calls (field extraction, confirmation) are handled identically via shared `process_tool_calls()`/`maybe_advance_phase()`.
 
-**Widget ↔ Wizard sync (bidirectional):**
-- Widget → Wizard: `iri:field_updated` CustomEvents → `useWidgetSync` hook → `mergeFields()` → `collectedFields` in `ApplicationContext` → `bulkSetValues()` in form controller
+**Widget ↔ Wizard sync (gated):**
+- AI Experience / Prefill → Wizard: `mergeFields()` populates `collectedFields` + sets `pendingSync=true` → on wizard mount, `useEffect` consumes fields via `bulkSetValues()` only when `pendingSync` is true, then clears the flag. Fields do NOT auto-populate the wizard from stale context or unrelated sessions.
 - Wizard → Widget: Form `values` change → `mergeFields()` → on widget reopen, new fields sent as message to existing session
-- `lastAppliedRef` prevents infinite sync loops
+- `lastAppliedRef` prevents infinite sync loops, `pendingSync` prevents stale field leakage
 
 **Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client` (live Redtail API), `lookup_crm_notes` (meeting transcripts — LLM extracts financial data), `lookup_prior_policies` (fallback), `lookup_annual_statements`, `extract_document_fields`, `get_advisor_preferences`, `get_carrier_suitability` tools → returns `known_data` (including suitability score/rating and advisor recommendations) → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
 
-**AI Experience flow (chat-driven):** Frontend `/ai-experience` page → auto-creates advisor session (no product required, `questions: []`) with `advisor_name: "Andrew Barnett"` → two-panel layout: ChatPanel (left) + FieldMappingPanel (right). Chat greets advisor and asks about client → advisor types client name → LLM calls `lookup_crm_client` → tool response includes `result_data` + `source_label` → frontend extracts fields into `gatheredFields` Map with source attribution → FieldMappingPanel shows raw fields with source chips. Advisor selects product from dropdown in side panel → product definition loaded → field matching table appears (grouped by page, with fill percentage). LLM suggests family lookup → `lookup_family_members` → beneficiary fields added. "Call Client" button in side panel triggers RetellCallPanel (appears above chat) → extracted fields merge with "Client Call" source. "Open in Wizard" navigates to `/wizard-v2/:productId` with all collected data pre-filled via `mergeFields()`.
+**AI Experience flow (chat-driven):** Frontend `/ai-experience` page → auto-creates advisor session (no product required, `questions: []`) with `advisor_name: "Andrew Barnett"` → two-panel layout: ChatPanel (left) + FieldMappingPanel (right). Chat greets advisor and asks about client → advisor types client name → LLM calls `lookup_crm_client` → tool response includes `result_data` + `source_label` → frontend extracts fields into `gatheredFields` Map with source attribution → FieldMappingPanel shows raw fields with source chips. Advisor selects product from dropdown in side panel → product definition loaded → field matching table appears (grouped by page, with fill percentage). LLM suggests family lookup → `lookup_family_members` → beneficiary fields added. "Call Client" button in side panel triggers RetellCallPanel (appears above chat) → extracted fields merge with "Client Call" source. "Open in Wizard" navigates to `/wizard-v2/:productId` with all collected data pre-filled via `mergeFields()`. **Voice mode:** Mic toggle button in chat header activates voice via `useVoiceConnection` hook (Nova Sonic WebSocket). Voice transcript area appears above ChatPanel when active. Voice tool results (`tool_call_info` WS messages) flow through the same `handleToolCalls` callback as text, so gathered fields and source attribution work identically in both modes.
 
 **Retell AI outbound call flow:** Frontend `POST /api/v1/retell/calls` with `{to_number, missing_fields, client_name, advisor_name}` → AI service calls Retell API to initiate outbound call with dynamic variables (missing fields prompt, names) → Retell agent (voice: 11labs-Adrian) calls client, collects missing field values conversationally → frontend polls `GET /api/v1/retell/calls/{id}` every 3s for status + live transcript → on call completion, Retell post-call analysis extracts `collected_fields` as JSON → webhook `POST /api/v1/retell/webhook` caches results → frontend merges extracted fields into gathered data.
 
 **Application persistence flow:** Frontend `ProductSelectionPage` fetches `GET /products` → user picks product → `POST /applications` creates DynamoDB record → wizard saves progress to localStorage via `applicationStorageService` → on submit, `POST /applications/:applicationId/submit` runs 5-step pipeline (validate → transform → business rules → persist to Submissions table → mark submitted). Resume via `/wizard-v2/:productId?resume=<id>`.
 
-**State hub:** `ApplicationContext.tsx` holds `collectedFields`, `sessionId`, `phase`, and step progress shared across wizard and chat.
+**State hub:** `ApplicationContext.tsx` holds `collectedFields`, `pendingSync`, `sessionId`, `phase`, and step progress shared across wizard and chat.
 
 ## Shared Conventions
 
@@ -144,3 +144,4 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 - **Amplify build fails on missing dep** — Add to `frontend/package.json` (e.g., `lottie-web`, `@lottiefiles/dotlottie-react`).
 - **Widget 404** — Restart server after adding new routes.
 - **Git push rejected** — Remote has new commits. `git stash && git pull --rebase origin main && git stash pop && git push`.
+- **Voice WebSocket fails on App Runner** — App Runner doesn't support WebSockets. Use EC2 with Docker for voice testing.

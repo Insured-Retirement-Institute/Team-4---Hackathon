@@ -28,20 +28,28 @@ async def voice_websocket(websocket: WebSocket, session_id: str):
         {"type": "transcript", "role": "assistant"|"user", "text": "..."}
         {"type": "field_update", "fields": [...]}
         {"type": "phase_change", "phase": "collecting"}
+        {"type": "tool_call_info", "name": "lookup_crm_client", "result_data": {...}, "source_label": "Redtail CRM"}
         {"type": "error", "message": "..."}
         {"type": "session_ended"}
     """
+    logger.info("[VoiceWS] Connection request for session %s", session_id)
     state = get_session(session_id)
     if not state:
+        logger.warning("[VoiceWS] Session %s not found, closing", session_id)
         await websocket.close(code=4004, reason="Session not found")
         return
 
+    logger.info("[VoiceWS] Session found: phase=%s, advisor=%s, fields=%d",
+                 state.phase.value, state.advisor_name, len(state.fields))
     await websocket.accept()
 
     manager = NovaSonicStreamManager(state)
 
     try:
         await manager.start_session()
+        logger.info("[VoiceWS] Nova Sonic session started, sending greeting...")
+        await manager.send_initial_greeting()
+        logger.info("[VoiceWS] Greeting sent, starting bidirectional relay")
     except Exception as e:
         logger.exception("Failed to start Nova Sonic session")
         await _send_json(websocket, {"type": "error", "message": f"Failed to start voice session: {e}"})
@@ -103,12 +111,32 @@ async def _ws_to_nova(websocket: WebSocket, manager: NovaSonicStreamManager) -> 
 
 async def _nova_to_ws(websocket: WebSocket, manager: NovaSonicStreamManager) -> None:
     """Read from Nova Sonic, forward audio/transcript/field_updates to WebSocket."""
+    msg_count = 0
     try:
         async for msg in manager.process_responses():
+            msg_count += 1
+            msg_type = msg.get("type", "?")
+            # Log non-audio messages in detail, audio just as count
+            if msg_type == "audio":
+                if msg_count % 50 == 1:
+                    logger.debug("[VoiceWS] Audio chunks sent so far: %d", msg_count)
+            elif msg_type == "transcript":
+                logger.info("[VoiceWS] >>> Transcript (%s): %s", msg.get("role"), msg.get("text", "")[:200])
+            elif msg_type == "tool_call_info":
+                logger.info("[VoiceWS] >>> tool_call_info: name=%s, source=%s, fields=%d",
+                             msg.get("name"), msg.get("source_label"),
+                             len(msg.get("result_data", {})))
+            elif msg_type == "field_update":
+                logger.info("[VoiceWS] >>> field_update: %d fields", len(msg.get("fields", [])))
+            elif msg_type == "phase_change":
+                logger.info("[VoiceWS] >>> phase_change: %s", msg.get("phase"))
+            else:
+                logger.info("[VoiceWS] >>> %s: %s", msg_type, json.dumps(msg, default=str)[:200])
             await _send_json(websocket, msg)
     except Exception as e:
         logger.exception("Error in nova_to_ws")
         await _send_json(websocket, {"type": "error", "message": str(e)})
+    logger.info("[VoiceWS] nova_to_ws ended, total messages forwarded: %d", msg_count)
 
 
 async def _send_json(websocket: WebSocket, data: dict) -> None:
