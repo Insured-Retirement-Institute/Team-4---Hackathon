@@ -160,7 +160,11 @@ def _tool_instructions(state: ConversationState) -> str:
             "lookup_prior_policies, and lookup_annual_statements to gather complete data."
         )
         lines.append(
-            "- Use get_carrier_suitability to check if the client qualifies for the product."
+            "- Use get_carrier_suitability to check if the client qualifies for the product. "
+            "When calling this tool, you MUST include the client's financial data in the client_data object. "
+            "Use carrier_id 'aspida' for Aspida MYGA, 'midland-national' for Midland, 'equitrust' for EquiTrust. "
+            "Include these fields from prior tool results: annual_income, net_worth, age, risk_tolerance, "
+            "investment_experience, investment_objective, time_horizon, source_of_funds, existing_annuity_count."
         )
         lines.append(
             "- Use call_client to initiate an outbound phone call to collect missing fields."
