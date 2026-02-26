@@ -61,17 +61,22 @@ export default function AIExperiencePage() {
       console.log('[AIExperience] computeMatchedFields called with', fields.size, 'gathered fields');
 
       // Build lookup with camelCase, snake_case, AND explicit aliases
+      // All keys are lowercased for case-insensitive matching since DynamoDB
+      // may store question IDs in lowercase while CRM uses snake_case/camelCase.
       const lookup: Record<string, { value: string; source: string }> = {};
+      const addKey = (key: string, v: { value: string; source: string }) => {
+        lookup[key.toLowerCase()] = v;
+      };
       for (const [k, v] of fields) {
-        lookup[k] = v;
-        lookup[snakeToCamel(k)] = v;
-        lookup[camelToSnake(k)] = v;
+        addKey(k, v);
+        addKey(snakeToCamel(k), v);
+        addKey(camelToSnake(k), v);
         // Apply field name aliases
         const aliases = FIELD_ALIASES[k] ?? FIELD_ALIASES[camelToSnake(k)];
         if (aliases) {
           for (const alias of aliases) {
-            lookup[alias] = v;
-            lookup[camelToSnake(alias)] = v;
+            addKey(alias, v);
+            addKey(camelToSnake(alias), v);
           }
         }
       }
@@ -80,13 +85,14 @@ export default function AIExperiencePage() {
         p.questions.map((q) => ({ ...q, pageTitle: p.title })),
       );
       const matched: MatchedField[] = allQuestions.map((q) => {
-        const entry = lookup[q.id];
+        const qid = q.id.toLowerCase();
+        const entry = lookup[qid];
         return {
           id: q.id,
           label: q.label,
           pageTitle: q.pageTitle,
           value: entry?.value ?? null,
-          filled: q.id in lookup,
+          filled: qid in lookup,
           source: entry?.source,
         };
       });
@@ -228,15 +234,20 @@ export default function AIExperiencePage() {
   // Launch wizard
   const handleLaunchWizard = useCallback(() => {
     if (!selectedProductId) return;
-    // Normalize fields to camelCase for wizard, including aliases
+    // Normalize fields for wizard — include camelCase, aliases, AND lowercase
+    // since DynamoDB may store question IDs in lowercase
     const normalized: Record<string, string> = {};
     for (const [k, entry] of gatheredFields) {
-      normalized[snakeToCamel(k)] = entry.value;
+      const camel = snakeToCamel(k);
+      normalized[camel] = entry.value;
+      normalized[camel.toLowerCase()] = entry.value;
+      normalized[k] = entry.value;
       // Also set aliased names so wizard fields get populated
       const aliases = FIELD_ALIASES[k] ?? FIELD_ALIASES[camelToSnake(k)];
       if (aliases) {
         for (const alias of aliases) {
           normalized[alias] = entry.value;
+          normalized[alias.toLowerCase()] = entry.value;
         }
       }
     }
