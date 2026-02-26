@@ -238,6 +238,26 @@ export default function AIExperiencePage() {
     setCallActive(true);
   }, []);
 
+  // Map common Retell response keys → exact product question IDs
+  const CALL_FIELD_ALIASES: Record<string, string[]> = {
+    annual_income: ['suitAnnualIncome'],
+    income: ['suitAnnualIncome'],
+    net_worth: ['suitNetWorth'],
+    networth: ['suitNetWorth'],
+    liquid_assets: ['suitLiquidAssets'],
+    liquidassets: ['suitLiquidAssets'],
+    liquid: ['suitLiquidAssets'],
+    source_of_funds: ['suitSourceOfFunds'],
+    sourceoffunds: ['suitSourceOfFunds'],
+    emergency_funds: ['suitHasEmergencyFunds'],
+    emergencyfunds: ['suitHasEmergencyFunds'],
+    has_emergency_funds: ['suitHasEmergencyFunds'],
+    emergency_fund: ['suitHasEmergencyFunds'],
+    address: ['ownerResidentialAddress'],
+    current_address: ['ownerResidentialAddress'],
+    verify_address: ['ownerResidentialAddress'],
+  };
+
   const handleCallFieldsExtracted = useCallback(
     (fields: Record<string, string>) => {
       setGatheredFields((prev) => {
@@ -245,10 +265,20 @@ export default function AIExperiencePage() {
         for (const [k, v] of Object.entries(fields)) {
           if (v != null && String(v).trim()) {
             const entry = { value: String(v), source: 'Client Call' };
+            // Store under original key + case variants
             next.set(k, entry);
-            // Store case variants for resilient field matching
             next.set(camelToSnake(k), entry);
             next.set(snakeToCamel(k), entry);
+            // Map to exact product question IDs
+            const keyLower = k.toLowerCase().replace(/[\s-]/g, '_');
+            const aliases = CALL_FIELD_ALIASES[keyLower]
+              ?? CALL_FIELD_ALIASES[camelToSnake(k)]
+              ?? CALL_FIELD_ALIASES[k.toLowerCase()];
+            if (aliases) {
+              for (const alias of aliases) {
+                next.set(alias, entry);
+              }
+            }
           }
         }
         return next;
