@@ -35,6 +35,7 @@ const TOOL_LABELS: Record<string, string> = {
   get_advisor_preferences: 'Advisor Preferences',
   get_carrier_suitability: 'Carrier Suitability Check',
   call_client: 'Client Phone Call',
+  select_product: 'Product Selected',
   extract_application_fields: 'Field Extraction',
   confirm_known_fields: 'Field Confirmation',
 };

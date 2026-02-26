@@ -35,12 +35,14 @@ TOOL_SOURCE_LABELS = {
     "get_advisor_preferences": "Advisor Preferences",
     "get_carrier_suitability": "Suitability Check",
     "call_client": "Client Call",
+    "select_product": "Product Selection",
 }
 
 ADVISOR_TOOL_NAMES = {
     "lookup_crm_client", "lookup_family_members", "lookup_crm_notes",
     "lookup_prior_policies", "lookup_annual_statements", "extract_document_fields",
     "get_advisor_preferences", "get_carrier_suitability", "call_client",
+    "select_product",
 }
 
 # In-memory session store
@@ -188,6 +190,13 @@ async def handle_message(
                         "call_id": call_result.get("call_id", ""),
                         "message": f"Call initiated to {call_input.get('client_name', 'client')}. "
                                    "The AI agent will collect the missing information.",
+                    })
+                elif tc["name"] == "select_product":
+                    select_input = tc.get("input", {})
+                    tool_results[tc["id"]] = json.dumps({
+                        "status": "product_selected",
+                        "product_id": select_input.get("product_id", ""),
+                        "product_name": select_input.get("product_name", ""),
                     })
                 else:
                     result = await execute_prefill_tool(tc["name"], tc.get("input", {}))

@@ -247,6 +247,33 @@ ADVISOR_TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "select_product",
+        "description": (
+            "Select the annuity product for this application. Call this tool "
+            "immediately when the advisor indicates which product to use."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "enum": [
+                        "midland-fixed-annuity-001",
+                        "aspida-myga-001",
+                        "certainty-select",
+                    ],
+                    "description": "The product identifier.",
+                },
+                "product_name": {
+                    "type": "string",
+                    "description": "Human-readable product name.",
+                },
+            },
+            "required": ["product_id", "product_name"],
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "call_client",
         "description": (
             "Initiate an outbound phone call to the client via Retell AI to collect "

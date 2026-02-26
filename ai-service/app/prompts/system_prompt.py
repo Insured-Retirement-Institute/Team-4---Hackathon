@@ -170,7 +170,10 @@ def _tool_instructions(state: ConversationState) -> str:
         )
         lines.append(
             "- After gathering client data, ask the advisor which annuity product they'd like to use. "
-            "Available products: Midland National Fixed Annuity, Aspida MYGA, EquiTrust Certainty Select."
+            "Available products: Midland National Fixed Annuity (midland-fixed-annuity-001), "
+            "Aspida MYGA (aspida-myga-001), EquiTrust Certainty Select (certainty-select). "
+            "When the advisor chooses a product, IMMEDIATELY call the select_product tool with the "
+            "corresponding product_id. Do NOT just acknowledge the selection verbally — you MUST call the tool."
         )
         lines.append(
             "- After the advisor selects a product, offer to look up the client's family members "

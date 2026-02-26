@@ -114,7 +114,7 @@ export default function RetellCallPanel({
               // First time seeing "ended" — keep polling for analysis (up to 20s)
               endedAtRef.current = Date.now();
               console.log('[RetellCall] Call ended, waiting for analysis...');
-            } else if (Date.now() - endedAtRef.current > 20000) {
+            } else if (Date.now() - endedAtRef.current > 30000) {
               // Timed out waiting for analysis
               console.log('[RetellCall] Analysis timeout — completing without fields');
               stopPolling();
