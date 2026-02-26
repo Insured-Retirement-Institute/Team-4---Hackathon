@@ -1123,17 +1123,15 @@ const [subDialog, setSubDialog] = useState<{
                 </Button>
               ) : (
                 <>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Button
-                      startIcon={<ExitToAppIcon />}
-                      onClick={() => setExitDialogOpen(true)}
-                      color="warning"
-                      variant="outlined"
-                      size="small"
-                    >
-                      Exit
-                    </Button>
-                  </Stack>
+                  <Button
+                    startIcon={<ExitToAppIcon />}
+                    onClick={() => setExitDialogOpen(true)}
+                    color="warning"
+                    variant="outlined"
+                    size="small"
+                  >
+                    Exit
+                  </Button>
 
                   <Stack direction="row" spacing={1.5}>
                     <Button
