@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
+import Collapse from '@mui/material/Collapse';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SendIcon from '@mui/icons-material/Send';
 import { sendMessage, type MessageResponse, type ToolCallInfo } from '../services/aiService';
 
@@ -13,6 +15,7 @@ interface ChatMessage {
   role: 'user' | 'assistant' | 'tool';
   text: string;
   toolNames?: string[];
+  toolDetails?: ToolCallInfo[];
 }
 
 interface ChatPanelProps {
@@ -39,6 +42,84 @@ const TOOL_LABELS: Record<string, string> = {
   extract_application_fields: 'Field Extraction',
   confirm_known_fields: 'Field Confirmation',
 };
+
+const TOOL_DESCRIPTIONS: Record<string, string> = {
+  lookup_crm_client: 'Redtail CRM API  /contacts/{id}',
+  lookup_family_members: 'Redtail CRM API  /contacts/{id}/family',
+  lookup_crm_notes: 'Redtail CRM API  /contacts/{id}/notes',
+  lookup_prior_policies: 'Policy System  /suitability/{id}',
+  lookup_annual_statements: 'S3  iri-hackathon-statements/statements/{id}/',
+  extract_document_fields: 'Claude Vision  document analysis',
+  get_advisor_preferences: 'S3  iri-hackathon-statements/advisors/{id}/',
+  get_carrier_suitability: 'Suitability Engine  weighted scoring',
+  call_client: 'Retell AI  outbound call',
+  select_product: 'Internal  product selection',
+};
+
+function ToolCallRow({ tool }: { tool: ToolCallInfo }) {
+  const [open, setOpen] = useState(false);
+  const data = tool.result_data;
+  const fieldCount = data ? Object.keys(data).length : 0;
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      <Chip
+        label={
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <span>{TOOL_LABELS[tool.name] || tool.name}</span>
+            {fieldCount > 0 && (
+              <Box component="span" sx={{ opacity: 0.7, fontSize: 10 }}>
+                ({fieldCount} fields)
+              </Box>
+            )}
+            <ExpandMoreIcon sx={{
+              fontSize: 14,
+              transition: 'transform 0.2s',
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            }} />
+          </Stack>
+        }
+        size="small"
+        color="secondary"
+        variant={open ? 'filled' : 'outlined'}
+        onClick={() => setOpen((v) => !v)}
+        sx={{ fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+      />
+      <Collapse in={open}>
+        <Box sx={{
+          mt: 0.5,
+          p: 1.5,
+          bgcolor: 'grey.900',
+          color: 'grey.100',
+          borderRadius: 1,
+          fontFamily: 'monospace',
+          fontSize: 11,
+          lineHeight: 1.6,
+          maxHeight: 200,
+          overflowY: 'auto',
+        }}>
+          <Typography sx={{ color: 'grey.500', fontSize: 10, mb: 0.5, fontFamily: 'monospace' }}>
+            {TOOL_DESCRIPTIONS[tool.name] || tool.name}
+          </Typography>
+          {tool.source_label && (
+            <Typography sx={{ color: 'info.light', fontSize: 10, mb: 0.5, fontFamily: 'monospace' }}>
+              Source: {tool.source_label}
+            </Typography>
+          )}
+          {data ? (
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          ) : (
+            <Typography sx={{ color: 'grey.500', fontSize: 11, fontStyle: 'italic', fontFamily: 'monospace' }}>
+              No response data
+            </Typography>
+          )}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
 
 export default function ChatPanel({ sessionId, onFieldUpdate, onToolCalls, greeting }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -74,7 +155,7 @@ export default function ChatPanel({ sessionId, onFieldUpdate, onToolCalls, greet
         const toolNames = response.tool_calls.map((tc) => tc.name);
         setMessages((prev) => [
           ...prev,
-          { role: 'tool', text: '', toolNames },
+          { role: 'tool', text: '', toolNames, toolDetails: response.tool_calls },
           { role: 'assistant', text: response.reply },
         ]);
         onToolCalls?.(response.tool_calls);
@@ -114,6 +195,15 @@ export default function ChatPanel({ sessionId, onFieldUpdate, onToolCalls, greet
         )}
         <Stack spacing={1.5}>
           {messages.map((msg, i) => {
+            if (msg.role === 'tool' && msg.toolDetails) {
+              return (
+                <Box key={i} sx={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                  {msg.toolDetails.map((tool) => (
+                    <ToolCallRow key={tool.name} tool={tool} />
+                  ))}
+                </Box>
+              );
+            }
             if (msg.role === 'tool' && msg.toolNames) {
               return (
                 <Box key={i} sx={{ display: 'flex', justifyContent: 'center', gap: 0.5, flexWrap: 'wrap' }}>
