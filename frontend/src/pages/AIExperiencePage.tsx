@@ -3,13 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
+import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import MicIcon from '@mui/icons-material/Mic';
+import MicOffIcon from '@mui/icons-material/MicOff';
+import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import { useApplication } from '../context/ApplicationContext';
 import { createSession, type ToolCallInfo } from '../services/aiService';
 import { getProducts, getApplication, type Product } from '../services/apiService';
+import { useVoiceConnection } from '../hooks/useVoiceConnection';
 import ChatPanel from '../components/ChatPanel';
 import FieldMappingPanel, { type MatchedField } from '../components/FieldMappingPanel';
 import RetellCallPanel from '../components/RetellCallPanel';
@@ -43,7 +48,7 @@ const FIELD_ALIASES: Record<string, string[]> = {
 
 export default function AIExperiencePage() {
   const navigate = useNavigate();
-  const { mergeFields } = useApplication();
+  const { mergeFields, setPendingSync } = useApplication();
 
   // Core state
   const [sessionId, setLocalSessionId] = useState<string | null>(null);
@@ -54,6 +59,7 @@ export default function AIExperiencePage() {
   const [gatheredFields, setGatheredFields] = useState<Map<string, { value: string; source: string }>>(new Map());
   const [matchedFields, setMatchedFields] = useState<MatchedField[]>([]);
   const [callActive, setCallActive] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
 
   // Compute matched fields when gathered data or definition changes
   const computeMatchedFields = useCallback(
@@ -193,6 +199,17 @@ export default function AIExperiencePage() {
     [mergeFieldsFromToolData],
   );
 
+  // Voice connection — reuses handleToolCalls for field mapping
+  const { status: voiceStatus, transcripts, connect: voiceConnect, disconnect: voiceDisconnect } =
+    useVoiceConnection({
+      onToolCallInfo: (info) => {
+        console.log('[AIExperience] Voice tool_call_info received:', info.name, info.source_label,
+                     'fields:', info.result_data ? Object.keys(info.result_data).length : 0);
+        handleToolCalls([info]);
+      },
+    });
+  const isVoiceConnected = voiceStatus === 'connected' || voiceStatus === 'speaking';
+
   // Product selection — just set definition, let useEffect handle matching
   const handleProductSelect = useCallback(
     (productId: string) => {
@@ -252,8 +269,9 @@ export default function AIExperiencePage() {
       }
     }
     mergeFields(normalized);
+    setPendingSync(true);
     navigate(`/wizard-v2/${encodeURIComponent(selectedProductId)}`);
-  }, [selectedProductId, gatheredFields, navigate, mergeFields]);
+  }, [selectedProductId, gatheredFields, navigate, mergeFields, setPendingSync]);
 
   const missingFields = matchedFields
     .filter((f) => !f.filled)
@@ -307,11 +325,53 @@ export default function AIExperiencePage() {
 
               {/* Chat */}
               <Paper sx={{ flex: 1, borderRadius: 2, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Typography variant="subtitle2" fontWeight={700}>
                     Advisor Chat -- {ADVISOR_NAME}
                   </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      if (isVoiceConnected) {
+                        console.log('[AIExperience] Disconnecting voice');
+                        voiceDisconnect();
+                        setVoiceMode(false);
+                      } else if (sessionId) {
+                        console.log('[AIExperience] Connecting voice, sessionId:', sessionId);
+                        voiceConnect(sessionId);
+                        setVoiceMode(true);
+                      }
+                    }}
+                    color={isVoiceConnected ? 'error' : 'primary'}
+                    disabled={!sessionId}
+                    title={isVoiceConnected ? 'Stop voice mode' : 'Start voice mode'}
+                  >
+                    {isVoiceConnected ? <MicOffIcon /> : <MicIcon />}
+                  </IconButton>
                 </Box>
+
+                {/* Voice transcript area */}
+                {voiceMode && (
+                  <Box sx={{ maxHeight: 300, overflowY: 'auto', p: 2, bgcolor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
+                    <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                      <PhoneInTalkIcon color="success" sx={{ animation: isVoiceConnected ? 'pulse 1.5s infinite' : 'none' }} />
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        Voice Mode {voiceStatus === 'connecting' ? '(Connecting...)' : voiceStatus === 'speaking' ? '(AI Speaking)' : ''}
+                      </Typography>
+                    </Stack>
+                    {transcripts.length === 0 && (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>
+                        Waiting for voice connection...
+                      </Typography>
+                    )}
+                    {transcripts.map((t, i) => (
+                      <Typography key={i} variant="body2" sx={{ fontSize: 12, mb: 0.5 }}>
+                        <strong>{t.role === 'user' ? 'You' : 'AI'}:</strong> {t.text}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+
                 <Box sx={{ flex: 1, overflow: 'hidden' }}>
                   <ChatPanel
                     sessionId={sessionId}

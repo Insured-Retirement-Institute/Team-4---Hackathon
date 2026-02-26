@@ -39,7 +39,7 @@ npm run lint     # ESLint
 
 | File | Purpose |
 |------|---------|
-| `src/context/ApplicationContext.tsx` | Shared state: `collectedFields`, `sessionId`, `phase`, step progress |
+| `src/context/ApplicationContext.tsx` | Shared state: `collectedFields`, `pendingSync`, `sessionId`, `phase`, step progress |
 | `src/services/aiService.ts` | AI service client: `fetchSchema()`, `createSession(productId?, knownData?, advisorName?, clientContext?)`, `sendMessage()`. `ToolCallInfo` includes `result_data` and `source_label` for source-attributed field mapping. `productId` is optional — when omitted, skips schema fetch and sends empty `questions` |
 | `src/services/prefillService.ts` | Pre-fill API client: `fetchClients()`, `runPrefill()`, `runPrefillWithDocument()`, `runPrefillStream()` (SSE) |
 | `src/services/apiService.ts` | Backend API client: `getProducts()`, `getApplication()`, `validateApplication()`, `submitApplication()` (hardcoded base URL) |
@@ -49,7 +49,7 @@ npm run lint     # ESLint
 | `src/pages/PrefillPage.tsx` | CRM client selector + doc upload → agent results → session start |
 | `src/pages/AIExperiencePage.tsx` | Chat-driven advisor experience: two-panel layout (ChatPanel left, FieldMappingPanel right) with auto-created advisor session, source-attributed field accumulation, product selection, Retell calls, and wizard launch |
 | `src/components/FieldMappingPanel.tsx` | Right-side panel for AI Experience: product dropdown, source summary chips, field matching table (grouped by page with source attribution), raw field list, Call Client and Open in Wizard buttons |
-| `src/hooks/useVoiceConnection.ts` | Nova Sonic voice WebSocket hook: getUserMedia, AudioContext, PCM encode/decode, transcript/field events |
+| `src/hooks/useVoiceConnection.ts` | Nova Sonic voice WebSocket hook: getUserMedia, AudioContext, PCM encode/decode, transcript/field events. `VoiceConnectionOptions` interface supports `onToolCallInfo` callback for handling `tool_call_info` WS messages (advisor tool results with `result_data` + `source_label`) |
 | `src/components/VoicePanel.tsx` | Mic button with pulse animation, status label, scrolling role-colored transcript |
 | `src/components/ChatPanel.tsx` | Inline text chat panel using `sendMessage()` API, shares session with voice. Displays tool call chips (TOOL_LABELS) between messages and passes `onToolCalls` to parent for agent log integration |
 | `src/components/RetellCallPanel.tsx` | Retell outbound call UI: initiate, poll status, live transcript, extracted field display |
@@ -62,20 +62,21 @@ npm run lint     # ESLint
 | `src/features/wizard-v2/applicationDefinition.ts` | Static bundled product definition normalizer (fallback when API unavailable) |
 | `public/widget.js` | Embeddable chat widget (self-contained IIFE) |
 
-## Bidirectional Sync
+## Field Sync (Gated)
 
-Widget and wizard share field data through `ApplicationContext.collectedFields`:
+AI-gathered fields only flow into the wizard when explicitly launched from AI Experience ("Open in Wizard") or Prefill ("Start Application"). The wizard does NOT auto-populate from stale `collectedFields`.
 
-**Widget → Wizard:**
-1. Widget dispatches `iri:field_updated` CustomEvents with field data
-2. `useWidgetSync` hook listens and calls `mergeFields()` on context
-3. `collectedFields` updates trigger `bulkSetValues()` in wizard form controller
+**AI Experience / Prefill → Wizard:**
+1. Source page calls `mergeFields()` to populate `ApplicationContext.collectedFields`
+2. Source page sets `setPendingSync(true)` before navigating to wizard
+3. Wizard `useEffect` checks `pendingSync` — if true, applies fields via `bulkSetValues()` and clears the flag
+4. If `pendingSync` is false (e.g. navigating to wizard directly), `collectedFields` are ignored
 
 **Wizard → Widget:**
 1. Form `values` change triggers `mergeFields()` on context
 2. When widget reopens, accumulated new fields are sent as a message to existing AI session
 
-**Loop prevention:** `lastAppliedRef` tracks which fields were already synced, preventing infinite update cycles.
+**Loop prevention:** `lastAppliedRef` tracks which fields were already synced, `pendingSync` prevents stale field leakage across sessions.
 
 ## Widget Integration
 
@@ -114,7 +115,7 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 
 ## AI Experience Page
 
-`src/pages/AIExperiencePage.tsx` — chat-driven advisor workflow with two-panel layout. No stages, no voice, no SSE.
+`src/pages/AIExperiencePage.tsx` — chat-driven advisor workflow with two-panel layout. No stages, no SSE.
 
 **Layout:** ChatPanel (left, `md=7`) + FieldMappingPanel (right, `md=5`), full viewport height. RetellCallPanel appears above the chat when a call is active.
 
@@ -125,6 +126,8 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 **Product selection:** Advisor selects product from dropdown in FieldMappingPanel → `getApplication(productId)` fetches `ApplicationDefinition` → `computeMatchedFields()` maps gathered data to product questions (handles camelCase/snake_case normalization) → field matching table appears grouped by page with fill percentage.
 
 **Retell call integration:** "Call Client" button in FieldMappingPanel → `callActive=true` → RetellCallPanel appears above chat. Missing fields computed from matched fields. On call completion, extracted fields merge into `gatheredFields` with source "Client Call".
+
+**Voice mode:** Mic toggle button in chat header activates Nova Sonic voice via `useVoiceConnection` hook. A voice transcript area appears above ChatPanel when active. The hook is configured with `onToolCallInfo` callback (via `VoiceConnectionOptions`) that receives `tool_call_info` WS messages and routes them through the same `handleToolCalls` callback as text mode, so gathered fields and source attribution work identically in both modes.
 
 **Launch wizard:** "Open in Wizard" button → normalizes fields to camelCase → `mergeFields()` into ApplicationContext → navigates to `/wizard-v2/:productId`.
 

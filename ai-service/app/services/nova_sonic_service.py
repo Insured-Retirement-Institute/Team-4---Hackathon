@@ -12,8 +12,15 @@ from typing import Any, AsyncGenerator
 from app.config import settings
 from app.models.conversation import ConversationState
 from app.prompts.system_prompt import build_voice_system_prompt
-from app.services.conversation_service import maybe_advance_phase, process_tool_calls
+from app.services.conversation_service import (
+    ADVISOR_TOOL_NAMES,
+    TOOL_SOURCE_LABELS,
+    maybe_advance_phase,
+    process_tool_calls,
+)
 from app.services.extraction_service import build_tools_for_phase
+from app.services.prefill_agent import _execute_tool as execute_prefill_tool
+from app.services.retell_service import retell_service
 from app.services.tool_adapter import anthropic_to_nova_sonic
 
 logger = logging.getLogger(__name__)
@@ -34,6 +41,8 @@ class NovaSonicStreamManager:
 
     async def start_session(self) -> None:
         """Initialize the Bedrock client and open the bidirectional stream."""
+        logger.info("[Voice] Starting Nova Sonic session for %s (model=%s, voice=%s, advisor=%s)",
+                     self.state.session_id, self.model_id, self.voice_id, self.state.advisor_name)
         # Set AWS env vars for the SDK's EnvironmentCredentialsResolver.
         # Only set if non-empty — in App Runner the instance role provides creds,
         # and setting empty values would override role-based resolution.
@@ -54,9 +63,11 @@ class NovaSonicStreamManager:
         )
 
         # Send session setup sequence
+        logger.info("[Voice] Bedrock stream opened, sending setup sequence...")
         await self._send_session_start()
         await self._send_prompt_start()
         await self._send_system_prompt()
+        logger.info("[Voice] Session setup complete (sessionStart + promptStart + systemPrompt sent)")
 
     async def _send_session_start(self) -> None:
         """Send sessionStart event with inference config."""
@@ -77,6 +88,8 @@ class NovaSonicStreamManager:
         """Send promptStart event with audio/text output config and tool config."""
         # Build tools from current phase
         anthropic_tools = build_tools_for_phase(self.state)
+        tool_names = [t.get("name", "?") for t in anthropic_tools] if anthropic_tools else []
+        logger.info("[Voice] Tools available (%d): %s", len(tool_names), tool_names)
         nova_tools = anthropic_to_nova_sonic(anthropic_tools)
 
         tool_config = {}
@@ -146,6 +159,25 @@ class NovaSonicStreamManager:
             }
         })
 
+    async def send_initial_greeting(self) -> None:
+        """Send an initial text prompt to trigger Nova Sonic to speak a greeting."""
+        logger.info("[Voice] Sending initial greeting prompt to trigger Nova Sonic speech")
+        content_name = f"greeting-{uuid.uuid4().hex[:8]}"
+        await self._send_event({"event": {"contentStart": {
+            "promptName": self.prompt_name,
+            "contentName": content_name,
+            "type": "TEXT", "role": "USER",
+            "textInputConfiguration": {"mediaType": "text/plain"},
+        }}})
+        await self._send_event({"event": {"textInput": {
+            "promptName": self.prompt_name,
+            "contentName": content_name,
+            "content": "Hello, I just connected. Please greet me and ask what I'd like to work on.",
+        }}})
+        await self._send_event({"event": {"contentEnd": {
+            "promptName": self.prompt_name, "contentName": content_name,
+        }}})
+
     async def send_audio(self, base64_chunk: str) -> None:
         """Forward a base64-encoded audio chunk to Nova Sonic."""
         if self._closed:
@@ -207,6 +239,8 @@ class NovaSonicStreamManager:
                     continue
 
                 event_type = parsed.get("type")
+                if event_type not in ("audioOutput",):  # Don't log every audio chunk
+                    logger.info("[Voice] Nova Sonic event: %s", event_type)
 
                 if event_type == "audioOutput":
                     yield {
@@ -256,28 +290,88 @@ class NovaSonicStreamManager:
         tool_use_id = parsed.get("toolUseId", str(uuid.uuid4()))
         tool_input = parsed.get("content", {})
 
+        logger.info("[Voice] toolUse received: name=%s, id=%s, input_type=%s",
+                     tool_name, tool_use_id, type(tool_input).__name__)
+
         if isinstance(tool_input, str):
             try:
                 tool_input = json.loads(tool_input)
             except json.JSONDecodeError:
                 tool_input = {}
 
-        # Normalize to the format process_tool_calls expects
-        normalized = {
-            "id": tool_use_id,
-            "name": tool_name,
-            "input": tool_input,
-        }
+        logger.info("[Voice] Tool input (parsed): %s", json.dumps(tool_input, default=str)[:500])
 
-        # Use shared tool processing logic
-        results = process_tool_calls([normalized], self.state)
-        updated_fields = results.get("updated_fields", [])
+        if tool_name in ADVISOR_TOOL_NAMES:
+            # Execute advisor tools (CRM, documents, suitability, calls)
+            logger.info("[Voice] >>> ADVISOR TOOL: %s — routing to execute_prefill_tool", tool_name)
+            try:
+                if tool_name == "call_client":
+                    missing = [{"id": f, "label": f} for f in tool_input.get("missing_fields", [])]
+                    call_result = await retell_service.create_outbound_call(
+                        to_number=tool_input.get("phone_number", ""),
+                        missing_fields=missing,
+                        client_name=tool_input.get("client_name", ""),
+                        advisor_name=self.state.advisor_name or "",
+                    )
+                    result_str = json.dumps({
+                        "status": "call_initiated",
+                        "call_id": call_result.get("call_id", ""),
+                        "message": f"Call initiated to {tool_input.get('client_name', 'client')}.",
+                    })
+                else:
+                    raw = await execute_prefill_tool(tool_name, tool_input)
+                    result_str = raw if isinstance(raw, str) else json.dumps(raw)
 
-        if updated_fields:
-            messages.append({
-                "type": "field_update",
-                "fields": updated_fields,
-            })
+                logger.info("[Voice] Tool %s executed, result length=%d chars",
+                             tool_name, len(result_str) if isinstance(result_str, str) else 0)
+                logger.debug("[Voice] Tool %s raw result: %s", tool_name, result_str[:1000] if isinstance(result_str, str) else str(result_str)[:1000])
+
+                # Parse result for frontend field mapping
+                source_label = TOOL_SOURCE_LABELS.get(tool_name)
+                try:
+                    result_data = json.loads(result_str) if isinstance(result_str, str) else result_str
+                    if isinstance(result_data, dict) and "error" not in result_data:
+                        field_count = len(result_data)
+                        logger.info("[Voice] Emitting tool_call_info: name=%s, source=%s, fields=%d, keys=%s",
+                                     tool_name, source_label, field_count,
+                                     list(result_data.keys())[:15])
+                        messages.append({
+                            "type": "tool_call_info",
+                            "name": tool_name,
+                            "result_data": result_data,
+                            "source_label": source_label,
+                        })
+                    else:
+                        logger.warning("[Voice] Tool %s result has error or is not dict: %s",
+                                        tool_name, str(result_data)[:200])
+                except (json.JSONDecodeError, TypeError) as exc:
+                    logger.warning("[Voice] Failed to parse tool %s result as JSON: %s", tool_name, exc)
+
+            except Exception as e:
+                logger.exception("Advisor tool %s failed in voice", tool_name)
+                result_str = json.dumps({"error": str(e)})
+
+            logger.info("[Voice] Sent tool result back to Nova Sonic for %s", tool_name)
+            await self._send_tool_result(tool_use_id, result_str)
+        else:
+            # Field extraction/confirmation tools — use existing shared logic
+            logger.info("[Voice] >>> FIELD TOOL: %s — routing to process_tool_calls", tool_name)
+            normalized = {
+                "id": tool_use_id,
+                "name": tool_name,
+                "input": tool_input,
+            }
+            results = process_tool_calls([normalized], self.state)
+            updated_fields = results.get("updated_fields", [])
+
+            if updated_fields:
+                messages.append({
+                    "type": "field_update",
+                    "fields": updated_fields,
+                })
+
+            tool_result_str = json.dumps(results.get(tool_use_id, "OK"))
+            await self._send_tool_result(tool_use_id, tool_result_str)
 
         # Check phase transitions
         old_phase = self.state.phase
@@ -287,10 +381,6 @@ class NovaSonicStreamManager:
                 "type": "phase_change",
                 "phase": self.state.phase.value,
             })
-
-        # Send tool result back to Nova Sonic
-        tool_result_str = json.dumps(results.get(tool_use_id, "OK"))
-        await self._send_tool_result(tool_use_id, tool_result_str)
 
         return messages
 
@@ -336,6 +426,9 @@ class NovaSonicStreamManager:
         """Parse a Nova Sonic output event into a normalized dict."""
         # The SDK delivers events as typed objects; extract the relevant data
         try:
+            logger.debug("[Voice] Raw event type: %s, attrs: %s",
+                          type(event).__name__,
+                          [a for a in dir(event) if not a.startswith("_")][:10])
             # Try to access as dict-like or attribute-based depending on SDK version
             if hasattr(event, "to_dict"):
                 data = event.to_dict()

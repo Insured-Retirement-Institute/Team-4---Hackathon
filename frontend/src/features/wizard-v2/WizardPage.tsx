@@ -701,7 +701,7 @@ interface WizardPageContentProps {
 function WizardPageContent({ applicationId, initialStep }: WizardPageContentProps) {
   const navigate = useNavigate();
   const { definition, pages, values, validatePage, isPageComplete, populateWithDummyData, bulkSetValues } = useWizardV2Controller();
-  const { collectedFields, mergeFields } = useApplication();
+  const { collectedFields, mergeFields, pendingSync, setPendingSync } = useApplication();
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [showSubmissionBanner, setShowSubmissionBanner] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -735,6 +735,7 @@ const [subDialog, setSubDialog] = useState<{
   // ── AI field sync ──────────────────────────────────────────────────────────
 
   useEffect(() => {
+    if (!pendingSync) return;
     const newFields: Record<string, string | boolean> = {};
     for (const [key, val] of Object.entries(collectedFields)) {
       if ((typeof val === 'string' || typeof val === 'boolean') && lastAppliedRef.current[key] !== val) {
@@ -745,7 +746,8 @@ const [subDialog, setSubDialog] = useState<{
       lastAppliedRef.current = { ...lastAppliedRef.current, ...newFields };
       bulkSetValues(newFields);
     }
-  }, [collectedFields, bulkSetValues]);
+    setPendingSync(false);
+  }, [collectedFields, bulkSetValues, pendingSync, setPendingSync]);
 
   useEffect(() => {
     const nonEmpty: Record<string, string | boolean> = {};
