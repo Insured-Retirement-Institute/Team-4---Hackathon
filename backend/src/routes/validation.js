@@ -73,6 +73,24 @@ router.post('/:applicationId/validate', async (req, res) => {
 
     // For 'page' scope, still run structure validation as before
     const result = validate(product, mergedAnswers, scope, pageId);
+
+    if (scope === 'full') {
+      const applicationId = req.params.applicationId;
+      const payload = transformSubmission(product, mergedAnswers, { applicationId });
+      const suitabilityDecision = await evaluateSuitability(payload, product);
+
+      await updateApplicationSuitabilityDecision(applicationId, suitabilityDecision);
+
+      if (suitabilityDecision.valid === false) {
+        result.valid = false;
+      }
+      if (Array.isArray(suitabilityDecision.errors) && suitabilityDecision.errors.length > 0) {
+        result.errors = result.errors.concat(suitabilityDecision.errors);
+      }
+
+      return res.json({ ...result, suitabilityDecision });
+    }
+
     res.json(result);
   } catch (err) {
     console.error('Validation error:', err);
