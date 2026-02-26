@@ -2,20 +2,23 @@ import type { PageDefinition, QuestionDefinition, ValidationRule } from '../../t
 import { evaluateVisibility } from './visibility';
 
 export type GroupItemValue = Record<string, string | boolean>;
-export type AnswerValue = string | boolean | GroupItemValue[];
+export type AnswerValue = string | boolean | number | GroupItemValue[];
 export type FormValues = Record<string, AnswerValue>;
 export type FormErrors = Record<string, string>;
 
 function isEmptyValue(value: AnswerValue | undefined) {
   if (value === undefined) return true;
   if (typeof value === 'boolean') return false;
+  if (typeof value === 'number') return false;
   if (Array.isArray(value)) return value.length === 0;
 
   return !value.trim();
 }
 
 function asString(value: AnswerValue | undefined) {
-  return typeof value === 'string' ? value : '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return '';
 }
 
 function parseDateValue(value: string): number | null {

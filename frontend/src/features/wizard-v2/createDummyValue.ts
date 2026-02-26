@@ -18,6 +18,7 @@ function findOptionValue(question: QuestionDefinition, candidates: string[]) {
 export function createDummyValue(question: QuestionDefinition): DummyAnswerValue {
   // Normalize camelCase IDs (e.g. ownerFirstName) to snake_case (owner_first_name)
   const id = question.id.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+  const matches = (keyword: string) => id.includes(keyword);
 
   if (question.type === 'boolean') {
     if (matches('same_as') || matches('address_same')) return false;
@@ -113,6 +114,8 @@ export function createDummyValue(question: QuestionDefinition): DummyAnswerValue
   }
 
   if (question.type === 'signature') return 'sig_token_alex_patel';
+  if (question.type === 'initials') return 'ARP';
+  if (question.type === 'file_upload') return '';
   if (question.type === 'allocation_table') {
     const firstFund = question.allocationConfig?.funds?.[0];
     if (!firstFund) return [];

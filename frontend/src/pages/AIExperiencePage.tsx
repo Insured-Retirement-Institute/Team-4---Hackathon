@@ -252,7 +252,7 @@ export default function AIExperiencePage() {
       }
     }
     mergeFields(normalized);
-    navigate(`/wizard-v2/${encodeURIComponent(selectedProductId)}`);
+    navigate(`/wizard-v2/${encodeURIComponent(selectedProductId)}`, { state: { fromAIExperience: true } });
   }, [selectedProductId, gatheredFields, navigate, mergeFields]);
 
   const missingFields = matchedFields
