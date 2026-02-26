@@ -45,6 +45,7 @@ export default function RetellCallPanel({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
+  const endedAtRef = useRef(0); // track when call ended, to keep polling for analysis
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -97,17 +98,28 @@ export default function RetellCallPanel({
             setCallStage('in-progress');
           } else if (status.status === 'ended') {
             setCallStage('ended');
-            stopPolling();
 
             if (status.transcript) setTranscript(status.transcript);
             if (status.duration_seconds) setDuration(Math.round(status.duration_seconds));
 
             const fields = status.extracted_fields ?? {};
             setExtractedFields(fields);
+
             if (Object.keys(fields).length > 0) {
+              // Got fields — stop polling and notify parent
+              stopPolling();
               onFieldsExtracted(fields);
+              onCallComplete();
+            } else if (!endedAtRef.current) {
+              // First time seeing "ended" — keep polling for analysis (up to 20s)
+              endedAtRef.current = Date.now();
+              console.log('[RetellCall] Call ended, waiting for analysis...');
+            } else if (Date.now() - endedAtRef.current > 20000) {
+              // Timed out waiting for analysis
+              console.log('[RetellCall] Analysis timeout — completing without fields');
+              stopPolling();
+              onCallComplete();
             }
-            onCallComplete();
           } else if (status.status === 'error') {
             setCallStage('error');
             setError('Call failed');

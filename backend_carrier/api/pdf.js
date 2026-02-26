@@ -82,8 +82,15 @@ router.get('/applications/:submissionId/pdf', async (req, res) => {
     // Populate the PDF using the mapping file
     const populatedPdfBuffer = await populatePDFWithMapping(pdfBuffer, submission, mapping);
 
-    res.contentType('application/pdf');
-    res.send(populatedPdfBuffer);
+    // Ensure we send a proper Buffer and set PDF response headers so browsers render inline
+    const outBuffer = Buffer.isBuffer(populatedPdfBuffer)
+      ? populatedPdfBuffer
+      : Buffer.from(populatedPdfBuffer);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${submissionId}.pdf"`);
+    res.setHeader('Content-Length', outBuffer.length);
+    res.status(200).send(outBuffer);
   } catch (error) {
     console.error('Error generating PDF:', error);
     res.status(500).json({

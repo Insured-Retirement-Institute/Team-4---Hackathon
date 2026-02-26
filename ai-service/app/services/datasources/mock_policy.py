@@ -6,8 +6,9 @@ from typing import Any
 
 from app.services.datasources.base import DataSource
 
+# Keys are Redtail CRM contact IDs (source of truth).
 MOCK_POLICIES: dict[str, dict[str, Any]] = {
-    "101": {
+    "3": {  # James Whitfield
         "annual_income": "85000",
         "net_worth": "450000",
         "tax_bracket": "22",
@@ -19,19 +20,7 @@ MOCK_POLICIES: dict[str, dict[str, Any]] = {
         "existing_annuity_count": "1",
         "existing_life_insurance": "yes",
     },
-    "102": {
-        "annual_income": "70000",
-        "net_worth": "720000",
-        "tax_bracket": "22",
-        "risk_tolerance": "conservative",
-        "investment_experience": "extensive",
-        "investment_objective": "preservation",
-        "time_horizon": "3_to_5_years",
-        "source_of_funds": "inheritance",
-        "existing_annuity_count": "0",
-        "existing_life_insurance": "yes",
-    },
-    "103": {
+    "5": {  # Robert Hargrove
         "annual_income": "247000",
         "net_worth": "1200000",
         "tax_bracket": "32",
@@ -41,18 +30,6 @@ MOCK_POLICIES: dict[str, dict[str, Any]] = {
         "time_horizon": "10_plus_years",
         "source_of_funds": "investment_portfolio",
         "existing_annuity_count": "0",
-        "existing_life_insurance": "no",
-    },
-    "104": {
-        "annual_income": "52000",
-        "net_worth": "745000",
-        "tax_bracket": "12",
-        "risk_tolerance": "conservative",
-        "investment_experience": "limited",
-        "investment_objective": "income",
-        "time_horizon": "5_to_10_years",
-        "source_of_funds": "savings",
-        "existing_annuity_count": "1",
         "existing_life_insurance": "no",
     },
 }

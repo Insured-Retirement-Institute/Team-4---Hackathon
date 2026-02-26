@@ -26,7 +26,7 @@ Each service has its own `CLAUDE.md` with service-specific details.
 
 - `/` — Landing page with feature overview, recent applications, CTAs to wizard, AI chat, and CRM pre-fill
 - `/prefill` — Pre-fill page: select CRM client or upload document → AI agent gathers data → start session
-- `/ai-experience` — Voice-first AI Experience: select advisor + client + product → voice session (Nova Sonic) + SSE data gathering → gap review with field matching → Retell AI outbound call to client for missing fields → launch application
+- `/ai-experience` — Chat-driven advisor experience: two-panel layout with advisor chat (left) driving CRM lookups, data gathering, and client calls conversationally, and a field mapping panel (right) showing source-attributed data accumulating in real-time. Product selection in side panel, Retell outbound calls, and "Open in Wizard" to launch pre-filled application
 - `/wizard-v2` — Product selection → dynamic form wizard (data-driven from product JSON)
 - `/wizard-v2/:productId` — Wizard for a specific product (supports `?resume=<id>` for saved applications)
 - `/applications` — Application history: list saved/submitted applications, resume or delete
@@ -80,7 +80,17 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 
 ## Cross-Service Integration
 
-**AI Chat flow (text):** Frontend fetches schema from AI service (`GET /api/v1/demo/midland-schema`) → creates session with questions (`POST /api/v1/sessions`) → sends messages (`POST /api/v1/sessions/{id}/message`) → receives reply + `updated_fields`.
+**AI Chat flow (text):** Frontend fetches schema from AI service (`GET /api/v1/demo/midland-schema`) → creates session with questions (`POST /api/v1/sessions`) → sends messages (`POST /api/v1/sessions/{id}/message`) → receives reply + `updated_fields` + `tool_calls`.
+
+**Advisor chat mode:** When `advisor_name` and optional `client_context` (`{client_id, display_name}`) are passed to session creation, the chat operates in advisor mode:
+- Session creation supports empty `questions` array (product-agnostic) — `questions` field defaults to `[]`
+- System prompt switches persona to address the advisor (not end client)
+- LLM gets access to 9 advisor tools: `lookup_crm_client`, `lookup_family_members`, `lookup_crm_notes`, `lookup_prior_policies`, `lookup_annual_statements`, `extract_document_fields`, `get_advisor_preferences`, `get_carrier_suitability`, `call_client`
+- `force_tool=False` — LLM decides when to call tools (vs regular mode which forces extraction tools)
+- Advisor tools execute async via `execute_prefill_tool()` from the prefill agent; `call_client` initiates Retell outbound calls
+- Tool results fed back to LLM for a natural language follow-up response
+- `tool_calls` in `MessageResponse` now include `result_data` (structured JSON from tool execution) and `source_label` (human-readable source name like "Redtail CRM", "CRM Notes", "Document Store") — frontend uses these to populate the field mapping panel with source attribution
+- `client_context` embeds the selected client's CRM ID in the system prompt so the LLM knows which ID to use for lookups
 
 **AI Chat flow (voice):** Same session creation as text. Frontend opens WebSocket to `WS /api/v1/sessions/{id}/voice` → sends `{"type":"audio","data":"<base64 PCM 16kHz>"}` → receives `{"type":"audio","data":"<base64 PCM 24kHz>"}` + `{"type":"transcript"}` + `{"type":"field_update"}`. Uses AWS Nova Sonic (speech-to-speech) via `aws_sdk_bedrock_runtime` bidirectional stream. Voice and text share the same `ConversationState` (fields, phase) so users can switch modes mid-session. Tool calls (field extraction, confirmation) are handled identically via shared `process_tool_calls()`/`maybe_advance_phase()`.
 
@@ -91,7 +101,7 @@ Push to `main` branch → Amplify auto-deploys. No Docker needed.
 
 **Pre-fill agent flow:** Frontend `/prefill` page → select CRM client and/or upload document → `POST /api/v1/prefill` or `POST /api/v1/prefill/document` → LLM agent loop calls `lookup_crm_client` (live Redtail API), `lookup_crm_notes` (meeting transcripts — LLM extracts financial data), `lookup_prior_policies` (fallback), `lookup_annual_statements`, `extract_document_fields`, `get_advisor_preferences`, `get_carrier_suitability` tools → returns `known_data` (including suitability score/rating and advisor recommendations) → frontend calls `createSession(productId, known_data)` → navigates home and opens widget with session in SPOT_CHECK phase.
 
-**AI Experience flow (voice-first, 5 stages):** Frontend `/ai-experience` page → select advisor profile + CRM client + product → **setup** stage. "Start with Voice" creates a session + opens Nova Sonic WebSocket AND starts SSE prefill stream simultaneously → **voice_active** stage shows VoicePanel (mic + transcript) + agent log + field accumulator. On `agent_complete` → **gap_review** stage shows summary bar + field matching table (filled vs missing). "Call Client to Fill Gaps" initiates Retell AI outbound call → **client_call** stage shows RetellCallPanel (status, timer, live transcript, extracted fields) + field matching table updating live. On call completion, extracted fields merge into `known_data` → **results** stage with final summary, field matching, and actions: "Start Application" (creates session + opens widget), "Open in Wizard" (navigates to wizard), "Call Client Again" (if fields still missing), "Run Again" (reset).
+**AI Experience flow (chat-driven):** Frontend `/ai-experience` page → auto-creates advisor session (no product required, `questions: []`) with `advisor_name: "Andrew Barnett"` → two-panel layout: ChatPanel (left) + FieldMappingPanel (right). Chat greets advisor and asks about client → advisor types client name → LLM calls `lookup_crm_client` → tool response includes `result_data` + `source_label` → frontend extracts fields into `gatheredFields` Map with source attribution → FieldMappingPanel shows raw fields with source chips. Advisor selects product from dropdown in side panel → product definition loaded → field matching table appears (grouped by page, with fill percentage). LLM suggests family lookup → `lookup_family_members` → beneficiary fields added. "Call Client" button in side panel triggers RetellCallPanel (appears above chat) → extracted fields merge with "Client Call" source. "Open in Wizard" navigates to `/wizard-v2/:productId` with all collected data pre-filled via `mergeFields()`.
 
 **Retell AI outbound call flow:** Frontend `POST /api/v1/retell/calls` with `{to_number, missing_fields, client_name, advisor_name}` → AI service calls Retell API to initiate outbound call with dynamic variables (missing fields prompt, names) → Retell agent (voice: 11labs-Adrian) calls client, collects missing field values conversationally → frontend polls `GET /api/v1/retell/calls/{id}` every 3s for status + live transcript → on call completion, Retell post-call analysis extracts `collected_fields` as JSON → webhook `POST /api/v1/retell/webhook` caches results → frontend merges extracted fields into gathered data.
 

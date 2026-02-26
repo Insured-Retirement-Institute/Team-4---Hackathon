@@ -176,9 +176,9 @@ async def retell_webhook(request: Request):
             for e in transcript_entries
         ) if transcript_entries else None
 
-        # Extract fields from call analysis
+        # Extract fields from call analysis (parse collected_fields JSON)
         analysis = call.get("call_analysis", {})
-        extracted_fields = analysis.get("custom_analysis_data") or {}
+        extracted_fields = _parse_analysis_fields(analysis)
 
         # Duration
         start_ts = call.get("start_timestamp")
@@ -191,11 +191,13 @@ async def retell_webhook(request: Request):
             "extracted_fields": extracted_fields,
             "duration_seconds": duration_seconds,
         })
+        logger.info("Call %s ended: %d extracted fields", call_id, len(extracted_fields))
 
     elif event == "call_analyzed":
         analysis = call.get("call_analysis", {})
-        extracted_fields = analysis.get("custom_analysis_data") or {}
+        extracted_fields = _parse_analysis_fields(analysis)
         if extracted_fields:
             _call_results[call_id]["extracted_fields"] = extracted_fields
+            logger.info("Call %s analyzed: %d extracted fields", call_id, len(extracted_fields))
 
     return {"ok": True}

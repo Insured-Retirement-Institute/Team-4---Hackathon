@@ -40,17 +40,18 @@ npm run lint     # ESLint
 | File | Purpose |
 |------|---------|
 | `src/context/ApplicationContext.tsx` | Shared state: `collectedFields`, `sessionId`, `phase`, step progress |
-| `src/services/aiService.ts` | AI service client: `fetchSchema()`, `createSession()`, `sendMessage()` |
+| `src/services/aiService.ts` | AI service client: `fetchSchema()`, `createSession(productId?, knownData?, advisorName?, clientContext?)`, `sendMessage()`. `ToolCallInfo` includes `result_data` and `source_label` for source-attributed field mapping. `productId` is optional — when omitted, skips schema fetch and sends empty `questions` |
 | `src/services/prefillService.ts` | Pre-fill API client: `fetchClients()`, `runPrefill()`, `runPrefillWithDocument()`, `runPrefillStream()` (SSE) |
 | `src/services/apiService.ts` | Backend API client: `getProducts()`, `getApplication()`, `validateApplication()`, `submitApplication()` (hardcoded base URL) |
 | `src/services/applicationStorageService.ts` | localStorage save/resume: `listSaves()`, `saveApplication()`, `loadApplicationData()`, `markSubmitted()`, `deleteApplication()` |
 | `src/types/application.ts` | Canonical types: `ApplicationDefinition`, `PageDefinition`, `QuestionDefinition`, `AnswerMap`, visibility/validation types |
 | `src/hooks/useWidgetSync.ts` | Bridges widget.js CustomEvents ↔ React context, exports `openWidget()` |
 | `src/pages/PrefillPage.tsx` | CRM client selector + doc upload → agent results → session start |
-| `src/pages/AIExperiencePage.tsx` | Voice-first AI Experience: 5-stage state machine (setup → voice_active → gap_review → client_call → results) |
+| `src/pages/AIExperiencePage.tsx` | Chat-driven advisor experience: two-panel layout (ChatPanel left, FieldMappingPanel right) with auto-created advisor session, source-attributed field accumulation, product selection, Retell calls, and wizard launch |
+| `src/components/FieldMappingPanel.tsx` | Right-side panel for AI Experience: product dropdown, source summary chips, field matching table (grouped by page with source attribution), raw field list, Call Client and Open in Wizard buttons |
 | `src/hooks/useVoiceConnection.ts` | Nova Sonic voice WebSocket hook: getUserMedia, AudioContext, PCM encode/decode, transcript/field events |
 | `src/components/VoicePanel.tsx` | Mic button with pulse animation, status label, scrolling role-colored transcript |
-| `src/components/ChatPanel.tsx` | Inline text chat panel using `sendMessage()` API, shares session with voice |
+| `src/components/ChatPanel.tsx` | Inline text chat panel using `sendMessage()` API, shares session with voice. Displays tool call chips (TOOL_LABELS) between messages and passes `onToolCalls` to parent for agent log integration |
 | `src/components/RetellCallPanel.tsx` | Retell outbound call UI: initiate, poll status, live transcript, extracted field display |
 | `src/services/retellService.ts` | Retell API client: `initiateCall()`, `getCallStatus()` |
 | `src/pages/ApplicationHistoryPage.tsx` | Lists saved/submitted applications from localStorage with resume and delete |
@@ -113,25 +114,27 @@ Widget and wizard share field data through `ApplicationContext.collectedFields`:
 
 ## AI Experience Page
 
-`src/pages/AIExperiencePage.tsx` — voice-first advisor workflow with five-stage state machine (`setup` → `voice_active` → `gap_review` → `client_call` → `results`):
+`src/pages/AIExperiencePage.tsx` — chat-driven advisor workflow with two-panel layout. No stages, no voice, no SSE.
 
-1. **Setup stage**: Single advisor (hardcoded: Andrew Barnett, `advisor_002`). Two buttons: "Start with Voice" (creates session + opens Nova Sonic) and "Start with Chat" (text-based). Voice/chat toggle available throughout.
-2. **Voice active stage**: VoicePanel (mic + transcript) at top. Below: agent log (dark terminal, SSE tool calls) + field accumulator (gathered fields). Voice and SSE run simultaneously. Auto-transitions to gap_review on `agent_complete`.
-3. **Gap review stage**: Compact VoicePanel (still connected). Summary bar (fields found, time, sources, suitability). Field matching table (filled vs missing, grouped by page). Actions: "Call Client to Fill Gaps", "Start Application", "Open in Wizard".
-4. **Client call stage**: RetellCallPanel (initiate call, poll status, live transcript, extracted fields). Field matching table updates when call completes. Collapsed VoicePanel available. Auto-transitions to results on call completion.
-5. **Results stage**: Summary bar + field matching table + actions: "Start Application", "Open in Wizard", "Call Client Again" (if fields still missing), "Run Again".
+**Layout:** ChatPanel (left, `md=7`) + FieldMappingPanel (right, `md=5`), full viewport height. RetellCallPanel appears above the chat when a call is active.
 
-**Voice integration**: `useVoiceConnection` hook manages WebSocket to `/api/v1/sessions/{id}/voice`, getUserMedia (mic capture at 16kHz PCM mono), AudioContext playback (24kHz). Dispatches `iri:field_updated` CustomEvents on `field_update` messages. `VoicePanel` component renders mic button with CSS pulse animation, connection status, and scrolling transcript. Supports `compact` mode.
+**On mount:** Loads products via `getProducts()` and creates an advisor session via `createSession(undefined, undefined, 'Andrew Barnett')` — no product required (empty `questions`). Chat greets: "Hi Andrew! What client would you like to work on today?"
 
-**Retell call integration**: `retellService.ts` API client calls `POST /api/v1/retell/calls` (initiate) and `GET /api/v1/retell/calls/{id}` (poll). `RetellCallPanel` component handles the full call lifecycle: idle → ringing → in-progress (with duration timer + live transcript) → ended (transcript accordion + extracted field chips). Polls every 3s. On completion, extracted fields merge into `gatheredFields` + `finalResult.known_data`.
+**Data flow:** Advisor types in chat → LLM calls advisor tools → `MessageResponse.tool_calls` includes `result_data` (structured JSON) + `source_label` (e.g., "Redtail CRM") → `handleToolCalls()` extracts key-value pairs into `gatheredFields` Map (keyed by field name, value is `{value, source}`) → FieldMappingPanel renders fields with source attribution chips.
 
-**Tool display metadata**: `TOOL_META` maps tool names to human-readable labels and MUI icons (e.g., `lookup_crm_client` → "CRM Client Lookup" with `PersonSearchIcon`, `lookup_family_members` → "Family & Spouse Lookup" with `PeopleIcon`).
+**Product selection:** Advisor selects product from dropdown in FieldMappingPanel → `getApplication(productId)` fetches `ApplicationDefinition` → `computeMatchedFields()` maps gathered data to product questions (handles camelCase/snake_case normalization) → field matching table appears grouped by page with fill percentage.
 
-**SSE event protocol** (`StreamEvent` type):
-- `agent_start` — `{type, message, timestamp}`
-- `tool_start` — `{type, name, description, iteration, timestamp}`
-- `tool_result` — `{type, name, fields_extracted, duration_ms, iteration, timestamp}`
-- `agent_complete` — `{type, known_data, sources_used, fields_found, summary, total_duration_ms, timestamp}`
+**Retell call integration:** "Call Client" button in FieldMappingPanel → `callActive=true` → RetellCallPanel appears above chat. Missing fields computed from matched fields. On call completion, extracted fields merge into `gatheredFields` with source "Client Call".
+
+**Launch wizard:** "Open in Wizard" button → normalizes fields to camelCase → `mergeFields()` into ApplicationContext → navigates to `/wizard-v2/:productId`.
+
+**FieldMappingPanel** (`src/components/FieldMappingPanel.tsx`):
+- Product dropdown (MUI Select)
+- Source summary chips with color coding (e.g., "Redtail CRM: 24", "CRM Notes: 5")
+- Field matching table (when product selected): grouped by page, each row shows filled/missing icon, label, value, source chip
+- Raw field list (before product selected): simple key-value list with source badges
+- Action buttons: "Call Client" (green, disabled when no product or call in progress) and "Open in Wizard" (outlined)
+- Source colors: Redtail CRM (blue), CRM Notes (purple), Prior Policies (orange), Document Store (green), Suitability Check (deep purple), Client Call (red)
 
 ## Application History
 

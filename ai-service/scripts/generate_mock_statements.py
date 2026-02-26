@@ -7,7 +7,7 @@ Generates two statement formats:
 - **Aspida MYGA format** (SynergyChoice MYGA): pink/navy branding, contract details,
   contract values summary, financial activity detail.
 
-Client IDs use Redtail CRM IDs (101-104) so the prefill agent finds them.
+Client IDs use Redtail CRM contact IDs (3, 5, etc.) so the prefill agent finds them.
 
 Usage:
     cd ai-service
@@ -53,10 +53,10 @@ ASPIDA_NAVY = colors.HexColor("#1b2a4a")
 ASPIDA_PINK = colors.HexColor("#c41e7a")
 ASPIDA_LIGHT_BG = colors.HexColor("#f0e8f0")
 
-# ── Client data (CRM IDs 101-104) ───────────────────────────────────────────
+# ── Client data keyed by Redtail CRM contact IDs (source of truth) ──────────
 
 CLIENTS = {
-    "101": {
+    "3": {  # James Whitfield (Redtail contact 3)
         "format": "mnl",
         "name": "James Whitfield",
         "joint_owner": "Margaret Whitfield",
@@ -94,47 +94,10 @@ CLIENTS = {
         "index_account_2_credit": "3.10%",
         "s3_year": "2024",
     },
-    "102": {
-        "format": "aspida",
-        "name": "Catherine Morales",
-        "joint_owner": None,
-        "address": "87 Commonwealth Avenue, Boston, MA 02116",
-        "contract_number": "AFMYA0000102",
-        "product": "SynergyChoice MYGA 5",
-        "plan_type": "Multi-Year Guaranteed Annuity — 5 Year",
-        "issue_date": "June 1, 2023",
-        "statement_year": "2024",
-        "agent_name": "Andrew Barnett",
-        "agent_number": "AB-44501",
-        # Contract Details
-        "death_benefit_type": "Contract Value",
-        "guaranteed_rate": "5.00%",
-        "guaranteed_until": "May 31, 2028",
-        "withdrawal_charge_end": "May 31, 2028",
-        "one_year_rate": "5.00%",
-        "min_guaranteed_rate": "1.00%",
-        "email": "c.morales@outlook.com",
-        # Contract Values Summary
-        "total_premium_payment": "$200,000.00",
-        "beginning_contract_value": "$200,000.00",
-        "total_withdrawals": "$0.00",
-        "interest_credited": "$10,000.00",
-        "ending_contract_value": "$210,000.00",
-        "cash_surrender_value": "$193,200.00",
-        "death_benefit_value": "$210,000.00",
-        # Financial Activity Detail
-        "activity": [
-            ("06/01/2023", "Premium Receipt", "$200,000.00"),
-            ("12/31/2023", "Fixed Interest Credit", "$5,000.00"),
-            ("06/30/2024", "Fixed Interest Credit", "$5,000.00"),
-            ("12/31/2024", "Ending Contract Value", "$210,000.00"),
-        ],
-        "s3_year": "2024",
-    },
-    "103": {
+    "5": {  # Robert Hargrove (Redtail contact 5)
         "format": "mnl",
-        "name": "Richard Hargrove",
-        "joint_owner": "Diane Hargrove",
+        "name": "Robert Hargrove",
+        "joint_owner": "Helen Hargrove",
         "address": "445 Park Avenue South, New York, NY 10016",
         "contract_number": "8500000103",
         "product": "Midland National Innovator Choice 14",
@@ -167,44 +130,6 @@ CLIENTS = {
         "index_account_2_balance": "$43,500.00",
         "index_account_2_cap": "4.50%",
         "index_account_2_credit": "3.10%",
-        "s3_year": "2024",
-    },
-    "104": {
-        "format": "mnl",
-        "name": "Susan Pemberton",
-        "joint_owner": None,
-        "address": "1820 North Damen Avenue, Chicago, IL 60647",
-        "contract_number": "MN-2023-00104",
-        "product": "Midland National Guarantee Plus",
-        "issue_date": "September 22, 2023",
-        "statement_year": "2024",
-        "agent_name": "Andrew Barnett",
-        "agent_number": "AB-33204",
-        # Statement Period Summary (simpler fixed product)
-        "beginning_accumulation": "$87,975.00",
-        "premiums": "$0.00",
-        "premium_bonus": "$0.00",
-        "partial_surrenders": "$0.00",
-        "interest_index_credits": "$3,400.00",
-        "ending_accumulation": "$91,375.00",
-        # Statement Inception Summary
-        "total_premiums_paid": "$85,000.00",
-        "total_premium_bonus": "$0.00",
-        "total_withdrawals": "$0.00",
-        "outstanding_loan": "$0.00",
-        "surrender_value": "$84,461.25",
-        "death_benefit": "$91,375.00",
-        # Account detail — fixed only
-        "fixed_account_balance": "$91,375.00",
-        "fixed_rate": "3.50%",
-        "index_account_1_name": None,
-        "index_account_1_balance": None,
-        "index_account_1_cap": None,
-        "index_account_1_credit": None,
-        "index_account_2_name": None,
-        "index_account_2_balance": None,
-        "index_account_2_cap": None,
-        "index_account_2_credit": None,
         "s3_year": "2024",
     },
 }
