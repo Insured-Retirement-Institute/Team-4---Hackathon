@@ -11,6 +11,16 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SendIcon from '@mui/icons-material/Send';
 import { sendMessage, type MessageResponse, type ToolCallInfo } from '../services/aiService';
 
+/** Lightweight markdown → HTML for chat bubbles */
+function mdToHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code style="background:#e0e0e0;padding:0 4px;border-radius:3px;font-size:12px">$1</code>')
+    .replace(/\n/g, '<br/>');
+}
+
 interface ChatMessage {
   role: 'user' | 'assistant' | 'tool';
   text: string;
@@ -238,9 +248,11 @@ export default function ChatPanel({ sessionId, onFieldUpdate, onToolCalls, greet
                     color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
                   }}
                 >
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {msg.text}
-                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ '& strong': { fontWeight: 700 }, '& code': { fontSize: 12 } }}
+                    dangerouslySetInnerHTML={{ __html: mdToHtml(msg.text) }}
+                  />
                 </Box>
               </Box>
             );
